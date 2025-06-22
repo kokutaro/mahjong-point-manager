@@ -62,6 +62,9 @@ export default function GameInfo({ gameState, isConnected, gameType }: GameInfoP
   }
 
   const maxRound = gameType === 'TONPUU' ? 4 : 8
+  const isOorasu =
+    (gameType === 'TONPUU' && gameState.currentRound === 4) ||
+    (gameType === 'HANCHAN' && gameState.currentRound === 8)
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-3 sm:p-6 mb-6">
@@ -69,6 +72,9 @@ export default function GameInfo({ gameState, isConnected, gameType }: GameInfoP
         <div className="w-full sm:w-auto">
           <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">
             {getRoundName(gameState.currentRound)}
+            {isOorasu && (
+              <span className="ml-2 text-red-600 font-semibold">オーラス</span>
+            )}
             {gameState.honba > 0 && (
               <span className="text-base sm:text-lg font-medium text-orange-600 ml-2">
                 {gameState.honba}本場
@@ -127,6 +133,9 @@ export default function GameInfo({ gameState, isConnected, gameType }: GameInfoP
           <div className="text-gray-600 text-xs">現在局</div>
           <div className="font-semibold text-gray-800 text-xs sm:text-sm">
             {getRoundName(gameState.currentRound)}
+            {isOorasu && (
+              <span className="ml-1 text-red-600 font-semibold">オーラス</span>
+            )}
           </div>
         </div>
         

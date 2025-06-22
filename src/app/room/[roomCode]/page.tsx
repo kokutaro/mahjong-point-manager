@@ -6,6 +6,10 @@ import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState, useRef } from 'react'
 import { Reorder } from 'framer-motion'
 import { GripVertical } from 'lucide-react'
+import { useMediaQuery } from '@mantine/hooks'
+import { QrCode } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
+import { QRCodeModal } from '@/components/QRCodeModal'
 
 interface GamePlayer {
   playerId: string
@@ -36,8 +40,21 @@ export default function RoomPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [isStarting, setIsStarting] = useState(false)
+  const [showQrModal, setShowQrModal] = useState(false)
+
+  const isDesktop = useMediaQuery('(min-width: 768px)')
 
   const roomCode = params.roomCode as string
+
+  const joinUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/room/${roomCode}`
+    : ''
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace(`/?redirect=/room/${roomCode}`)
+    }
+  }, [isAuthenticated, router, roomCode])
 
   const fetchRoomInfo = useCallback(async () => {
     try {
@@ -338,7 +355,7 @@ export default function RoomPage() {
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
-        <div className="text-xl text-gray-600">ログインが必要です</div>
+        <div className="text-xl text-gray-600">リダイレクト中...</div>
       </div>
     )
   }
@@ -381,14 +398,26 @@ export default function RoomPage() {
                 ホスト: {roomInfo?.hostPlayer?.name}
               </p>
             </div>
-            <div className="text-right">
-              <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm ${
-                isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-              }`}>
-                {isConnected ? '✓ 接続中' : '✗ 切断'}
-              </div>
-              <div className="text-sm text-gray-500 mt-1">
-                {gameState?.players.length || 0}/4 プレイヤー
+            <div className="flex items-center gap-4">
+              {isDesktop ? (
+                <QRCodeSVG value={joinUrl} size={80} />
+              ) : (
+                <>
+                  <button onClick={() => setShowQrModal(true)} aria-label="Show QR">
+                    <QrCode className="w-6 h-6 text-gray-700" />
+                  </button>
+                  <QRCodeModal opened={showQrModal} onClose={() => setShowQrModal(false)} url={joinUrl} />
+                </>
+              )}
+              <div className="text-right">
+                <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm ${
+                  isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                }`}>
+                  {isConnected ? '✓ 接続中' : '✗ 切断'}
+                </div>
+                <div className="text-sm text-gray-500 mt-1">
+                  {gameState?.players.length || 0}/4 プレイヤー
+                </div>
               </div>
             </div>
           </div>
