@@ -5,15 +5,35 @@ let io = null
 
 function initSocket(server) {
   console.log('🔌 JS: Initializing WebSocket server...')
+  console.log('🔌 Environment:', process.env.NODE_ENV)
+  console.log('🔌 NEXTAUTH_URL:', process.env.NEXTAUTH_URL)
+  
+  const corsOrigins = process.env.NODE_ENV === 'production' 
+    ? [
+        process.env.NEXTAUTH_URL,
+        'http://localhost',
+        'https://localhost',
+        /^https?:\/\/.*$/,  // すべてのHTTP/HTTPSを許可（プロダクション環境）
+        /^http:\/\/\d+\.\d+\.\d+\.\d+(:\d+)?$/,  // IPアドレス（ポート付き可）を許可
+        /^http:\/\/.*\.local(:\d+)?$/  // .localドメイン許可
+      ].filter(Boolean)
+    : ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000', /^http:\/\/.*$/]
+  
+  console.log('🔌 CORS origins:', corsOrigins)
+  
   io = new SocketIOServer(server, {
     cors: {
-      origin: process.env.NODE_ENV === 'production' 
-        ? process.env.NEXTAUTH_URL 
-        : ['http://localhost:3000', 'http://localhost:3001'],
-      methods: ['GET', 'POST'],
-      credentials: true
+      origin: corsOrigins,
+      methods: ['GET', 'POST', 'OPTIONS'],
+      credentials: true,
+      allowedHeaders: ['Content-Type', 'Authorization']
     },
-    transports: ['websocket', 'polling']
+    transports: ['websocket', 'polling'],
+    allowEIO3: true,
+    pingTimeout: 60000,
+    pingInterval: 25000,
+    upgradeTimeout: 30000,
+    maxHttpBufferSize: 1e6
   })
 
   io.on('connection', (socket) => {

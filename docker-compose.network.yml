@@ -1,0 +1,27 @@
+# ネットワークアクセス用のDocker Compose設定
+# ベースファイル: docker-compose.prod.yml
+# 使用方法: docker-compose -f docker-compose.prod.yml -f docker-compose.network.yml up -d
+
+services:
+  nginx:
+    ports:
+      # すべてのネットワークインターフェースでポート80をバインド
+      - "0.0.0.0:80:80"
+      - "0.0.0.0:443:443"
+    environment:
+      # Nginxにホスト名設定を追加
+      - NGINX_HOST=_  # すべてのホストを受け入れ
+      
+  app:
+    environment:
+      # ネットワークアクセス用の追加環境変数
+      - HOSTNAME=0.0.0.0
+      - HOST=0.0.0.0
+      # NEXTAUTH_URLは.env.prodファイルで設定
+      
+networks:
+  mahjong-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

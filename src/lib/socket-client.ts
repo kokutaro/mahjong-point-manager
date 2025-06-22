@@ -18,20 +18,40 @@ export class SocketClient {
       return this.socket
     }
 
-    const socketUrl = url || (typeof window !== 'undefined' 
-      ? `${window.location.protocol}//${window.location.hostname}:${window.location.port}`
-      : 'http://localhost:3000')
+    let socketUrl = url
     
-    console.log('Connecting to WebSocket:', socketUrl)
+    if (!socketUrl && typeof window !== 'undefined') {
+      // 現在のページのURLベースでWebSocket URLを生成
+      if (process.env.NODE_ENV === 'production') {
+        // プロダクション環境：現在のホスト名とプロトコルを使用（ポートなし）
+        socketUrl = `${window.location.protocol}//${window.location.host}`
+      } else {
+        // 開発環境：ポート3000を指定
+        const port = window.location.port || '3000'
+        socketUrl = `${window.location.protocol}//${window.location.hostname}:${port}`
+      }
+    }
+    
+    // フォールバック（通常使用されない）
+    if (!socketUrl) {
+      socketUrl = process.env.NODE_ENV === 'production' 
+        ? `${typeof window !== 'undefined' ? window.location.origin : 'http://localhost'}` 
+        : 'http://localhost:3000'
+    }
+    
+    console.log('Connecting to WebSocket:', socketUrl, 'NODE_ENV:', process.env.NODE_ENV)
     
     this.socket = io(socketUrl, {
       transports: ['websocket', 'polling'],
-      timeout: 5000,
+      timeout: 10000,
       forceNew: false,
       reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      autoConnect: true
+      reconnectionAttempts: 10,
+      reconnectionDelay: 2000,
+      reconnectionDelayMax: 10000,
+      autoConnect: true,
+      upgrade: true,
+      rememberUpgrade: true
     })
 
     this.socket.on('connect', () => {

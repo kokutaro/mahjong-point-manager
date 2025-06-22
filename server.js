@@ -4,9 +4,8 @@ const next = require('next')
 const { initSocket } = require('./src/lib/socketjs')
 
 const dev = process.env.NODE_ENV !== 'production'
-const hostname = 'localhost'
+const hostname = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost'
 const port = parseInt(process.env.PORT, 10) || 3000
-const socketPort = parseInt(process.env.SOCKET_IO_PORT, 10) || 3001
 
 // Next.jsアプリの初期化
 const app = next({ dev, hostname, port })

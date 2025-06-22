@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button, TextInput, Paper, Title, Text } from '@mantine/core'
+import WebSocketDebug, { useWebSocketDebug } from '@/components/WebSocketDebug'
 
 function HomePageContent() {
   const { user, isAuthenticated, login, isLoading } = useAuth()
@@ -14,6 +15,7 @@ function HomePageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get('redirect')
+  const { showDebug, setShowDebug } = useWebSocketDebug()
 
   useEffect(() => {
     if (isAuthenticated && redirectTo) {
@@ -235,6 +237,9 @@ function HomePageContent() {
           </div>
         </div>
       </div>
+      
+      {/* WebSocketデバッグ (Ctrl+Shift+W で表示) */}
+      <WebSocketDebug show={showDebug} />
     </div>
   )
 }

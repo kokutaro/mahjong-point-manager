@@ -1,9 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    typedRoutes: true,
-  },
-  output: 'standalone',
+  // Remove standalone for custom server
+  // output: 'standalone',
   images: {
     domains: ['localhost'],
   },
@@ -63,9 +61,22 @@ const nextConfig = {
           },
         },
       }
+    } else {
+      // Server-side externals configuration
+      config.externals = config.externals || []
+      config.externals.push({
+        'socket.io': 'commonjs socket.io',
+        '@prisma/client': 'commonjs @prisma/client'
+      })
     }
     
     return config
+  },
+  
+  // Experimental features for server components
+  experimental: {
+    typedRoutes: true,
+    serverComponentsExternalPackages: ['socket.io', '@prisma/client'],
   },
 }
 

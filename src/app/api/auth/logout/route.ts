@@ -5,9 +5,16 @@ export async function POST(request: NextRequest) {
   try {
     const cookieStore = await cookies()
     
-    // セッションCookieを削除
-    cookieStore.delete('session_token')
-    cookieStore.delete('player_id')
+    // セッションCookieを削除（ネットワークアクセス対応）
+    const deleteOptions = {
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'lax' as const : 'strict' as const
+    }
+    
+    cookieStore.set('session_token', '', { ...deleteOptions, maxAge: 0 })
+    cookieStore.set('player_id', '', { ...deleteOptions, maxAge: 0 })
 
     return NextResponse.json({
       success: true,

@@ -52,18 +52,19 @@ export async function POST(request: NextRequest) {
 
     // Cookieにセッション情報を設定
     const cookieStore = await cookies()
-    cookieStore.set('session_token', sessionToken, {
+    
+    // ネットワークアクセス対応のクッキー設定
+    const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      expires: expiresAt
-    })
-    cookieStore.set('player_id', player.id, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      expires: expiresAt
-    })
+      sameSite: process.env.NODE_ENV === 'production' ? 'lax' as const : 'strict' as const,
+      expires: expiresAt,
+      path: '/',
+      // ドメイン設定はしない（自動的に現在のホストが使用される）
+    }
+    
+    cookieStore.set('session_token', sessionToken, cookieOptions)
+    cookieStore.set('player_id', player.id, cookieOptions)
 
     return NextResponse.json({
       success: true,
