@@ -18,10 +18,11 @@
 - **PostgreSQL** (データベース)
 - **Socket.io** (リアルタイム通信)
 
-### インフラ
+### インフラ・開発環境
 
-- **Vercel** (デプロイ・ホスティング)
-- **Vercel Postgres** (データベース)
+- **Docker** (開発環境・本番デプロイ)
+- **PostgreSQL** (データベース)
+- **Jest + Testing Library** (テスト環境)
 
 ## システム構成
 
@@ -51,100 +52,107 @@
 
 ```text
 mahjong-point-manager/
-├── app/                          # Next.js App Router
-│   ├── (routes)/                 # ルートグループ
-│   │   ├── room/                 # ルーム関連ページ
-│   │   │   ├── [roomCode]/       # 対局ページ
-│   │   │   └── create/           # ルーム作成ページ
-│   │   └── result/               # 結果ページ
-│   ├── api/                      # API Routes
-│   │   ├── games/                # ゲーム関連API
-│   │   ├── socket/               # Socket.io Handler
-│   │   └── players/              # プレイヤー関連API
-│   ├── components/               # 共通コンポーネント
-│   │   ├── ui/                   # UIコンポーネント
+├── src/
+│   ├── app/                      # Next.js App Router
+│   │   ├── api/                  # API Routes
+│   │   │   ├── auth/             # 認証関連API
+│   │   │   ├── game/             # ゲーム操作API
+│   │   │   │   └── [gameId]/     # 個別ゲーム操作
+│   │   │   ├── room/             # ルーム管理API
+│   │   │   ├── score/            # 点数計算API
+│   │   │   ├── history/          # 履歴API
+│   │   │   └── stats/            # 統計API
+│   │   ├── game/                 # ゲーム画面
+│   │   │   └── [gameId]/         # 対局ページ
+│   │   ├── room/                 # ルーム管理
+│   │   │   ├── create/           # ルーム作成
+│   │   │   └── [roomCode]/       # ルーム参加・待機
+│   │   ├── history/              # 履歴・統計ページ
+│   │   ├── layout.tsx            # ルートレイアウト
+│   │   └── page.tsx              # ホームページ
+│   ├── components/               # React コンポーネント
+│   │   ├── ui/                   # 基本UIコンポーネント
 │   │   ├── game/                 # ゲーム固有コンポーネント
 │   │   └── forms/                # フォームコンポーネント
-│   ├── globals.css               # グローバルCSS
-│   ├── layout.tsx                # ルートレイアウト
-│   └── page.tsx                  # ホームページ
-├── lib/                          # ユーティリティ・設定
-│   ├── prisma.ts                 # Prisma クライアント
-│   ├── socket.ts                 # Socket.io 設定
-│   ├── score-calculator.ts       # 点数計算ロジック
-│   └── game-logic.ts             # ゲームロジック
-├── stores/                       # Zustand stores
-│   ├── game-store.ts             # ゲーム状態管理
-│   ├── player-store.ts           # プレイヤー状態管理
-│   └── ui-store.ts               # UI状態管理
-├── types/                        # TypeScript型定義
-│   ├── game.ts                   # ゲーム関連型
-│   ├── player.ts                 # プレイヤー関連型
-│   └── api.ts                    # API関連型
-├── hooks/                        # カスタムフック
-│   ├── use-socket.ts             # WebSocket フック
-│   ├── use-game.ts               # ゲームロジックフック
-│   └── use-score.ts              # 点数計算フック
-├── services/                     # ビジネスロジック
-│   ├── game-service.ts           # ゲーム操作サービス
-│   ├── score-service.ts          # 点数計算サービス
-│   └── socket-service.ts         # WebSocket サービス
+│   ├── hooks/                    # カスタムフック
+│   │   ├── useSocket.ts          # WebSocket フック
+│   │   └── usePerformanceMonitor.ts # パフォーマンス監視
+│   ├── lib/                      # ユーティリティ・ロジック
+│   │   ├── prisma.ts             # Prisma クライアント
+│   │   ├── socket.ts             # Socket.io サーバー設定
+│   │   ├── socket-client.ts      # Socket.io クライアント
+│   │   ├── score.ts              # 点数計算ロジック
+│   │   ├── point-manager.ts      # 点数管理クラス
+│   │   ├── auth.ts               # 認証ロジック
+│   │   └── utils.ts              # ユーティリティ関数
+│   ├── types/                    # TypeScript型定義
+│   │   └── game.ts               # ゲーム関連型定義
+│   └── __tests__/                # テストファイル
+│       ├── lib/                  # ライブラリテスト
+│       ├── components/           # コンポーネントテスト
+│       └── api/                  # APIテスト
 ├── prisma/                       # Prisma設定
 │   ├── schema.prisma             # データベーススキーマ
+│   ├── seed.ts                   # シードデータ
 │   └── migrations/               # マイグレーションファイル
-└── docs/                         # ドキュメント
-    ├── architecture.md           # このファイル
-    └── api.md                    # API仕様
+├── docs/                         # ドキュメント
+│   ├── architecture.md           # このファイル
+│   ├── api.md                    # API仕様
+│   ├── score-calculation.md      # 点数計算仕様
+│   ├── point-management.md       # 点数管理仕様
+│   ├── game-settlement.md        # 精算システム仕様
+│   ├── round-management.md       # 局管理仕様
+│   ├── reach-kyotaku.md          # リーチ・供託仕様
+│   ├── online-match.md           # オンライン対戦仕様
+│   └── ui-ux-design.md           # UI/UX設計
+├── jest.config.js                # Jest設定
+├── jest.setup.js                 # Jestセットアップ
+├── docker-compose.yml            # Docker設定
+└── server.js                     # Socket.io サーバー
 ```
 
 ## 状態管理アーキテクチャ (Zustand)
 
-### Game Store
+### Game Store (実装済み)
 
 ```typescript
 interface GameStore {
   // 現在のゲーム状態
-  currentGame: Game | null;
-  participants: GameParticipant[];
-  gameEvents: GameEvent[];
+  gameState: GameState | null;
+  currentPlayer: PlayerState | null;
   
   // アクション
-  setGame: (game: Game) => void;
-  updateParticipant: (participantId: string, updates: Partial<GameParticipant>) => void;
-  addGameEvent: (event: GameEvent) => void;
+  setGameState: (state: GameState) => void;
+  setCurrentPlayer: (player: PlayerState) => void;
+  updatePlayer: (playerId: string, updates: Partial<PlayerState>) => void;
   
-  // 計算系
-  calculateScore: (han: number, fu: number, isOya: boolean) => ScoreResult;
-  updatePoints: (event: GameEvent) => void;
+  // ゲーム操作
+  handleScoreSubmit: (scoreData: ScoreSubmission) => void;
+  handleReachDeclaration: (playerId: string) => void;
+  handleRyukyoku: (tenpaiPlayers: string[]) => void;
 }
 ```
 
-### Player Store
+### PointManager クラス (実装済み)
 
 ```typescript
-interface PlayerStore {
-  currentPlayer: Player | null;
-  setPlayer: (player: Player) => void;
-  updatePlayer: (updates: Partial<Player>) => void;
-}
-```
-
-### UI Store
-
-```typescript
-interface UIStore {
-  // モーダル・ダイアログ状態
-  scoreModalOpen: boolean;
-  reachModalOpen: boolean;
+class PointManager {
+  private gameId: string;
   
-  // 選択状態
-  selectedHan: number;
-  selectedFu: number;
+  // 点数分配
+  async distributeWinPoints(winnerId: string, scoreResult: ScoreCalculationResult, isTsumo: boolean, loserId?: string): Promise<{gameEnded: boolean}>;
   
-  // アクション
-  openScoreModal: () => void;
-  closeScoreModal: () => void;
-  setScore: (han: number, fu: number) => void;
+  // リーチ処理
+  async declareReach(playerId: string): Promise<void>;
+  
+  // 流局処理
+  async handleRyukyoku(reason: string, tenpaiPlayers: string[]): Promise<{gameEnded: boolean}>;
+  
+  // 精算計算
+  private calculateSettlement(participants: GameParticipant[], settings: GameSettings): SettlementResult[];
+  
+  // ゲーム終了判定
+  async checkGameEnd(): Promise<{shouldEnd: boolean; reason?: string}>;
 }
 ```
 
@@ -265,29 +273,60 @@ socket.emit('error', { message: string, code: string });
 - **権限チェック** (自分のアクションのみ許可)
 - **レート制限** (DoS攻撃対策)
 
+## テスト戦略
+
+### テスト構成 (実装済み)
+
+- **Unit Tests**: 30テスト (全パス)
+  - 点数計算ロジック (`score.ts`)
+  - 点数管理クラス (`point-manager.ts`)
+  - ユーティリティ関数 (`utils.ts`)
+- **Integration Tests**: API エンドポイント
+- **Component Tests**: React コンポーネント
+
+### テストツール
+
+- **Jest** - テストフレームワーク
+- **Testing Library** - React コンポーネントテスト
+- **TypeScript** - 型安全性テスト
+
+### テストコマンド
+
+```bash
+npm test              # テスト実行
+npm run test:watch    # ウォッチモード
+npm run test:coverage # カバレッジ測定
+```
+
 ## デプロイ・運用
 
-### Vercel設定
+### Docker 構成
+
+- **開発環境**: Docker Compose
+- **本番環境**: Docker コンテナ
+- **データベース**: PostgreSQL コンテナ
+
+### 環境設定
 
 - **Environment Variables** で機密情報管理
-- **Preview Deployments** で機能確認
-- **Analytics** でパフォーマンス監視
-
-### 監視・ログ
-
-- **Vercel Analytics** でアクセス解析
-- **Error Tracking** でエラー監視
-- **Database Monitoring** でクエリ最適化
+- **Database URL** で接続設定
+- **Socket.IO** ポート設定
 
 ## 拡張性考慮
+
+### 実装済み機能
+
+- ✅ **対局履歴・統計** 機能 
+- ✅ **CSVエクスポート** 機能
+- ✅ **レスポンシブデザイン** 対応
 
 ### 将来対応予定機能
 
 - **プレイヤーレーティング** システム
-- **対局履歴・統計** 機能
 - **カスタムルール** 設定
 - **観戦機能** (WebSocket Room拡張)
 - **モバイルアプリ** (React Native)
+- **焼き鳥ルール** 対応
 
 ### スケールアウト
 

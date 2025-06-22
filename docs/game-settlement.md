@@ -2,266 +2,203 @@
 
 ## 概要
 
-麻雀対局の終了処理と最終精算を行う機能です。ウマ・オカの計算、特殊ルール（トビ賞・焼き鳥）の適用、最終順位の確定を自動化します。
+麻雀対局の終了処理と最終精算を行う機能です。**オカ機能は廃止**され、ウマとトビ終了のみに対応。返し点（base points）設定により精算を行います。
 
-## 機能要件
+## 実装済み機能
 
-### 終局判定
+### 終局判定 ✅
 
-- **規定局数終了**: 東風戦・半荘戦の完了判定
-- **トビ終了**: 0点未満での強制終了
-- **30000点到達**: 親番での高得点終了
-- **時間制限**: 制限時間による強制終了
+- **規定局数終了**: 東風戦（東4局）・半荘戦（南4局）の完了判定
+- **トビ終了**: 0点以下での強制終了（設定により有効/無効）
+- **手動終了**: 管理者による強制終了機能
 
-### 精算計算
+### 精算計算 ✅
 
-- **ウマ計算**: 順位による点数分配
-- **オカ計算**: 配給原点からのプラス分配
-- **特殊ルール**: トビ賞・焼き鳥ペナルティ
-- **最終精算**: 実際の金額計算
+- **ウマ計算**: 順位による点数分配（プリセット + カスタム対応）
+- **返し点計算**: 配給原点25,000点 + 設定可能な返し点（20,000〜50,000点）
+- **トビ終了対応**: 設定により有効/無効を切り替え可能
+- **最終精算**: 素点差分 + ウマによる精算
 
-### 結果管理
+### 結果管理 ✅
 
-- **順位確定**: 最終点数による順位決定
-- **統計記録**: 対局データの保存
-- **結果表示**: 分かりやすい結果画面
+- **順位確定**: 最終点数による順位決定（同点時は起家順）
+- **統計記録**: 対局データの自動保存
+- **結果表示**: GameResult コンポーネントによる結果画面
+- **履歴管理**: 対局履歴・統計の表示機能
 
-## データ構造
+## 実装済みデータ構造
 
-### 精算データ
+### 精算データ (PointManager.calculateSettlement)
 
 ```typescript
-interface GameSettlement {
-  gameId: string;
-  endReason: EndReason;
-  endedAt: Date;
-  
-  // 最終結果
-  finalResults: PlayerResult[];
-  
-  // 精算設定
-  settings: SettlementSettings;
-  
-  // 精算詳細
-  calculations: SettlementCalculation;
-}
-
-interface PlayerResult {
+interface SettlementResult {
   playerId: string;
-  playerName: string;
-  position: number;          // 座席位置
-  
-  // 点数情報
-  finalPoints: number;       // 最終点数
-  rawPoints: number;         // 補正前点数
-  pointDifference: number;   // 配給原点との差
-  
-  // 順位・精算
+  finalPoints: number;
   rank: number;              // 最終順位 (1-4)
+  pointDiff: number;         // 返し点との差分
+  roundedDiff: number;       // 千点単位での差分
   uma: number;               // ウマ
-  oka: number;               // オカ
-  penalties: PenaltyInfo[];  // ペナルティ
   settlement: number;        // 最終精算額
 }
 
-interface SettlementSettings {
-  startingPoints: number;    // 配給原点 (25000)
-  returnPoints: number;      // 返し点 (30000)
-  
-  // ウマ設定
-  umaSettings: {
-    first: number;           // 1位ウマ
-    second: number;          // 2位ウマ
-    third: number;           // 3位ウマ
-    fourth: number;          // 4位ウマ
-  };
-  
-  // 特殊ルール
-  hasOka: boolean;
-  hasTobi: boolean;
-  hasYakitori: boolean;
-  tobiPenalty: number;
-  yakitoriPenalty: number;
+interface GameSettings {
+  initialPoints: number;     // 配給原点 (25000)
+  basePoints: number;        // 返し点 (設定可能)
+  gameType: 'TONPUU' | 'HANCHAN';
+  uma: number[];             // [1位, 2位, 3位, 4位]
+  hasTobi: boolean;          // トビ終了有効/無効
 }
 ```
 
-## コア実装
-
-### SettlementService
+### データベースモデル
 
 ```typescript
-export class SettlementService {
-  constructor(private prisma: PrismaClient) {}
-  
-  async processGameEnd(
-    gameId: string,
-    endReason: EndReason
-  ): Promise<GameSettlement> {
-    return await this.prisma.$transaction(async (tx) => {
-      // 最終状態取得
-      const game = await tx.game.findUnique({
-        where: { id: gameId },
-        include: {
-          participants: { include: { player: true } },
-          settings: true
-        }
-      });
-      
-      // 順位確定
-      const rankedResults = this.calculateRankings(game.participants);
-      
-      // 精算計算
-      const settlement = this.calculateSettlement(rankedResults, game.settings);
-      
-      // 結果保存
-      await this.saveGameResult(tx, gameId, settlement);
-      
-      // ゲーム状態更新
-      await tx.game.update({
-        where: { id: gameId },
-        data: { status: 'FINISHED', endedAt: new Date() }
-      });
-      
-      return settlement;
-    });
-  }
-  
-  private calculateRankings(
-    participants: GameParticipant[]
-  ): PlayerResult[] {
-    // 点数順でソート（同点の場合は起家に近い順）
-    const sorted = participants
+model GameResult {
+  id          String   @id @default(cuid())
+  gameId      String   @unique
+  playerId    String
+  finalPoints Int
+  rank        Int
+  pointDiff   Int
+  uma         Int
+  settlement  Int
+  createdAt   DateTime @default(now())
+}
+```
+
+## 実装済みコアロジック
+
+### PointManager.calculateSettlement (実装済み)
+
+```typescript
+// src/lib/point-manager.ts
+class PointManager {
+  private calculateSettlement(
+    participants: GameParticipant[],
+    settings: { uma: number[]; basePoints: number }
+  ): SettlementResult[] {
+    
+    // 1. 順位計算（点数順、同点時は起家順）
+    const sortedParticipants = participants
+      .map(p => ({
+        ...p,
+        pointDiff: p.currentPoints - settings.basePoints,
+        roundedDiff: Math.round((p.currentPoints - settings.basePoints) / 1000)
+      }))
       .sort((a, b) => {
         if (a.currentPoints !== b.currentPoints) {
-          return b.currentPoints - a.currentPoints;
+          return b.currentPoints - a.currentPoints; // 高得点順
         }
-        return a.position - b.position;
-      })
-      .map((p, index) => ({
-        playerId: p.playerId,
-        playerName: p.player.name,
-        position: p.position,
-        finalPoints: p.currentPoints,
-        rawPoints: p.currentPoints,
-        pointDifference: p.currentPoints - 25000,
-        rank: index + 1,
-        uma: 0,
-        oka: 0,
-        penalties: [],
-        settlement: 0
-      }));
-    
-    return sorted;
-  }
-  
-  private calculateSettlement(
-    results: PlayerResult[],
-    settings: GameSettings
-  ): SettlementCalculation {
-    const calculations = {
-      totalUma: 0,
-      totalOka: 0,
-      totalPenalties: 0,
-      verification: { isBalanced: true, difference: 0 }
-    };
-    
-    // ウマ計算
-    if (settings.umaSettings) {
-      const umaValues = [
-        settings.umaSettings.first,
-        settings.umaSettings.second,
-        settings.umaSettings.third,
-        settings.umaSettings.fourth
-      ];
-      
-      results.forEach((result, index) => {
-        result.uma = umaValues[index];
-        calculations.totalUma += result.uma;
+        return a.position - b.position; // 同点時は起家順
       });
+
+    // 2. ウマ適用
+    const resultsWithUma = sortedParticipants.map((participant, index) => ({
+      playerId: participant.playerId,
+      finalPoints: participant.currentPoints,
+      rank: index + 1,
+      pointDiff: participant.pointDiff,
+      roundedDiff: participant.roundedDiff,
+      uma: settings.uma[index],
+      settlement: 0 // 後で計算
+    }));
+
+    // 3. 最終精算額計算
+    const othersTotal = resultsWithUma
+      .slice(1) // 1位以外
+      .reduce((sum, result) => sum + result.roundedDiff, 0);
+    
+    // 1位の精算額は他の3人の合計の逆数 + ウマ
+    resultsWithUma[0].settlement = -othersTotal + resultsWithUma[0].uma;
+    
+    // 2-4位の精算額は素点差 + ウマ
+    for (let i = 1; i < resultsWithUma.length; i++) {
+      resultsWithUma[i].settlement = resultsWithUma[i].roundedDiff + resultsWithUma[i].uma;
     }
-    
-    // オカ計算
-    if (settings.hasOka) {
-      const totalPoints = results.reduce((sum, r) => sum + r.finalPoints, 0);
-      const expectedTotal = settings.startingPoints * 4;
-      const okaPool = totalPoints - expectedTotal;
-      
-      if (okaPool > 0) {
-        const okaPerPlayer = Math.floor(okaPool / 1000) * 250; // 1000点につき250円
-        results.forEach(result => {
-          result.oka = okaPerPlayer;
-          calculations.totalOka += okaPerPlayer;
-        });
-      }
-    }
-    
-    // 特殊ペナルティ
-    this.applyPenalties(results, settings, calculations);
-    
-    // 最終精算額計算
-    results.forEach(result => {
-      const pointValue = Math.floor(result.pointDifference / 1000) * 100; // 1000点=100円
-      result.settlement = pointValue + result.uma + result.oka 
-        - result.penalties.reduce((sum, p) => sum + p.amount, 0);
-    });
-    
-    // 収支バランス検証
-    this.verifySettlement(results, calculations);
-    
-    return calculations;
+
+    return resultsWithUma;
   }
   
-  private applyPenalties(
-    results: PlayerResult[],
-    settings: GameSettings,
-    calculations: SettlementCalculation
-  ): void {
-    results.forEach(result => {
-      // トビ賞
-      if (settings.hasTobi && result.finalPoints < 0) {
-        result.penalties.push({
-          type: 'TOBI',
-          amount: settings.tobiPenalty,
-          description: 'トビ賞'
-        });
-        calculations.totalPenalties += settings.tobiPenalty;
-      }
-      
-      // 焼き鳥 (アガリ回数0回の判定は別途実装)
-      if (settings.hasYakitori && this.hasNoWins(result.playerId)) {
-        result.penalties.push({
-          type: 'YAKITORI',
-          amount: settings.yakitoriPenalty,
-          description: '焼き鳥'
-        });
-        calculations.totalPenalties += settings.yakitoriPenalty;
-      }
+  // ゲーム終了時の最終結果保存
+  async calculateFinalResults(): Promise<void> {
+    const participants = await this.getParticipants();
+    const settings = await this.getGameSettings();
+    
+    const results = this.calculateSettlement(participants, settings);
+    
+    // データベースに結果保存
+    await this.saveFinalResults(results, participants);
+    
+    // ゲーム状態を終了に更新
+    await prisma.game.update({
+      where: { id: this.gameId },
+      data: { status: 'FINISHED', endedAt: new Date() }
     });
   }
 }
 ```
 
-## 特殊ルール対応
-
-### ウマ設定パターン
+### ゲーム終了判定 (実装済み)
 
 ```typescript
+// src/lib/point-manager.ts  
+async checkGameEnd(): Promise<{ shouldEnd: boolean; reason?: string }> {
+  const participants = await this.getParticipants();
+  const game = await prisma.game.findUnique({
+    where: { id: this.gameId },
+    include: { settings: true }
+  });
+
+  // 1. トビ判定
+  const tobiPlayer = participants.find(p => p.currentPoints <= 0);
+  if (tobiPlayer && game.settings?.hasTobi) {
+    return { 
+      shouldEnd: true, 
+      reason: `トビ終了: ${tobiPlayer.playerId}がマイナス点数` 
+    };
+  }
+
+  // 2. 規定局数終了判定
+  const gameEndResult = this.checkRoundEnd(game, game.settings?.gameType);
+  return gameEndResult;
+}
+
+private checkRoundEnd(game: any, gameType?: string): { shouldEnd: boolean; reason?: string } {
+  if (gameType === 'TONPUU' && game.currentRound > 4) {
+    return { shouldEnd: true, reason: '東風戦終了: 東4局完了' };
+  }
+  if (gameType === 'HANCHAN' && game.currentRound > 8) {
+    return { shouldEnd: true, reason: '半荘戦終了: 南4局完了' };
+  }
+  return { shouldEnd: false };
+}
+```
+
+## 実装済み特殊ルール
+
+### ウマ設定パターン ✅
+
+```typescript
+// src/app/room/create/page.tsx で実装済み
 const UMA_PRESETS = {
-  standard: { first: 20000, second: 10000, third: -10000, fourth: -20000 },
-  tournament: { first: 30000, second: 10000, third: -10000, fourth: -30000 },
-  casual: { first: 10000, second: 5000, third: -5000, fourth: -10000 }
+  gottou: [10, 5, -5, -10],    // ゴットー
+  onetwo: [20, 10, -10, -20],  // ワンツー  
+  onethree: [30, 10, -10, -30] // ワンスリー
 };
 ```
 
-### オカ計算方式
+### ルーム作成時の設定 ✅
 
-```typescript
-interface OkaCalculation {
-  method: 'EQUAL_DISTRIBUTION' | 'WINNER_TAKES_ALL' | 'PROPORTIONAL';
-  baseUnit: number;           // 計算単位 (1000点など)
-  rate: number;               // 変換レート (250円/1000点など)
-}
-```
+- **ゲーム種別**: 東風戦 / 半荘戦
+- **配給原点**: 25,000点 (固定)
+- **返し点**: 20,000〜50,000点 (設定可能)
+- **ウマ**: プリセット選択 + カスタム設定
+- **トビ終了**: 有効 / 無効
+
+### 廃止された機能
+
+- ❌ **オカ計算**: 返し点システムに統合
+- ❌ **焼き鳥ルール**: 将来実装予定
 
 ## 結果表示
 
