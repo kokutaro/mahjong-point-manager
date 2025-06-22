@@ -20,58 +20,8 @@ services:
     networks:
       - mahjong-network
 
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: mahjong-app
-    restart: unless-stopped
-    environment:
-      - NODE_ENV=production
-      - DATABASE_URL=postgresql://mahjong_user:mahjong_pass@postgres:5432/mahjong_db
-      - NEXTAUTH_SECRET=your-super-secret-key-change-this-in-production
-      - NEXTAUTH_URL=http://localhost:3000
-      - NEXT_TELEMETRY_DISABLED=1
-    ports:
-      - "3000:3000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    volumes:
-      # Mount for development (optional, remove in production)
-      - ./src:/app/src:ro
-      - ./public:/app/public:ro
-    networks:
-      - mahjong-network
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-  # Redis for session storage and caching (optional but recommended)
-  redis:
-    image: redis:7-alpine
-    container_name: mahjong-redis
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    command: redis-server --appendonly yes
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - mahjong-network
-
 volumes:
   postgres_data:
-    driver: local
-  redis_data:
     driver: local
 
 networks:
