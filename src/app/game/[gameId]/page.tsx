@@ -574,7 +574,7 @@ export default function GamePage() {
             <GameInfo
               gameState={gameState}
               isConnected={isConnected}
-              gameType={gameInfo?.gameType || 'HANCHAN'}
+              gameType={gameInfo?.settings?.gameType || 'HANCHAN'}
             />
 
             {/* プレイヤー状態 */}
@@ -588,7 +588,7 @@ export default function GamePage() {
         </div>
         
         <GameEndScreen
-          gameType={gameInfo?.gameType || 'HANCHAN'}
+          gameType={gameInfo?.settings?.gameType || 'HANCHAN'}
           endReason={gameEndReason || '規定局数終了'}
           onShowResult={() => {
             setShowGameEnd(false)
@@ -616,7 +616,7 @@ export default function GamePage() {
         <GameInfo
           gameState={gameState}
           isConnected={isConnected}
-          gameType={gameInfo?.gameType || 'HANCHAN'}
+          gameType={gameInfo?.settings?.gameType || 'HANCHAN'}
         />
 
         {/* プレイヤー状態 */}
