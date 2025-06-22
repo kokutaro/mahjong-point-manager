@@ -62,8 +62,8 @@ export async function POST(
       }, { status: 400 })
     }
 
-    // 起家をランダムに決定
-    const startingOya = Math.floor(Math.random() * 4)
+    // 起家は座席順0の人に固定
+    const startingOya = 0
 
     // ゲーム開始
     const updatedGame = await prisma.game.update({
@@ -71,6 +71,7 @@ export async function POST(
       data: {
         status: 'PLAYING',
         currentOya: startingOya,
+        startingOya: startingOya,
         startedAt: new Date()
       },
       include: {
