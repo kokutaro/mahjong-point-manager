@@ -272,7 +272,7 @@ export default function HistoryPage() {
                             {player.settlement >= 0 ? '+' : ''}{player.settlement.toLocaleString()}
                           </div>
                           <div className="text-xs text-gray-500">
-                            ウマ: {player.uma >= 0 ? '+' : ''}{player.uma} / オカ: {player.oka >= 0 ? '+' : ''}{player.oka}
+                            ウマ: {player.uma >= 0 ? '+' : ''}{player.uma}
                           </div>
                         </div>
                       </div>

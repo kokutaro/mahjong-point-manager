@@ -16,7 +16,8 @@ export async function GET(
           include: { player: true },
           orderBy: { position: 'asc' }
         },
-        result: true
+        result: true,
+        settings: true
       }
     })
 
@@ -99,12 +100,14 @@ export async function GET(
       (typeof endEvent.eventData === 'object' && endEvent.eventData !== null && 'reason' in endEvent.eventData ? 
         (endEvent.eventData as any).reason : '終了') : '終了'
 
+
     const resultData = {
       gameId: game.id,
       results,
-      gameType: game.gameType,
+      gameType: game.settings?.gameType || game.gameType,
       endReason,
-      endedAt: game.endedAt?.toISOString() || new Date().toISOString()
+      endedAt: game.endedAt?.toISOString() || new Date().toISOString(),
+      basePoints: game.settings?.basePoints || 30000
     }
 
     return NextResponse.json({
