@@ -1,0 +1,202 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// プレイヤー管理
+model Player {
+  id        String   @id @default(cuid())
+  name      String
+  avatar    String?
+  deviceId  String?  // デバイス識別子（簡易認証用）
+  lastLogin DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 対局参加履歴
+  gameParticipants GameParticipant[]
+  
+  // 対局イベント履歴（ツモ・ロン・リーチなど）
+  gameEvents GameEvent[]
+
+  // ホストしたゲーム
+  hostedGames Game[]
+
+  @@map("players")
+}
+
+// 対局（ゲーム）管理
+model Game {
+  id          String      @id @default(cuid())
+  roomCode    String      @unique // 6桁のルームコード
+  hostPlayerId String     // ホストプレイヤーID
+  gameType    GameType    @default(HANCHAN) // 東風戦・半荘戦
+  status      GameStatus  @default(WAITING)
+  currentRound Int         @default(1) // 現在の局（1=東1局、2=東2局...）
+  honba       Int         @default(0) // 本場数
+  kyotaku     Int         @default(0) // 供託（リーチ棒の数）
+  
+  // 親の起家設定
+  startingOya Int         @default(0) // 起家（0-3）
+  currentOya  Int         @default(0) // 現在の親（0-3）
+  
+  // 対局設定
+  settingsId  String?
+  settings    GameSettings? @relation(fields: [settingsId], references: [id])
+  
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  startedAt   DateTime?
+  endedAt     DateTime?
+
+  // ホストプレイヤー
+  hostPlayer   Player      @relation(fields: [hostPlayerId], references: [id])
+
+  // 参加プレイヤー（必ず4人）
+  participants GameParticipant[]
+  
+  // 対局中のイベント履歴
+  events      GameEvent[]
+  
+  // 最終結果
+  result      GameResult?
+
+  @@map("games")
+}
+
+// 対局参加者
+model GameParticipant {
+  id       String @id @default(cuid())
+  gameId   String
+  playerId String
+  position Int    // 座席位置（0-3: 東南西北）
+  
+  // リアルタイム点数
+  currentPoints Int @default(25000) // 現在の持ち点
+  
+  // リーチ状態
+  isReach      Boolean @default(false)
+  reachRound   Int?    // リーチした局
+  
+  // 対局結果用
+  finalPoints  Int?    // 最終点数
+  finalRank    Int?    // 最終順位（1-4）
+  uma          Int?    // ウマ
+  oka          Int?    // オカ
+  settlement   Int?    // 最終精算
+
+  game   Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@unique([gameId, position])
+  @@unique([gameId, playerId])
+  @@map("game_participants")
+}
+
+// 対局設定
+model GameSettings {
+  id     String @id @default(cuid())
+  
+  // 基本設定
+  gameType      GameType @default(HANCHAN)
+  initialPoints Int      @default(25000) // 配給原点
+  basePoints    Int      @default(30000) // 基準点（返し点）
+  
+  // ウマ設定（配列で格納）
+  uma           Json     @default("[20, 10, -10, -20]") // [1位, 2位, 3位, 4位]
+  
+  // 特殊ルール
+  hasTobi       Boolean  @default(true)   // トビ賞あり
+  hasYakitori   Boolean  @default(false)  // 焼き鳥あり
+  oka           Int      @default(0)      // オカ（配給からのプラス分）
+  tobiPenalty   Int      @default(20)     // トビ賞ペナルティ
+  yakitoriPenalty Int    @default(20)     // 焼き鳥ペナルティ
+
+  // このSettingsを使用するGame
+  games         Game[]
+
+  @@map("game_settings")
+}
+
+// 対局イベント（ツモ・ロン・流局・リーチなど）
+model GameEvent {
+  id          String    @id @default(cuid())
+  gameId      String
+  playerId    String?   // イベント実行者（流局の場合はnull）
+  eventType   EventType
+  round       Int       // 発生した局
+  honba       Int       // 発生時の本場数
+  
+  // イベント詳細（JSON）
+  eventData   Json      // 翻数、符数、点数変動など
+  
+  createdAt   DateTime  @default(now())
+
+  game   Game    @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  player Player? @relation(fields: [playerId], references: [id])
+
+  @@map("game_events")
+}
+
+// 対局結果
+model GameResult {
+  id       String @id @default(cuid())
+  gameId   String @unique
+  
+  // 最終結果データ（JSON）
+  results  Json   // [{playerId, finalPoints, rank, uma, oka, settlement}]
+  
+  createdAt DateTime @default(now())
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@map("game_results")
+}
+
+// 翻数・符数マスタ
+model ScorePattern {
+  id      String @id @default(cuid())
+  han     Int    // 翻数
+  fu      Int    // 符数
+  
+  // 点数（親・子別）
+  oyaPoints    Int // 親の点数
+  koPoints     Int // 子の点数
+  
+  // ツモ時の分配
+  oyaTsumoAll  Int // 親ツモ時の子の支払い
+  koTsumoOya   Int // 子ツモ時の親の支払い
+  koTsumoKo    Int // 子ツモ時の他の子の支払い
+
+  @@unique([han, fu])
+  @@map("score_patterns")
+}
+
+// Enum定義
+enum GameType {
+  TONPUU  // 東風戦
+  HANCHAN // 半荘戦
+}
+
+enum GameStatus {
+  WAITING    // 待機中
+  PLAYING    // 対局中
+  FINISHED   // 終了
+  CANCELLED  // キャンセル
+}
+
+enum EventType {
+  TSUMO      // ツモ
+  RON        // ロン
+  REACH      // リーチ
+  RYUKYOKU   // 流局
+  GAME_START // 対局開始
+  GAME_END   // 対局終了
+}
