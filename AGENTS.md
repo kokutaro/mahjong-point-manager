@@ -48,4 +48,5 @@ This repository contains a real-time Mahjong point calculator and point tracking
   ```bash
   npm run lint
   npm run type-check
+  npm test
   ```
