@@ -3,7 +3,9 @@
 import { useAuth } from '@/contexts/AuthContext'
 import { useSocket } from '@/hooks/useSocket'
 import { useParams, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
+import { Reorder } from 'framer-motion'
+import { GripVertical } from 'lucide-react'
 import { useMediaQuery } from '@mantine/hooks'
 import { QrCode } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
@@ -300,6 +302,53 @@ export default function RoomPage() {
     return positions[position] || '?'
   }
 
+  const [seatOrder, setSeatOrder] = useState<GamePlayer[]>([])
+  const seatOrderRef = useRef<GamePlayer[]>([])
+
+  useEffect(() => {
+    if (gameState && gameState.players.length === 4) {
+      const sorted = [...gameState.players].sort((a, b) => a.position - b.position)
+      setSeatOrder(sorted)
+      seatOrderRef.current = sorted
+    } else {
+      setSeatOrder([])
+      seatOrderRef.current = []
+    }
+  }, [gameState])
+
+  const updateSeatOrderOnServer = useCallback(
+    async (order: GamePlayer[]) => {
+      try {
+        const response = await fetch(`/api/room/${roomCode}/seat-order`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            positions: order.map((p, i) => ({ playerId: p.playerId, position: i }))
+          })
+        })
+        const data = await response.json()
+        if (!response.ok) {
+          throw new Error(data.error?.message || '席順の更新に失敗しました')
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '席順の更新に失敗しました')
+      }
+    },
+    [roomCode]
+  )
+
+  const handleReorder = (newOrder: GamePlayer[]) => {
+    setSeatOrder(newOrder)
+    seatOrderRef.current = newOrder
+  }
+
+  const handleReorderEnd = () => {
+    if (seatOrderRef.current.length === 4) {
+      updateSeatOrderOnServer(seatOrderRef.current)
+    }
+  }
+
   const isHost = user && roomInfo && user.playerId === roomInfo.hostPlayer?.id
   const canStartGame = roomInfo?.players.length === 4 && roomInfo?.status === 'WAITING'
 
@@ -378,47 +427,71 @@ export default function RoomPage() {
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">プレイヤー</h2>
           <div className="grid gap-4">
-            {[0, 1, 2, 3].map((position) => {
-              const player = gameState?.players.find(p => p.position === position)
-              return (
-                <div
-                  key={position}
-                  className={`p-4 rounded-lg border-2 ${
-                    player 
-                      ? 'border-green-200 bg-green-50' 
-                      : 'border-gray-200 bg-gray-50'
-                  }`}
-                >
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center font-semibold text-gray-700">
-                        {getPositionName(position)}
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-800">
-                          {player?.name || '待機中...'}
+            {seatOrder.length === 4 && isHost ? (
+              <Reorder.Group axis="y" values={seatOrder} onReorder={handleReorder} className="grid gap-4">
+                {seatOrder.map((player, idx) => (
+                  <Reorder.Item
+                    key={player.playerId}
+                    value={player}
+                    className="p-4 rounded-lg border-2 border-green-200 bg-green-50"
+                    layout
+                    onDragEnd={handleReorderEnd}
+                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center space-x-3">
+                        <GripVertical className="w-5 h-5 text-gray-400 cursor-grab" />
+                        <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center font-semibold text-gray-700">
+                          {getPositionName(idx)}
                         </div>
-                        {player && (
-                          <div className="text-sm text-gray-500">
-                            {player.points.toLocaleString()}点
-                          </div>
+                        <div>
+                          <div className="font-medium text-gray-800">{player.name}</div>
+                          <div className="text-sm text-gray-500">{player.points.toLocaleString()}点</div>
+                        </div>
+                      </div>
+                      <div className="flex space-x-2">
+                        {player.isConnected && <span className="text-green-600 text-sm">●</span>}
+                        {player.isReach && (
+                          <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs">リーチ</span>
                         )}
                       </div>
                     </div>
-                    <div className="flex space-x-2">
-                      {player?.isConnected && (
-                        <span className="text-green-600 text-sm">●</span>
-                      )}
-                      {player?.isReach && (
-                        <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs">
-                          リーチ
-                        </span>
-                      )}
+                  </Reorder.Item>
+                ))}
+              </Reorder.Group>
+            ) : (
+              [0, 1, 2, 3].map((position) => {
+                  const player = gameState?.players.find((p) => p.position === position)
+                  return (
+                    <div
+                      key={position}
+                      className={`p-4 rounded-lg border-2 ${
+                        player ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center font-semibold text-gray-700">
+                            {getPositionName(position)}
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-800">{player?.name || '待機中...'}</div>
+                            {player && (
+                              <div className="text-sm text-gray-500">{player.points.toLocaleString()}点</div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex space-x-2">
+                          {player?.isConnected && <span className="text-green-600 text-sm">●</span>}
+                          {player?.isReach && (
+                            <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs">リーチ</span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              )
-            })}
+                  )
+                })
+            )}
           </div>
         </div>
 
