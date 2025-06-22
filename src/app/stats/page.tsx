@@ -38,11 +38,23 @@ interface PlayerStats {
 
 export default function StatsPage() {
   const router = useRouter()
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, refreshAuth } = useAuth()
   const [stats, setStats] = useState<PlayerStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [gameTypeFilter, setGameTypeFilter] = useState<string>('')
+
+  // Ensure auth state is loaded (important when hosting a new game)
+  useEffect(() => {
+    const ensureAuth = async () => {
+      if (!isAuthenticated) {
+        await refreshAuth()
+      }
+    }
+    // run once on mount
+    void ensureAuth()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const fetchStats = async (gameType: string = '') => {
     if (!user) return

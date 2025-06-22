@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+import { cookies } from 'next/headers'
 
 const createRoomSchema = z.object({
   hostPlayerName: z.string().min(1).max(20),
@@ -32,13 +33,29 @@ export async function POST(request: NextRequest) {
       })
     } while (existingGame)
 
-    // ホストプレイヤー作成
-    const hostPlayer = await prisma.player.create({
-      data: {
-        name: validatedData.hostPlayerName,
-        createdAt: new Date()
+    // 既存プレイヤーがいれば再利用
+    const cookieStore = await cookies()
+    const currentPlayerId = cookieStore.get('player_id')?.value
+
+    let hostPlayer = currentPlayerId
+      ? await prisma.player.findUnique({ where: { id: currentPlayerId } })
+      : null
+
+    if (hostPlayer) {
+      if (hostPlayer.name !== validatedData.hostPlayerName) {
+        hostPlayer = await prisma.player.update({
+          where: { id: hostPlayer.id },
+          data: { name: validatedData.hostPlayerName }
+        })
       }
-    })
+    } else {
+      hostPlayer = await prisma.player.create({
+        data: {
+          name: validatedData.hostPlayerName,
+          createdAt: new Date()
+        }
+      })
+    }
 
     // ゲーム設定作成
     const gameSettings = await prisma.gameSettings.create({
