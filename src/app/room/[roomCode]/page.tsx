@@ -3,7 +3,7 @@
 import { useAuth } from '@/contexts/AuthContext'
 import { useSocket } from '@/hooks/useSocket'
 import { useParams, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import { Reorder } from 'framer-motion'
 import { GripVertical } from 'lucide-react'
 
@@ -286,13 +286,16 @@ export default function RoomPage() {
   }
 
   const [seatOrder, setSeatOrder] = useState<GamePlayer[]>([])
+  const seatOrderRef = useRef<GamePlayer[]>([])
 
   useEffect(() => {
     if (gameState && gameState.players.length === 4) {
       const sorted = [...gameState.players].sort((a, b) => a.position - b.position)
       setSeatOrder(sorted)
+      seatOrderRef.current = sorted
     } else {
       setSeatOrder([])
+      seatOrderRef.current = []
     }
   }, [gameState])
 
@@ -320,10 +323,13 @@ export default function RoomPage() {
 
   const handleReorder = (newOrder: GamePlayer[]) => {
     setSeatOrder(newOrder)
+    seatOrderRef.current = newOrder
   }
 
   const handleReorderEnd = () => {
-    updateSeatOrderOnServer(seatOrder)
+    if (seatOrderRef.current.length === 4) {
+      updateSeatOrderOnServer(seatOrderRef.current)
+    }
   }
 
   const isHost = user && roomInfo && user.playerId === roomInfo.hostPlayer?.id
@@ -393,13 +399,14 @@ export default function RoomPage() {
           <h2 className="text-xl font-semibold text-gray-800 mb-4">プレイヤー</h2>
           <div className="grid gap-4">
             {seatOrder.length === 4 && isHost ? (
-              <Reorder.Group axis="y" values={seatOrder} onReorder={handleReorder} onDragEnd={handleReorderEnd} className="grid gap-4">
+              <Reorder.Group axis="y" values={seatOrder} onReorder={handleReorder} className="grid gap-4">
                 {seatOrder.map((player, idx) => (
                   <Reorder.Item
                     key={player.playerId}
                     value={player}
                     className="p-4 rounded-lg border-2 border-green-200 bg-green-50"
                     layout
+                    onDragEnd={handleReorderEnd}
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                   >
                     <div className="flex justify-between items-center">
