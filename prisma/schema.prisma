@@ -115,7 +115,6 @@ model GameSettings {
   // 特殊ルール
   hasTobi       Boolean  @default(true)   // トビ賞あり
   hasYakitori   Boolean  @default(false)  // 焼き鳥あり
-  oka           Int      @default(0)      // オカ（配給からのプラス分）
   tobiPenalty   Int      @default(20)     // トビ賞ペナルティ
   yakitoriPenalty Int    @default(20)     // 焼き鳥ペナルティ
 
