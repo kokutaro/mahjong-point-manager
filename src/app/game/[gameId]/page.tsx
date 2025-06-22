@@ -7,6 +7,7 @@ import GameResult from '@/components/GameResult'
 import PlayerStatus from '@/components/PlayerStatus'
 import PointAnimation from '@/components/PointAnimation'
 import ScoreInputForm from '@/components/ScoreInputForm'
+import RyukyokuForm from '@/components/RyukyokuForm'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSocket } from '@/hooks/useSocket'
 import { useParams, useRouter } from 'next/navigation'
@@ -43,6 +44,7 @@ export default function GamePage() {
   const [showScoreInput, setShowScoreInput] = useState(false)
   const [activeAction, setActiveAction] = useState<'tsumo' | 'ron' | null>(null)
   const [selectedLoserId, setSelectedLoserId] = useState<string | null>(null)
+  const [showRyukyokuForm, setShowRyukyokuForm] = useState(false)
   const [showPointAnimation, setShowPointAnimation] = useState(false)
   const [pointChanges, setPointChanges] = useState<Array<{ playerId: string; change: number; newPoints: number }>>([])
   const [previousGameState, setPreviousGameState] = useState<GameState | null>(null)
@@ -436,7 +438,11 @@ export default function GamePage() {
     }
   }
 
-  const handleRyukyoku = async () => {
+  const openRyukyokuDialog = () => {
+    setShowRyukyokuForm(true)
+  }
+
+  const handleRyukyokuSubmit = async (tenpaiPlayers: string[]) => {
     if (!socket) return
 
     try {
@@ -445,7 +451,7 @@ export default function GamePage() {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ reason: '流局' }),
+        body: JSON.stringify({ reason: '流局', tenpaiPlayers }),
         credentials: 'include'
       })
 
@@ -453,6 +459,8 @@ export default function GamePage() {
         const data = await response.json()
         throw new Error(data.error?.message || '流局処理に失敗しました')
       }
+
+      setShowRyukyokuForm(false)
 
       // 流局処理成功後、念のため最新状態を再取得
       setTimeout(() => fetchGameState(), 100)
@@ -719,7 +727,7 @@ export default function GamePage() {
                 リーチ
               </button>
               <button
-                onClick={handleRyukyoku}
+                onClick={openRyukyokuDialog}
                 className="bg-gray-600 text-white py-4 px-3 sm:py-3 sm:px-4 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors font-semibold text-lg sm:text-base"
               >
                 流局
@@ -752,6 +760,14 @@ export default function GamePage() {
               setActiveAction(null)
               setSelectedLoserId(null)
             }}
+          />
+        )}
+
+        {showRyukyokuForm && (
+          <RyukyokuForm
+            players={gameState.players}
+            onSubmit={handleRyukyokuSubmit}
+            onCancel={() => setShowRyukyokuForm(false)}
           />
         )}
 
