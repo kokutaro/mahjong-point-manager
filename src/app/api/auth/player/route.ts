@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { cookies } from 'next/headers'
+import { NextRequest, NextResponse } from 'next/server'
 import { v4 as uuidv4 } from 'uuid'
+import { z } from 'zod'
 
 const playerAuthSchema = z.object({
   name: z.string().min(1).max(20),
@@ -53,15 +53,50 @@ export async function POST(request: NextRequest) {
     // Cookieにセッション情報を設定
     const cookieStore = await cookies()
     
-    // ネットワークアクセス対応のクッキー設定
+    // ブラウザ対応のクッキー設定（Safari/iPhone Chrome対応）
+    const userAgent = request.headers.get('user-agent') || ''
+    const isSafari = userAgent.includes('Safari') && !userAgent.includes('Chrome')
+    const isMobile = userAgent.includes('Mobile') || userAgent.includes('iPhone') || userAgent.includes('iPad')
+    
+    console.log('Browser detection:', { userAgent, isSafari, isMobile })
+    
+    // プロトコル検出（HTTPSかHTTPか）
+    const protocol = request.headers.get('x-forwarded-proto') || 
+                    (request.headers.get('host')?.includes('localhost') ? 'http' : 'http')
+    const isHttps = protocol === 'https'
+    
+    console.log('Protocol detection:', { protocol, isHttps })
+    
+    // SameSiteとSecureの組み合わせを適切に設定
+    let sameSiteSetting: 'strict' | 'lax' | 'none' = 'lax'
+    let secureSetting = false
+    
+    if (isSafari || isMobile) {
+      // Safari/モバイルの場合
+      if (isHttps) {
+        // HTTPS環境ではSameSite=noneとSecure=trueを使用
+        sameSiteSetting = 'none'
+        secureSetting = true
+      } else {
+        // HTTP環境では最も緩い設定（sameSiteを設定しない）
+        sameSiteSetting = 'lax'
+        secureSetting = false
+      }
+    } else {
+      // その他のブラウザ（Chrome, Firefox等）
+      sameSiteSetting = 'lax'
+      secureSetting = isHttps
+    }
+    
     const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'lax' as const : 'strict' as const,
+      secure: secureSetting,
+      sameSite: sameSiteSetting,
       expires: expiresAt,
       path: '/',
-      // ドメイン設定はしない（自動的に現在のホストが使用される）
     }
+    
+    console.log('Cookie options:', cookieOptions)
     
     cookieStore.set('session_token', sessionToken, cookieOptions)
     cookieStore.set('player_id', player.id, cookieOptions)
@@ -73,6 +108,12 @@ export async function POST(request: NextRequest) {
         name: player.name,
         deviceId: player.deviceId,
         sessionToken: sessionToken
+      },
+      // ブラウザ情報をクライアントに送信（デバッグ用）
+      debug: {
+        browser: { isSafari, isMobile },
+        cookieOptions: cookieOptions,
+        protocol: protocol
       }
     })
 
@@ -102,12 +143,25 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const cookieStore = await cookies()
-    const playerId = cookieStore.get('player_id')?.value
+    
+    // クッキーまたはヘッダーからプレイヤーIDを取得
+    let playerId = cookieStore.get('player_id')?.value
+    
+    // クッキーがない場合、ヘッダーから取得（Safari/iPhone対応）
+    if (!playerId) {
+      playerId = request.headers.get('x-player-id') || undefined
+      console.log('📱 Using header-based auth, playerId:', playerId)
+    }
 
     if (!playerId) {
       return NextResponse.json({
         success: false,
-        error: { message: '認証が必要です' }
+        error: { message: '認証が必要です' },
+        debug: {
+          cookiePlayerId: cookieStore.get('player_id')?.value,
+          headerPlayerId: request.headers.get('x-player-id'),
+          userAgent: request.headers.get('user-agent')
+        }
       }, { status: 401 })
     }
 

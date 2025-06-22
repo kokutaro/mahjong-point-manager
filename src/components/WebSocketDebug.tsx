@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { AuthFallback } from '@/lib/auth-fallback'
 
 interface WebSocketStatus {
   websocketInitialized: boolean
@@ -29,6 +30,7 @@ export default function WebSocketDebug({ show = false }: DebugProps) {
   const [status, setStatus] = useState<WebSocketStatus | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>('')
+  const [browserInfo, setBrowserInfo] = useState<any>(null)
 
   const checkWebSocketStatus = async () => {
     setLoading(true)
@@ -53,6 +55,11 @@ export default function WebSocketDebug({ show = false }: DebugProps) {
   useEffect(() => {
     if (show) {
       checkWebSocketStatus()
+      // ブラウザ情報を取得
+      setBrowserInfo({
+        ...AuthFallback.getBrowserInfo(),
+        fallbackSession: AuthFallback.getSession()
+      })
     }
   }, [show])
 
@@ -124,6 +131,22 @@ export default function WebSocketDebug({ show = false }: DebugProps) {
           <div className="text-xs text-gray-500 mt-2">
             Last updated: {status.timestamp}
           </div>
+        </div>
+      )}
+
+      {browserInfo && (
+        <div className="mt-4 p-2 bg-blue-50 rounded text-xs">
+          <strong>ブラウザ・認証情報:</strong>
+          <ul className="ml-2 mt-1">
+            <li>Safari: {browserInfo.isSafari ? '✅' : '❌'}</li>
+            <li>Mobile: {browserInfo.isMobile ? '✅' : '❌'}</li>
+            <li>iOS: {browserInfo.isIOS ? '✅' : '❌'}</li>
+            <li>Cookie Support: {browserInfo.cookieSupported ? '✅' : '❌'}</li>
+            <li>Fallback Session: {browserInfo.fallbackSession ? '✅' : '❌'}</li>
+            {browserInfo.fallbackSession && (
+              <li>Session Player: {browserInfo.fallbackSession.playerId}</li>
+            )}
+          </ul>
         </div>
       )}
     </div>

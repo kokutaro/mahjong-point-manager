@@ -1,6 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { AuthFallback, fetchWithAuth } from '@/lib/auth-fallback'
 
 interface AuthUser {
   playerId: string
@@ -38,19 +39,42 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const checkExistingSession = async () => {
     try {
-      const response = await fetch('/api/auth/player', {
-        method: 'GET',
-        credentials: 'include'
+      // ブラウザ情報を取得
+      const browserInfo = AuthFallback.getBrowserInfo()
+      console.log('🔍 Browser info:', browserInfo)
+      
+      // フォールバック機能でセッションをチェック
+      const fallbackSession = AuthFallback.getSession()
+      console.log('🔍 Fallback session:', fallbackSession)
+      
+      // 認証対応のfetchを使用
+      const response = await fetchWithAuth('/api/auth/player', {
+        method: 'GET'
       })
 
       if (response.ok) {
         const data = await response.json()
+        console.log('🔍 Auth response:', data)
+        
         if (data.success) {
           setUser(data.data)
+          
+          // Safari/モバイルの場合、LocalStorageにも保存
+          if (!browserInfo.cookieSupported || browserInfo.isSafari || browserInfo.isMobile) {
+            AuthFallback.setSession({
+              playerId: data.data.playerId,
+              sessionToken: data.data.sessionToken || fallbackSession?.sessionToken || '',
+              expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24時間
+            })
+          }
         }
+      } else {
+        // 認証失敗時はフォールバックセッションをクリア
+        AuthFallback.clearSession()
       }
     } catch (error) {
       console.error('Session check failed:', error)
+      AuthFallback.clearSession()
     } finally {
       setIsLoading(false)
     }
@@ -90,6 +114,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (data.success) {
         setUser(data.data)
+        
+        console.log('✅ Login successful:', data)
+        
+        // Safari/モバイルの場合、LocalStorageにセッション保存
+        const browserInfo = AuthFallback.getBrowserInfo()
+        if (!browserInfo.cookieSupported || browserInfo.isSafari || browserInfo.isMobile) {
+          AuthFallback.setSession({
+            playerId: data.data.playerId,
+            sessionToken: data.data.sessionToken,
+            expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24時間
+          })
+          console.log('📱 Session saved to localStorage for browser compatibility')
+        }
+        
         // デバイスIDを更新
         localStorage.setItem('mahjong_device_id', data.data.deviceId)
       } else {
@@ -109,14 +147,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setIsLoading(true)
       setError(null)
 
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include'
+      // フォールバック認証を使用してログアウト
+      await fetchWithAuth('/api/auth/logout', {
+        method: 'POST'
       })
 
+      // LocalStorageのセッションもクリア
+      AuthFallback.clearSession()
       setUser(null)
+      
+      console.log('✅ Logout successful')
     } catch (error) {
       console.error('Logout failed:', error)
+      // エラーでもローカルセッションはクリア
+      AuthFallback.clearSession()
+      setUser(null)
       setError('ログアウトに失敗しました')
     } finally {
       setIsLoading(false)
