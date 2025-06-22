@@ -13,9 +13,10 @@ interface GameState {
 interface GameInfoProps {
   gameState: GameState
   isConnected: boolean
+  gameType: 'TONPUU' | 'HANCHAN'
 }
 
-export default function GameInfo({ gameState, isConnected }: GameInfoProps) {
+export default function GameInfo({ gameState, isConnected, gameType }: GameInfoProps) {
   const getRoundName = (round: number) => {
     if (round <= 4) {
       const roundNames = ['東一局', '東二局', '東三局', '東四局']
@@ -59,6 +60,8 @@ export default function GameInfo({ gameState, isConnected }: GameInfoProps) {
       default: return 'bg-gray-100 text-gray-800'
     }
   }
+
+  const maxRound = gameType === 'TONPUU' ? 4 : 8
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-3 sm:p-6 mb-6">
@@ -106,16 +109,16 @@ export default function GameInfo({ gameState, isConnected }: GameInfoProps) {
 
       {/* 進行状況バー */}
       <div className="mb-3 sm:mb-4">
-        <div className="flex justify-between text-xs text-gray-500 mb-1">
-          <span>進行状況</span>
-          <span>{gameState.currentRound}/16局</span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
-          <div 
-            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-            style={{ width: `${Math.min((gameState.currentRound / 16) * 100, 100)}%` }}
-          />
-        </div>
+      <div className="flex justify-between text-xs text-gray-500 mb-1">
+        <span>進行状況</span>
+          <span>{gameState.currentRound}/{maxRound}局</span>
+      </div>
+      <div className="w-full bg-gray-200 rounded-full h-2">
+        <div
+          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+          style={{ width: `${Math.min((gameState.currentRound / maxRound) * 100, 100)}%` }}
+        />
+      </div>
       </div>
 
       {/* 詳細情報 */}
@@ -177,7 +180,7 @@ export default function GameInfo({ gameState, isConnected }: GameInfoProps) {
             <div className="flex justify-between">
               <span>オーラス条件</span>
               <span>
-                {gameState.currentRound >= 8 ? 'オーラス圏内' : '通常進行'}
+                {gameState.currentRound >= maxRound ? 'オーラス圏内' : '通常進行'}
               </span>
             </div>
             {gameState.players.some(p => p.points <= 0) && (
