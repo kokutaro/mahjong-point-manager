@@ -279,7 +279,7 @@ export default function GamePage() {
           players: gameState.players.map(p => ({ name: p.name, points: p.points }))
         } : null)
         console.log('🔌 New gameState from WebSocket:', data.gameState ? {
-          players: data.gameState.players.map(p => ({ name: p.name, points: p.points }))
+          players: data.gameState.players.map((p: any) => ({ name: p.name, points: p.points }))
         } : null)
         
         if (data.gameState) {

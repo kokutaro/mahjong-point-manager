@@ -180,6 +180,9 @@ export default function RoomPage() {
       }
 
       if (data.success) {
+        // Update auth to sync new player_id cookie
+        await refreshAuth()
+
         // ルーム情報を再取得
         await fetchRoomInfo()
       }

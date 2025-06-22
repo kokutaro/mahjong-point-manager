@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 
 export default function CreateRoomPage() {
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, refreshAuth } = useAuth()
   const [gameType, setGameType] = useState<'TONPUU' | 'HANCHAN'>('HANCHAN')
   const [initialPoints, setInitialPoints] = useState(25000)
   const [hasTobi, setHasTobi] = useState(true)
@@ -50,6 +50,8 @@ export default function CreateRoomPage() {
       }
 
       if (data.success) {
+        // Refresh auth so the new player_id cookie is reflected in context
+        await refreshAuth()
         router.push(`/room/${data.data.roomCode}` as any)
       }
     } catch (error) {
