@@ -481,7 +481,7 @@ export class PointManager {
         }
       } else if (typeof game.settings.uma === 'object') {
         // Prisma JSON型の場合
-        umaArray = game.settings.uma as number[]
+        umaArray = game.settings.uma as unknown as number[]
       }
     }
 
