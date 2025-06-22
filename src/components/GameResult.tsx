@@ -8,7 +8,6 @@ interface PlayerResult {
   finalPoints: number
   rank: number
   uma: number
-  oka: number
   settlement: number
 }
 
@@ -18,6 +17,7 @@ interface GameResultData {
   gameType: 'TONPUU' | 'HANCHAN'
   endReason: string
   endedAt: string
+  basePoints: number
 }
 
 interface GameResultProps {
@@ -180,9 +180,6 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
                     ウマ
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    オカ
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     精算
                   </th>
                 </tr>
@@ -209,11 +206,6 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
                     <td className="px-6 py-4 whitespace-nowrap text-right">
                       <div className={`text-sm font-mono ${result.uma >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {formatPoints(result.uma)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className={`text-sm font-mono ${result.oka >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {formatPoints(result.oka)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right">
@@ -287,13 +279,6 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
                     </span>
                   </div>
                   
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">オカ:</span>
-                    <span className={`font-mono ${result.oka >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatPoints(result.oka)}
-                    </span>
-                  </div>
-                  
                   <hr className="my-2" />
                   
                   <div className="flex justify-between text-sm text-gray-500">
@@ -306,19 +291,18 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
                           const othersTotal = resultData.results
                             .filter(r => r.rank !== 1)
                             .reduce((sum, r) => {
-                              const diff = r.finalPoints - 30000
+                              const diff = r.finalPoints - (resultData.basePoints || 30000)
                               return sum + (diff >= 0 ? Math.floor(diff / 1000) : Math.ceil(diff / 1000))
                             }, 0)
                           roundedDiff = -othersTotal
                         } else {
                           // 1位以外の場合は通常計算
-                          const diff = result.finalPoints - 30000
+                          const diff = result.finalPoints - (resultData.basePoints || 30000)
                           roundedDiff = diff >= 0 ? Math.floor(diff / 1000) : Math.ceil(diff / 1000)
                         }
                         
                         const uma = result.uma
-                        const oka = result.oka
-                        return `${roundedDiff > 0 ? '+' : ''}${roundedDiff} + ${uma > 0 ? '+' : ''}${uma} + ${oka > 0 ? '+' : ''}${oka}`
+                        return `${roundedDiff > 0 ? '+' : ''}${roundedDiff} + ${uma > 0 ? '+' : ''}${uma}`
                       })()}
                     </span>
                   </div>

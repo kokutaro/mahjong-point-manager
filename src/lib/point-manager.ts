@@ -451,8 +451,7 @@ export class PointManager {
         settings: game.settings ? {
           initialPoints: game.settings.initialPoints,
           basePoints: (game.settings as any).basePoints,
-          uma: game.settings.uma,
-          oka: game.settings.oka
+          uma: game.settings.uma
         } : null
       } : null,
       participants: participants.length 
@@ -469,8 +468,7 @@ export class PointManager {
       const defaultSettings = {
         initialPoints: 25000,
         basePoints: 30000,
-        uma: [20, 10, -10, -20],
-        oka: 0
+        uma: [20, 10, -10, -20]
       }
       
       console.log('🏁 Using default settings:', defaultSettings)
@@ -500,8 +498,7 @@ export class PointManager {
     const settings = {
       initialPoints: game.settings.initialPoints || 25000,
       basePoints: (game.settings as any).basePoints || 30000,
-      uma: umaArray,
-      oka: game.settings.oka || 0
+      uma: umaArray
     }
     
     console.log('🏁 Processed settings:', settings)
@@ -517,7 +514,6 @@ export class PointManager {
     initialPoints: number
     basePoints: number
     uma: number[]
-    oka: number
   }) {
     console.log('🏁 Starting settlement calculation with settings:', settings)
     
@@ -555,15 +551,14 @@ export class PointManager {
       }
 
       const uma = settings.uma[index] || 0
-      const oka = rank === 1 ? settings.oka : 0
       
-      // 1位以外の精算計算：精算点数 + ウマ + オカ
+      // 1位以外の精算計算：精算点数 + ウマ
       let settlement: number
       if (rank === 1) {
         // 1位は後で調整
         settlement = 0
       } else {
-        settlement = roundedDiff + uma + oka
+        settlement = roundedDiff + uma
       }
 
       return {
@@ -573,7 +568,6 @@ export class PointManager {
         pointDiff,
         roundedDiff,
         uma,
-        oka,
         settlement
       }
     })
@@ -589,13 +583,12 @@ export class PointManager {
     resultsWithDiff[0].roundedDiff = firstPlaceRoundedDiff
     
     const firstPlaceUma = resultsWithDiff[0].uma
-    const firstPlaceOka = resultsWithDiff[0].oka
-    resultsWithDiff[0].settlement = firstPlaceRoundedDiff + firstPlaceUma + firstPlaceOka
+    resultsWithDiff[0].settlement = firstPlaceRoundedDiff + firstPlaceUma
     
     console.log(`🏁 Others rounded diff total: ${othersRoundedDiffTotal}`)
     console.log(`🏁 First place rounded diff: ${firstPlaceRoundedDiff} (= -${othersRoundedDiffTotal})`)
-    console.log(`🏁 First place uma: ${firstPlaceUma}, oka: ${firstPlaceOka}`)
-    console.log(`🏁 First place settlement: ${firstPlaceRoundedDiff} + ${firstPlaceUma} + ${firstPlaceOka} = ${resultsWithDiff[0].settlement}`)
+    console.log(`🏁 First place uma: ${firstPlaceUma}`)
+    console.log(`🏁 First place settlement: ${firstPlaceRoundedDiff} + ${firstPlaceUma} = ${resultsWithDiff[0].settlement}`)
     
     // 最終チェック：ゼロサム確認
     const finalTotal = resultsWithDiff.reduce((sum, r) => sum + r.settlement, 0)
@@ -621,7 +614,6 @@ export class PointManager {
             finalPoints: result.finalPoints,
             finalRank: result.rank,
             uma: result.uma,
-            oka: result.oka,
             settlement: result.settlement
           }
         })
