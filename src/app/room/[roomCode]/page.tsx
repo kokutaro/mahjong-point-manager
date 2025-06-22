@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSocket } from '@/hooks/useSocket'
+import { useParams, useRouter } from 'next/navigation'
+import { useCallback, useEffect, useState } from 'react'
 
 interface GamePlayer {
   playerId: string
@@ -436,25 +436,6 @@ export default function RoomPage() {
             >
               閉じる
             </button>
-          </div>
-        )}
-
-        {/* デバッグ情報 */}
-        {process.env.NODE_ENV === 'development' && roomInfo && user && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <div className="text-blue-800 text-xs space-y-1">
-              <div><strong>Debug Info:</strong></div>
-              <div>Current User ID: <code>{user.playerId}</code></div>
-              <div>Current User Name: <code>{user.name}</code></div>
-              <div>WebSocket Connected: <code>{isConnected ? 'Yes' : 'No'}</code></div>
-              <div>Players in room: <code>{JSON.stringify(roomInfo.players?.map((p: any) => ({ id: p.playerId, name: p.name })))}</code></div>
-              <div>Is Participant: <code>{roomInfo.players?.some((p: any) => p.playerId === user.playerId) ? 'Yes' : 'No'}</code></div>
-              <div>Same name exists: <code>{roomInfo.players?.some((p: any) => p.name === user.name) ? 'Yes' : 'No'}</code></div>
-              <div>Is Host: <code>{isHost ? 'Yes' : 'No'}</code></div>
-              <div>Can Start Game: <code>{canStartGame ? 'Yes' : 'No'}</code></div>
-              <div>Room Status: <code>{roomInfo.status}</code></div>
-              <div>Room Code: <code>{roomCode}</code></div>
-            </div>
           </div>
         )}
 
