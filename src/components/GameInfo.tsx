@@ -1,5 +1,6 @@
 'use client'
 
+import { memo, useMemo, useCallback } from 'react'
 import { getPositionName } from '@/lib/utils'
 
 interface GameState {
@@ -18,8 +19,10 @@ interface GameInfoProps {
   gameType: 'TONPUU' | 'HANCHAN'
 }
 
-export default function GameInfo({ gameState, isConnected, gameType }: GameInfoProps) {
-  const getRoundName = (round: number) => {
+const GameInfo = memo(function GameInfo({ gameState, isConnected, gameType }: GameInfoProps) {
+  // Memoized round name calculation
+  const roundName = useMemo(() => {
+    const round = gameState.currentRound
     if (round <= 4) {
       const roundNames = ['東一局', '東二局', '東三局', '東四局']
       return roundNames[round - 1] || `東${round}局`
@@ -33,44 +36,62 @@ export default function GameInfo({ gameState, isConnected, gameType }: GameInfoP
       const roundNames = ['北一局', '北二局', '北三局', '北四局']
       return roundNames[round - 13] || `北${round - 12}局`
     }
-  }
+  }, [gameState.currentRound])
 
-
-  const getDealerName = () => {
+  // Memoized dealer information
+  const dealerInfo = useMemo(() => {
     const dealer = gameState.players.find(p => p.position === gameState.currentOya)
-    return dealer ? dealer.name : '不明'
-  }
-
-  const getGamePhaseText = (phase: string) => {
-    switch (phase) {
-      case 'waiting': return '待機中'
-      case 'playing': return '対局中'
-      case 'finished': return '終了'
-      default: return phase
+    return {
+      name: dealer ? dealer.name : '不明',
+      position: getPositionName(gameState.currentOya, gameState.currentOya)
     }
-  }
+  }, [gameState.players, gameState.currentOya])
 
-  const getGamePhaseColor = (phase: string) => {
+  // Memoized game phase calculation
+  const gamePhaseInfo = useMemo(() => {
+    const phaseText = (() => {
+      switch (gameState.gamePhase) {
+        case 'waiting': return '待機中'
+        case 'playing': return '対局中'
+        case 'finished': return '終了'
+        default: return gameState.gamePhase
+      }
+    })()
+
+    const maxRound = gameType === 'TONPUU' ? 4 : 8
+    const isOorasu = (gameType === 'TONPUU' && gameState.currentRound === 4) ||
+                     (gameType === 'HANCHAN' && gameState.currentRound === 8)
+    
+    return {
+      text: phaseText,
+      maxRound,
+      isOorasu,
+      progress: Math.min((gameState.currentRound / maxRound) * 100, 100)
+    }
+  }, [gameState.gamePhase, gameState.currentRound, gameType])
+
+  // Memoized reach players count
+  const reachPlayersCount = useMemo(() => {
+    return gameState.players.filter(p => p.isReach).length
+  }, [gameState.players])
+
+  // Memoized color calculation
+  const getGamePhaseColor = useCallback((phase: string) => {
     switch (phase) {
       case 'waiting': return 'bg-yellow-100 text-yellow-800'
       case 'playing': return 'bg-green-100 text-green-800'
       case 'finished': return 'bg-gray-100 text-gray-800'
       default: return 'bg-gray-100 text-gray-800'
     }
-  }
-
-  const maxRound = gameType === 'TONPUU' ? 4 : 8
-  const isOorasu =
-    (gameType === 'TONPUU' && gameState.currentRound === 4) ||
-    (gameType === 'HANCHAN' && gameState.currentRound === 8)
+  }, [])
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-3 sm:p-6 mb-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-4">
         <div className="w-full sm:w-auto">
           <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">
-            {getRoundName(gameState.currentRound)}
-            {isOorasu && (
+            {roundName}
+            {gamePhaseInfo.isOorasu && (
               <span className="ml-2 text-red-600 font-semibold">オーラス</span>
             )}
             {gameState.honba > 0 && (
@@ -81,7 +102,7 @@ export default function GameInfo({ gameState, isConnected, gameType }: GameInfoP
           </h1>
           <div className="flex items-center flex-wrap gap-2 sm:space-x-4 sm:gap-0 text-xs sm:text-sm text-gray-600">
             <span>
-              親: {getPositionName(gameState.currentOya, gameState.currentOya)} {getDealerName()}
+              親: {dealerInfo.position} {dealerInfo.name}
             </span>
             {gameState.kyotaku > 0 && (
               <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs">
@@ -106,7 +127,7 @@ export default function GameInfo({ gameState, isConnected, gameType }: GameInfoP
           <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs sm:text-sm font-medium ${
             getGamePhaseColor(gameState.gamePhase)
           }`}>
-            {getGamePhaseText(gameState.gamePhase)}
+            {gamePhaseInfo.text}
           </div>
         </div>
       </div>
@@ -115,12 +136,12 @@ export default function GameInfo({ gameState, isConnected, gameType }: GameInfoP
       <div className="mb-3 sm:mb-4">
       <div className="flex justify-between text-xs text-gray-500 mb-1">
         <span>進行状況</span>
-          <span>{gameState.currentRound}/{maxRound}局</span>
+          <span>{gameState.currentRound}/{gamePhaseInfo.maxRound}局</span>
       </div>
       <div className="w-full bg-gray-200 rounded-full h-2">
         <div
           className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-          style={{ width: `${Math.min((gameState.currentRound / maxRound) * 100, 100)}%` }}
+          style={{ width: `${gamePhaseInfo.progress}%` }}
         />
       </div>
       </div>
@@ -130,8 +151,8 @@ export default function GameInfo({ gameState, isConnected, gameType }: GameInfoP
         <div className="bg-gray-50 rounded-lg p-2 sm:p-3 text-center">
           <div className="text-gray-600 text-xs">現在局</div>
           <div className="font-semibold text-gray-800 text-xs sm:text-sm">
-            {getRoundName(gameState.currentRound)}
-            {isOorasu && (
+            {roundName}
+            {gamePhaseInfo.isOorasu && (
               <span className="ml-1 text-red-600 font-semibold">オーラス</span>
             )}
           </div>
@@ -140,7 +161,7 @@ export default function GameInfo({ gameState, isConnected, gameType }: GameInfoP
         <div className="bg-gray-50 rounded-lg p-2 sm:p-3 text-center">
           <div className="text-gray-600 text-xs">親</div>
           <div className="font-semibold text-gray-800">
-            {getPositionName(gameState.currentOya, gameState.currentOya)}
+            {dealerInfo.position}
           </div>
         </div>
         
@@ -187,7 +208,7 @@ export default function GameInfo({ gameState, isConnected, gameType }: GameInfoP
             <div className="flex justify-between">
               <span>オーラス条件</span>
               <span>
-                {gameState.currentRound >= maxRound ? 'オーラス圏内' : '通常進行'}
+                {gameState.currentRound >= gamePhaseInfo.maxRound ? 'オーラス圏内' : '通常進行'}
               </span>
             </div>
             {gameState.players.some(p => p.points <= 0) && (
@@ -200,4 +221,6 @@ export default function GameInfo({ gameState, isConnected, gameType }: GameInfoP
       )}
     </div>
   )
-}
+})
+
+export default GameInfo

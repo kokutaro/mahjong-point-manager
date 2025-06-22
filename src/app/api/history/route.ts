@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+// Enable caching for GET requests
+export const revalidate = 60 // Cache for 60 seconds
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -104,7 +107,7 @@ export async function GET(request: NextRequest) {
       }
     }))
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: {
         games: formattedGames,
@@ -116,6 +119,11 @@ export async function GET(request: NextRequest) {
         }
       }
     })
+
+    // Add cache headers for better performance
+    response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120')
+    
+    return response
 
   } catch (error) {
     console.error('History API error:', error)

@@ -1,5 +1,6 @@
 'use client'
 
+import { memo, useMemo, useCallback } from 'react'
 import { getPositionName } from '@/lib/utils'
 
 interface GamePlayer {
@@ -28,14 +29,15 @@ interface PlayerStatusProps {
   canDeclareReach: (player: GamePlayer) => boolean
 }
 
-export default function PlayerStatus({ 
+const PlayerStatus = memo(function PlayerStatus({ 
   gameState, 
   currentPlayer, 
   onReach, 
   canDeclareReach 
 }: PlayerStatusProps) {
 
-  const getPositionColor = (position: number) => {
+  // Memoized color calculation functions
+  const getPositionColor = useCallback((position: number) => {
     const colors = [
       'bg-red-100 text-red-800',    // 東
       'bg-green-100 text-green-800', // 南
@@ -43,9 +45,9 @@ export default function PlayerStatus({
       'bg-yellow-100 text-yellow-800' // 北
     ]
     return colors[position] || 'bg-gray-100 text-gray-800'
-  }
+  }, [])
 
-  const getRankColor = (rank: number) => {
+  const getRankColor = useCallback((rank: number) => {
     const colors = [
       'border-yellow-400 bg-yellow-50', // 1位
       'border-gray-400 bg-gray-50',     // 2位
@@ -53,19 +55,22 @@ export default function PlayerStatus({
       'border-red-400 bg-red-50'        // 4位
     ]
     return colors[rank - 1] || 'border-gray-300 bg-white'
-  }
+  }, [])
 
-  // プレイヤーを点数順でソート
-  const sortedPlayers = [...gameState.players].sort((a, b) => b.points - a.points)
-  
-  // 順位を計算
-  const playersWithRank = sortedPlayers.map((player, index) => ({
-    ...player,
-    rank: index + 1
-  }))
+  // Memoized player processing for performance
+  const orderedPlayers = useMemo(() => {
+    // プレイヤーを点数順でソート
+    const sortedPlayers = [...gameState.players].sort((a, b) => b.points - a.points)
+    
+    // 順位を計算
+    const playersWithRank = sortedPlayers.map((player, index) => ({
+      ...player,
+      rank: index + 1
+    }))
 
-  // 元の座席順に戻す
-  const orderedPlayers = playersWithRank.sort((a, b) => a.position - b.position)
+    // 元の座席順に戻す
+    return playersWithRank.sort((a, b) => a.position - b.position)
+  }, [gameState.players])
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-3 sm:p-6 mb-6">
@@ -297,4 +302,6 @@ export default function PlayerStatus({
       </div>
     </div>
   )
-}
+})
+
+export default PlayerStatus

@@ -36,22 +36,22 @@ export default function ErrorDisplay({
   ) : null
 
   useEffect(() => {
-    if (errorInfo) {
+    if (error) {
       setIsVisible(true)
       
-      // 自動非表示の設定
-      if (errorInfo.autoHide) {
+      // 自動非表示の設定（stringの場合はautoHideなし）
+      if (typeof error !== 'string' && error.autoHide) {
         const timer = setTimeout(() => {
           setIsVisible(false)
           onDismiss?.()
-        }, errorInfo.duration || 5000)
+        }, error.duration || 5000)
         
         return () => clearTimeout(timer)
       }
     } else {
       setIsVisible(false)
     }
-  }, [errorInfo, onDismiss])
+  }, [error, onDismiss])
 
   if (!errorInfo || !isVisible) return null
 

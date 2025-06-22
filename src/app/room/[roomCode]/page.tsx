@@ -1,6 +1,6 @@
 'use client'
 
-import { QRCodeModal } from '@/components/QRCodeModal'
+import QRCodeModal from '@/components/QRCodeModal'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSocket } from '@/hooks/useSocket'
 import { getPositionName } from '@/lib/utils'
@@ -402,7 +402,7 @@ export default function RoomPage() {
                   <button onClick={() => setShowQrModal(true)} aria-label="Show QR">
                     <QrCode className="w-6 h-6 text-gray-700" />
                   </button>
-                  <QRCodeModal opened={showQrModal} onClose={() => setShowQrModal(false)} url={joinUrl} />
+                  <QRCodeModal isOpen={showQrModal} onClose={() => setShowQrModal(false)} qrCodeData={joinUrl} />
                 </>
               )}
               <div className="text-right">

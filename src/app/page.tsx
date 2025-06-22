@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button, TextInput, Paper, Title, Text } from '@mantine/core'
 
-export default function HomePage() {
+function HomePageContent() {
   const { user, isAuthenticated, login, isLoading } = useAuth()
   const [playerName, setPlayerName] = useState('')
   const [roomCode, setRoomCode] = useState('')
@@ -17,7 +17,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (isAuthenticated && redirectTo) {
-      router.replace(redirectTo)
+      router.replace(redirectTo as any)
     }
   }, [isAuthenticated, redirectTo, router])
 
@@ -32,7 +32,7 @@ export default function HomePage() {
       await login(playerName.trim())
       setError('')
       if (redirectTo) {
-        router.replace(redirectTo)
+        router.replace(redirectTo as any)
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'ログインに失敗しました')
@@ -236,5 +236,15 @@ export default function HomePage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
+      <div className="text-xl text-gray-600">読み込み中...</div>
+    </div>}>
+      <HomePageContent />
+    </Suspense>
   )
 }

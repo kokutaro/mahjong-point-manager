@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+// Enable caching for player statistics
+export const revalidate = 120 // Cache for 2 minutes
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ playerId: string }> }
@@ -171,7 +174,7 @@ export async function GET(
         }
       })
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: {
         playerId,
@@ -187,6 +190,11 @@ export async function GET(
         monthlyStats
       }
     })
+
+    // Add cache headers for player statistics
+    response.headers.set('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=240')
+    
+    return response
 
   } catch (error) {
     console.error('Stats API error:', error)

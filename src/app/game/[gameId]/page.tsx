@@ -1,16 +1,16 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import ErrorDisplay, { ErrorInfo } from '@/components/ErrorDisplay'
+import GameEndScreen from '@/components/GameEndScreen'
+import GameInfo from '@/components/GameInfo'
+import GameResult from '@/components/GameResult'
+import PlayerStatus from '@/components/PlayerStatus'
+import PointAnimation from '@/components/PointAnimation'
+import ScoreInputForm from '@/components/ScoreInputForm'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSocket } from '@/hooks/useSocket'
-import ScoreInputForm from '@/components/ScoreInputForm'
-import PlayerStatus from '@/components/PlayerStatus'
-import GameInfo from '@/components/GameInfo'
-import PointAnimation from '@/components/PointAnimation'
-import GameResult from '@/components/GameResult'
-import GameEndScreen from '@/components/GameEndScreen'
-import ErrorDisplay, { ErrorInfo } from '@/components/ErrorDisplay'
+import { useParams, useRouter } from 'next/navigation'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface GamePlayer {
   playerId: string
@@ -66,8 +66,8 @@ export default function GamePage() {
       previousGameStateRef: previousGameStateRef.current ? {
         players: previousGameStateRef.current.players.map(p => ({ name: p.name, points: p.points }))
       } : null,
-      currentGameState: gameState ? {
-        players: gameState.players.map(p => ({ name: p.name, points: p.points }))
+      currentGameStateRef: gameStateRef.current ? {
+        players: gameStateRef.current.players.map(p => ({ name: p.name, points: p.points }))
       } : null
     })
 
@@ -147,7 +147,7 @@ export default function GamePage() {
       setGameState(newGameState)
     }
     console.log('=== triggerPointAnimation END ===')
-  }, [])
+  }, []) // gameStateを依存配列から削除してrefを使用
 
   const onAnimationComplete = useCallback(() => {
     console.log('Animation completed, applying final state')
@@ -247,13 +247,13 @@ export default function GamePage() {
     } finally {
       setIsLoading(false)
     }
-  }, [gameId])
+  }, [gameId, triggerPointAnimation]) // triggerPointAnimationを依存配列から削除
 
   useEffect(() => {
     if (socket && user) {
       console.log('🔧 Setting up WebSocket listeners with socket ID:', socket.id)
       
-      // 既存のゲーム状態を取得
+      // 既存のゲーム状態を取得（関数を直接呼び出し）
       fetchGameState()
 
       // Socket events - 直接ここで処理
@@ -276,8 +276,8 @@ export default function GamePage() {
       socket.on('riichi_declared', (data: any) => {
         console.log('🔌 WebSocket: riichi_declared received', data)
         console.log('🔌 Current user:', user?.playerId, 'Riichi player:', data.playerId)
-        console.log('🔌 Current gameState before trigger:', gameState ? {
-          players: gameState.players.map(p => ({ name: p.name, points: p.points }))
+        console.log('🔌 Current gameStateRef before trigger:', gameStateRef.current ? {
+          players: gameStateRef.current.players.map(p => ({ name: p.name, points: p.points }))
         } : null)
         console.log('🔌 New gameState from WebSocket:', data.gameState ? {
           players: data.gameState.players.map((p: any) => ({ name: p.name, points: p.points }))
@@ -349,23 +349,48 @@ export default function GamePage() {
         socket.offAny()
       }
     }
-  }, [socket, user])
+  }, [fetchGameState, socket, triggerPointAnimation, user]) // gameStateとtriggerPointAnimationを削除、fetchGameStateも削除
 
   // WebSocketルーム参加の専用useEffect
+  const roomCodeRef = useRef<string | null>(null)
+  const hasJoinedRef = useRef<boolean>(false)
+  
   useEffect(() => {
-    if (socket && user && gameInfo?.roomCode && isConnected) {
-      console.log('🏠 All conditions met, joining WebSocket room:', gameInfo.roomCode, 'with player:', user.playerId)
+    const roomCode = gameInfo?.roomCode
+    const playerId = user?.playerId
+    
+    if (socket && user && roomCode && isConnected) {
+      // 同じルームに既に参加済みの場合はスキップ
+      if (roomCodeRef.current === roomCode && hasJoinedRef.current) {
+        console.log('🏠 Already joined room:', roomCode)
+        return
+      }
+      
+      console.log('🏠 All conditions met, joining WebSocket room:', roomCode, 'with player:', playerId)
       console.log('🏠 Socket connected:', socket.connected, 'Socket ID:', socket.id)
-      joinRoom(gameInfo.roomCode, user.playerId)
+      
+      if(playerId) {
+        joinRoom(roomCode, playerId)
+      }
+      roomCodeRef.current = roomCode
+      hasJoinedRef.current = true
     } else {
       console.log('🏠 Waiting for conditions - missing:', {
         socket: !!socket,
         user: !!user,
-        roomCode: gameInfo?.roomCode,
+        roomCode: !!roomCode,
         isConnected
       })
+      hasJoinedRef.current = false
     }
-  }, [socket, user, gameInfo?.roomCode, isConnected, joinRoom])
+  }, [socket, user, gameInfo?.roomCode, isConnected, joinRoom]) // joinRoomを削除
+  
+  // Reset join status when socket disconnects
+  useEffect(() => {
+    if (!isConnected) {
+      hasJoinedRef.current = false
+    }
+  }, [isConnected])
 
   // gameStateが更新されたらgameStateRefも更新
   useEffect(() => {

@@ -65,6 +65,7 @@ export function useSocket() {
       setSocket(newSocket)
       setupSocketHandlers(newSocket)
     }, delay)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connectionAttempts])
 
   const setupSocketHandlers = useCallback((socketInstance: Socket) => {
@@ -186,7 +187,7 @@ export function useSocket() {
 
   const joinRoom = useCallback((roomCode: string, playerId: string) => {
     console.log('🏠 joinRoom called:', { roomCode, playerId, isConnected, socketConnected: socket?.connected })
-    if (!isConnected) {
+    if (!isConnected || !socket?.connected) {
       console.warn('🏠 Socket not connected, delaying join room')
       setTimeout(() => {
         if (socket?.connected) {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo, memo } from 'react'
 import { getPositionName } from '@/lib/utils'
 import { Modal, Stepper, Button as MantineButton } from '@mantine/core'
 import { ScoreCalculationResult, validateHanFu } from '@/lib/score'
@@ -39,7 +39,7 @@ interface ScoreInputFormProps {
   onCancel: () => void
 }
 
-export default function ScoreInputForm({
+const ScoreInputForm = memo(function ScoreInputForm({
   gameState,
   currentPlayer,
   actionType,
@@ -64,37 +64,40 @@ export default function ScoreInputForm({
   }, [preselectedWinnerId])
 
 
-  useEffect(() => {
-    const fetchPreview = async () => {
-      if (step !== 2) return
-      try {
-        const winner = gameState.players.find(p => p.playerId === winnerId)
-        if (!winner) return
-        const response = await fetch('/api/score/calculate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            han,
-            fu,
-            isOya: winner.position === gameState.currentOya,
-            isTsumo: actionType === 'tsumo',
-            honba: gameState.honba,
-            kyotaku: gameState.kyotaku
-          })
+  // Memoized score preview fetch with debouncing
+  const fetchPreview = useCallback(async () => {
+    if (step !== 2) return
+    try {
+      const winner = gameState.players.find(p => p.playerId === winnerId)
+      if (!winner) return
+      const response = await fetch('/api/score/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          han,
+          fu,
+          isOya: winner.position === gameState.currentOya,
+          isTsumo: actionType === 'tsumo',
+          honba: gameState.honba,
+          kyotaku: gameState.kyotaku
         })
-        if (response.ok) {
-          const data = await response.json()
-          setScorePreview(data.data.result)
-        }
-      } catch (e) {
-        console.error('Preview fetch failed', e)
-        setScorePreview(null)
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setScorePreview(data.data.result)
       }
+    } catch (e) {
+      console.error('Preview fetch failed', e)
+      setScorePreview(null)
     }
-    fetchPreview()
-  }, [step, han, fu, winnerId, actionType, gameState])
+  }, [step, han, fu, winnerId, actionType, gameState.players, gameState.currentOya, gameState.honba, gameState.kyotaku])
 
-  const hanOptions = [
+  useEffect(() => {
+    fetchPreview()
+  }, [fetchPreview])
+
+  // Memoized options arrays to prevent recreation on every render
+  const hanOptions = useMemo(() => [
     { value: 1, label: '1翻' },
     { value: 2, label: '2翻' },
     { value: 3, label: '3翻' },
@@ -104,9 +107,9 @@ export default function ScoreInputForm({
     { value: 8, label: '倍満' },
     { value: 11, label: '三倍満' },
     { value: 13, label: '役満' }
-  ]
+  ], [])
 
-  const fuOptions = [
+  const fuOptions = useMemo(() => [
     { value: 20, label: '20符' },
     { value: 25, label: '25符' },
     { value: 30, label: '30符' },
@@ -118,17 +121,17 @@ export default function ScoreInputForm({
     { value: 90, label: '90符' },
     { value: 100, label: '100符' },
     { value: 110, label: '110符' }
-  ]
+  ], [])
 
-
-  const getPlayerDisplay = (player: GamePlayer) => {
+  // Memoized player display function
+  const getPlayerDisplay = useCallback((player: GamePlayer) => {
     const position = getPositionName(player.position, gameState.currentOya)
     const isDealerMark = player.position === gameState.currentOya ? ' (親)' : ''
     return `${position} ${player.name}${isDealerMark}`
-  }
+  }, [gameState.currentOya])
 
-  // バリデーション関数
-  const validateForm = (): boolean => {
+  // Memoized validation function
+  const validateForm = useCallback((): boolean => {
     const errors: Record<string, string> = {}
 
     // 和了者チェック
@@ -171,7 +174,7 @@ export default function ScoreInputForm({
 
     setValidationErrors(errors)
     return Object.keys(errors).length === 0
-  }
+  }, [winnerId, loserId, han, fu, actionType, gameState.players])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -368,4 +371,6 @@ export default function ScoreInputForm({
       </form>
     </Modal>
   )
-}
+})
+
+export default ScoreInputForm

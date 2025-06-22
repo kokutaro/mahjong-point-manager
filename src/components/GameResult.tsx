@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 interface PlayerResult {
   playerId: string
@@ -30,11 +30,7 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    fetchGameResult()
-  }, [gameId])
-
-  const fetchGameResult = async () => {
+  const fetchGameResult = useCallback(async () => {
     try {
       setIsLoading(true)
       setError('')
@@ -63,7 +59,13 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [gameId])
+
+  useEffect(() => {
+    fetchGameResult()
+  }, [fetchGameResult])
+
+
 
   const getRankColor = (rank: number) => {
     switch (rank) {

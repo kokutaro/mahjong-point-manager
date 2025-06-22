@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import ErrorDisplay from '@/components/ErrorDisplay'
@@ -56,7 +56,7 @@ export default function StatsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const fetchStats = async (gameType: string = '') => {
+  const fetchStats = useCallback(async (gameType: string = '') => {
     if (!user) return
 
     try {
@@ -90,13 +90,13 @@ export default function StatsPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [user])
 
   useEffect(() => {
     if (isAuthenticated && user) {
       fetchStats(gameTypeFilter)
     }
-  }, [isAuthenticated, user, gameTypeFilter])
+  }, [isAuthenticated, user, gameTypeFilter, fetchStats])
 
   const handleGameTypeChange = (type: string) => {
     setGameTypeFilter(type)
