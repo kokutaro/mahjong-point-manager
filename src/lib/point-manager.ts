@@ -241,12 +241,21 @@ export class PointManager {
       throw new Error('Game not found')
     }
 
+    // 現在の親プレイヤーを取得
+    const currentOya = game.participants.find(p => p.position === game.currentOya)
+    if (!currentOya) {
+      throw new Error('親プレイヤーが見つかりません')
+    }
+
+    // 親がテンパイかどうか
+    const isOyaTenpai = tenpaiPlayers.includes(currentOya.playerId)
+
+    // 更新後の状態計算
+    const newHonba = game.honba + 1
+    const newOya = isOyaTenpai ? game.currentOya : (game.currentOya + 1) % 4
+    const newRound = isOyaTenpai ? game.currentRound : game.currentRound + 1
+
     await prisma.$transaction(async (tx) => {
-      // 現在の親プレイヤーを取得
-      const currentOya = game.participants.find(p => p.position === game.currentOya)
-      if (!currentOya) {
-        throw new Error('親プレイヤーが見つかりません')
-      }
 
       // テンパイ料の処理
       if (tenpaiPlayers.length > 0 && tenpaiPlayers.length < 4) {
@@ -288,15 +297,13 @@ export class PointManager {
         }
       })
 
-      // 流局時の本場・親処理：親が流れた時は本場+1、親継続、供託はそのまま
-      const newHonba = game.honba + 1
-      
+      // ゲーム状態更新（本場増加と親移動判定）
       await tx.game.update({
         where: { id: this.gameId },
         data: {
           honba: newHonba,
-          // 供託(kyotaku)は変更せずそのまま持ち越し
-          // 親は継続（currentOyaは変更しない）
+          currentOya: newOya,
+          currentRound: newRound,
           updatedAt: new Date()
         }
       })
@@ -306,12 +313,12 @@ export class PointManager {
         data: {
           gameId: this.gameId,
           eventType: 'RYUKYOKU',
-          eventData: { 
+          eventData: {
             reason,
             tenpaiPlayers,
             newHonba,
-            kyotaku: game.kyotaku, // 供託は変更なし
-            oyaContinued: true
+            kyotaku: game.kyotaku,
+            oyaContinued: isOyaTenpai
           },
           round: game.currentRound,
           honba: game.honba
@@ -319,9 +326,14 @@ export class PointManager {
       })
     })
 
-    // 親ローテーション処理とゲーム終了判定
-    const rotateResult = await this.rotateDealer()
-    return rotateResult
+    // ゲーム終了判定
+    const endResult = await this.checkGameEnd()
+    if (endResult.shouldEnd) {
+      await this.finishGame(endResult.reason || '規定局数終了')
+      return { gameEnded: true, reason: endResult.reason }
+    }
+
+    return { gameEnded: false }
   }
 
   /**
