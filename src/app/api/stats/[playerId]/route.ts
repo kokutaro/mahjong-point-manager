@@ -71,7 +71,8 @@ export async function GET(
           totalSettlement: 0,
           rankDistribution: { 1: 0, 2: 0, 3: 0, 4: 0 },
           gameTypeStats: {},
-          recentGames: []
+          recentGames: [],
+          monthlyStats: {}
         }
       })
     }
