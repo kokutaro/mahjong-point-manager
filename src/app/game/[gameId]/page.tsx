@@ -8,7 +8,8 @@ import PlayerStatus from '@/components/PlayerStatus'
 import PointAnimation from '@/components/PointAnimation'
 import ScoreInputForm from '@/components/ScoreInputForm'
 import RyukyokuForm from '@/components/RyukyokuForm'
-import MatchHistoryTable from '@/components/MatchHistoryTable'
+import MatchHistoryModal from '@/components/MatchHistoryModal'
+import MenuDrawer from '@/components/MenuDrawer'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSocket } from '@/hooks/useSocket'
 import { useMatchHistory } from '@/hooks/useMatchHistory'
@@ -58,6 +59,8 @@ export default function GamePage() {
   const pointChangesRef = useRef<Array<{ playerId: string; change: number; newPoints: number }>>([])
 
   const { history } = useMatchHistory()
+  const [showMenu, setShowMenu] = useState(false)
+  const [showHistoryModal, setShowHistoryModal] = useState(false)
 
   const gameId = params.gameId as string
 
@@ -659,8 +662,6 @@ export default function GamePage() {
           gameType={gameInfo?.settings?.gameType || 'HANCHAN'}
         />
 
-        {/* 連続対局履歴 */}
-        <MatchHistoryTable history={history} />
 
         {/* プレイヤー状態 */}
         <PlayerStatus 
@@ -796,6 +797,24 @@ export default function GamePage() {
           </button>
         </div>
       </div>
+
+      <button
+        onClick={() => setShowMenu(true)}
+        className="fixed top-4 right-4 z-40 bg-white rounded-md shadow p-2"
+        aria-label="メニューを開く"
+      >
+        ☰
+      </button>
+      <MenuDrawer
+        isOpen={showMenu}
+        onClose={() => setShowMenu(false)}
+        onShowHistory={() => setShowHistoryModal(true)}
+      />
+      <MatchHistoryModal
+        isOpen={showHistoryModal}
+        onClose={() => setShowHistoryModal(false)}
+        history={history}
+      />
 
       {/* 点数変動アニメーション */}
       {showPointAnimation && gameState && (
