@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
+import { Button, TextInput, Paper, Title, Text } from '@mantine/core'
 
 export default function HomePage() {
   const { user, isAuthenticated, login, isLoading } = useAuth()
@@ -81,43 +82,29 @@ export default function HomePage() {
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
-          <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">
+        <Paper shadow="md" p="lg" w="100%" maw={400}>
+          <Title order={1} ta="center" mb="lg">
             麻雀点数管理
-          </h1>
-          
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div>
-              <label htmlFor="playerName" className="block text-sm font-medium text-gray-700 mb-2">
-                プレイヤー名
-              </label>
-              <input
-                type="text"
-                id="playerName"
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                placeholder="お名前を入力"
-                maxLength={20}
-                required
-              />
-            </div>
-
+          </Title>
+          <form onSubmit={handleLogin}>
+            <TextInput
+              label="プレイヤー名"
+              value={playerName}
+              onChange={(e) => setPlayerName(e.currentTarget.value)}
+              placeholder="お名前を入力"
+              maxLength={20}
+              required
+            />
             {error && (
-              <div className="text-red-500 text-sm text-center bg-red-50 p-2 rounded">
+              <Text c="red" size="sm" ta="center" mt="sm">
                 {error}
-              </div>
+              </Text>
             )}
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
+            <Button type="submit" fullWidth mt="md" loading={isLoading}>
               {isLoading ? '読み込み中...' : 'ゲームに参加'}
-            </button>
+            </Button>
           </form>
-        </div>
+        </Paper>
       </div>
     )
   }
