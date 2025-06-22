@@ -1,5 +1,7 @@
 'use client'
 
+import { getPositionName } from '@/lib/utils'
+
 interface GamePlayer {
   playerId: string
   name: string
@@ -32,10 +34,6 @@ export default function PlayerStatus({
   onReach, 
   canDeclareReach 
 }: PlayerStatusProps) {
-  const getPositionName = (position: number) => {
-    const positions = ['東', '南', '西', '北']
-    return positions[position] || '?'
-  }
 
   const getPositionColor = (position: number) => {
     const colors = [
@@ -95,7 +93,7 @@ export default function PlayerStatus({
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center space-x-2">
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center font-semibold text-xs ${getPositionColor(player.position)}`}>
-                      {getPositionName(player.position)}
+                      {getPositionName(player.position, gameState.currentOya)}
                     </div>
                     <span className="font-semibold text-gray-800 text-sm">
                       {player.name}
@@ -166,7 +164,7 @@ export default function PlayerStatus({
                     {/* 座席・順位表示 */}
                     <div className="flex flex-col items-center space-y-1">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm ${getPositionColor(player.position)}`}>
-                        {getPositionName(player.position)}
+                        {getPositionName(player.position, gameState.currentOya)}
                       </div>
                       <div className="text-xs text-gray-500">
                         {player.rank}位

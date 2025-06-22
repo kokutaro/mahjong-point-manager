@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { GamePlayer } from '@/hooks/useSocket'
+import { getPositionName } from '@/lib/utils'
 
 interface PointChange {
   playerId: string
@@ -12,10 +13,11 @@ interface PointChange {
 interface PointAnimationProps {
   players: GamePlayer[]
   pointChanges: PointChange[]
+  dealerPosition: number
   onComplete: () => void
 }
 
-export default function PointAnimation({ players, pointChanges, onComplete }: PointAnimationProps) {
+export default function PointAnimation({ players, pointChanges, dealerPosition, onComplete }: PointAnimationProps) {
   const [currentPoints, setCurrentPoints] = useState<{ [playerId: string]: number }>({})
   const [showChanges, setShowChanges] = useState(false)
   const [animationPhase, setAnimationPhase] = useState<'fadeIn' | 'counting' | 'fadeOut'>('fadeIn')
@@ -109,10 +111,6 @@ export default function PointAnimation({ players, pointChanges, onComplete }: Po
     timeline()
   }, [players, pointChanges, onComplete])
 
-  const getPositionName = (position: number) => {
-    const positions = ['東', '南', '西', '北']
-    return positions[position] || '?'
-  }
 
   const getChangeOpacity = () => {
     switch (animationPhase) {
@@ -144,7 +142,7 @@ export default function PointAnimation({ players, pointChanges, onComplete }: Po
               >
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center font-semibold text-gray-700">
-                    {getPositionName(player.position)}
+                    {getPositionName(player.position, dealerPosition)}
                   </div>
                   <div>
                     <div className="font-medium text-gray-800">{player.name}</div>

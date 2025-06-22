@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useSocket } from '@/hooks/useSocket'
 import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
+import { getPositionName } from '@/lib/utils'
 
 interface GamePlayer {
   playerId: string
@@ -278,10 +279,6 @@ export default function RoomPage() {
     }
   }
 
-  const getPositionName = (position: number) => {
-    const positions = ['東', '南', '西', '北']
-    return positions[position] || '?'
-  }
 
   const isHost = user && roomInfo && user.playerId === roomInfo.hostPlayer?.id
   const canStartGame = roomInfo?.players.length === 4 && roomInfo?.status === 'WAITING'
@@ -363,7 +360,7 @@ export default function RoomPage() {
                   <div className="flex justify-between items-center">
                     <div className="flex items-center space-x-3">
                       <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center font-semibold text-gray-700">
-                        {getPositionName(position)}
+                        {getPositionName(position, gameState?.currentOya ?? 0)}
                       </div>
                       <div>
                         <div className="font-medium text-gray-800">

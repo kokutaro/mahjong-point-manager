@@ -754,6 +754,7 @@ export default function GamePage() {
         <PointAnimation
           players={gameState.players}
           pointChanges={pointChanges}
+          dealerPosition={gameState.currentOya}
           onComplete={onAnimationComplete}
         />
       )}
