@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button, TextInput, Paper, Title, Text } from '@mantine/core'
 
 export default function HomePage() {
@@ -12,6 +12,14 @@ export default function HomePage() {
   const [error, setError] = useState('')
   const [isJoining, setIsJoining] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectTo = searchParams.get('redirect')
+
+  useEffect(() => {
+    if (isAuthenticated && redirectTo) {
+      router.replace(redirectTo)
+    }
+  }, [isAuthenticated, redirectTo, router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -23,6 +31,9 @@ export default function HomePage() {
     try {
       await login(playerName.trim())
       setError('')
+      if (redirectTo) {
+        router.replace(redirectTo)
+      }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'ログインに失敗しました')
     }
