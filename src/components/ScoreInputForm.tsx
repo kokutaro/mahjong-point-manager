@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface GamePlayer {
   playerId: string
@@ -25,6 +25,8 @@ interface ScoreInputFormProps {
   gameState: GameState
   currentPlayer?: GamePlayer
   actionType: 'tsumo' | 'ron'
+  preselectedWinnerId?: string
+  preselectedLoserId?: string
   onSubmit: (scoreData: {
     winnerId: string
     han: number
@@ -35,19 +37,32 @@ interface ScoreInputFormProps {
   onCancel: () => void
 }
 
-export default function ScoreInputForm({ 
-  gameState, 
-  currentPlayer, 
-  actionType, 
-  onSubmit, 
-  onCancel 
+export default function ScoreInputForm({
+  gameState,
+  currentPlayer,
+  actionType,
+  preselectedWinnerId,
+  preselectedLoserId,
+  onSubmit,
+  onCancel
 }: ScoreInputFormProps) {
-  const [winnerId, setWinnerId] = useState(currentPlayer?.playerId || '')
-  const [loserId, setLoserId] = useState('')
+  const [winnerId, setWinnerId] = useState(
+    preselectedWinnerId || currentPlayer?.playerId || ''
+  )
+  const [loserId, setLoserId] = useState(preselectedLoserId || '')
   const [han, setHan] = useState(1)
   const [fu, setFu] = useState(30)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+
+  // Update state if preselected player changes
+  useEffect(() => {
+    if (preselectedWinnerId) setWinnerId(preselectedWinnerId)
+  }, [preselectedWinnerId])
+
+  useEffect(() => {
+    if (preselectedLoserId) setLoserId(preselectedLoserId)
+  }, [preselectedLoserId])
 
   const hanOptions = [
     { value: 1, label: '1翻' },
@@ -197,35 +212,41 @@ export default function ScoreInputForm({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-        {/* 和了者選択 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            和了者
-          </label>
-          <select
-            value={winnerId}
-            onChange={(e) => handleWinnerChange(e.target.value)}
-            className={`w-full px-3 py-3 sm:py-2 border rounded-md focus:outline-none focus:ring-2 text-base transition-colors ${
-              validationErrors.winnerId 
-                ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
-            }`}
-            required
-          >
-            <option value="">選択してください</option>
-            {gameState.players.map((player) => (
-              <option key={player.playerId} value={player.playerId}>
-                {getPlayerDisplay(player)}
-              </option>
-            ))}
-          </select>
-          {validationErrors.winnerId && (
-            <p className="mt-1 text-sm text-red-600">{validationErrors.winnerId}</p>
-          )}
-        </div>
+        {/* 和了者選択 (プリセットがない場合のみ) */}
+        {!preselectedWinnerId ? (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              和了者
+            </label>
+            <select
+              value={winnerId}
+              onChange={(e) => handleWinnerChange(e.target.value)}
+              className={`w-full px-3 py-3 sm:py-2 border rounded-md focus:outline-none focus:ring-2 text-base transition-colors ${
+                validationErrors.winnerId
+                  ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                  : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
+              }`}
+              required
+            >
+              <option value="">選択してください</option>
+              {gameState.players.map((player) => (
+                <option key={player.playerId} value={player.playerId}>
+                  {getPlayerDisplay(player)}
+                </option>
+              ))}
+            </select>
+            {validationErrors.winnerId && (
+              <p className="mt-1 text-sm text-red-600">{validationErrors.winnerId}</p>
+            )}
+          </div>
+        ) : (
+          <div className="text-sm text-gray-700">
+            和了者: {gameState.players.find(p => p.playerId === preselectedWinnerId)?.name}
+          </div>
+        )}
 
         {/* 放銃者選択（ロンの場合のみ） */}
-        {actionType === 'ron' && (
+        {actionType === 'ron' && (!preselectedLoserId ? (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               放銃者
@@ -234,8 +255,8 @@ export default function ScoreInputForm({
               value={loserId}
               onChange={(e) => handleLoserChange(e.target.value)}
               className={`w-full px-3 py-3 sm:py-2 border rounded-md focus:outline-none focus:ring-2 text-base transition-colors ${
-                validationErrors.loserId 
-                  ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                validationErrors.loserId
+                  ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
                   : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
               }`}
               required
@@ -253,7 +274,11 @@ export default function ScoreInputForm({
               <p className="mt-1 text-sm text-red-600">{validationErrors.loserId}</p>
             )}
           </div>
-        )}
+        ) : (
+          <div className="text-sm text-gray-700">
+            放銃者: {gameState.players.find(p => p.playerId === preselectedLoserId)?.name}
+          </div>
+        ))}
 
         {/* 翻数選択 */}
         <div>
