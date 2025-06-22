@@ -1,16 +1,15 @@
 'use client'
 
+import { QRCodeModal } from '@/components/QRCodeModal'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSocket } from '@/hooks/useSocket'
-import { useParams, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useState } from 'react'
 import { getPositionName } from '@/lib/utils'
-import { Reorder } from 'framer-motion'
-import { GripVertical } from 'lucide-react'
 import { useMediaQuery } from '@mantine/hooks'
-import { QrCode } from 'lucide-react'
+import { Reorder } from 'framer-motion'
+import { GripVertical, QrCode } from 'lucide-react'
+import { useParams, useRouter } from 'next/navigation'
 import { QRCodeSVG } from 'qrcode.react'
-import { QRCodeModal } from '@/components/QRCodeModal'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface GamePlayer {
   playerId: string
