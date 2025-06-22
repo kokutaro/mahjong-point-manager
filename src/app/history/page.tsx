@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import ErrorDisplay from '@/components/ErrorDisplay'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 interface GameHistory {
   id: string
@@ -18,7 +18,6 @@ interface GameHistory {
     finalPoints: number
     finalRank: number
     uma: number
-    oka: number
     settlement: number
   }[]
   settings: {
@@ -26,7 +25,6 @@ interface GameHistory {
     initialPoints: number
     basePoints: number
     uma: any
-    oka: number
   }
 }
 

@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
   request: NextRequest,
@@ -58,8 +58,7 @@ export async function GET(
           gameType: game.settings?.gameType,
           initialPoints: game.settings?.initialPoints,
           hasTobi: game.settings?.hasTobi,
-          uma: game.settings?.uma,
-          oka: game.settings?.oka
+          uma: game.settings?.uma
         }
       }
     })

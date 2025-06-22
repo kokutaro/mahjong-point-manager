@@ -514,12 +514,6 @@ export default function RoomPage() {
                   {roomInfo.settings.uma?.join(', ')}
                 </span>
               </div>
-              <div>
-                <span className="text-gray-600">オカ:</span>
-                <span className="ml-2 font-medium">
-                  {roomInfo.settings.oka}点
-                </span>
-              </div>
             </div>
           </div>
         )}

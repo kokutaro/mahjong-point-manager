@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
   request: NextRequest,
@@ -30,7 +30,6 @@ export async function GET(
         finalPoints: p.finalPoints,
         finalRank: p.finalRank,
         uma: p.uma,
-        oka: p.oka,
         settlement: p.settlement
       }))
     } : null })
@@ -61,7 +60,6 @@ export async function GET(
           finalPoints: participant.currentPoints,
           finalRank: 0, // 後で計算
           uma: 0,
-          oka: 0,
           settlement: participant.currentPoints - 25000
         }
       }
@@ -81,7 +79,6 @@ export async function GET(
       finalPoints: participant.finalPoints || participant.currentPoints,
       rank: participant.finalRank || participant.calculatedRank,
       uma: participant.uma || 0,
-      oka: participant.oka || 0,
       settlement: participant.settlement || (participant.finalPoints || participant.currentPoints) - 25000
     }))
 

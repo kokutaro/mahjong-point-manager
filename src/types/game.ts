@@ -30,7 +30,6 @@ export interface GameParticipant {
   finalPoints?: number
   finalRank?: number
   uma?: number
-  oka?: number
   settlement?: number
   player: Player
 }
@@ -59,7 +58,6 @@ export interface GameSettings {
   gameId: string
   startingPoints: number
   umaSettings: UmaSettings
-  hasOka: boolean
   hasTobi: boolean
   hasYakitori: boolean
   tobiPenalty: number

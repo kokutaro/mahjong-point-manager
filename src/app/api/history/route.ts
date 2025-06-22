@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { NextRequest, NextResponse } from 'next/server'
 
 // Enable caching for GET requests
 export const revalidate = 60 // Cache for 60 seconds
@@ -43,8 +43,7 @@ export async function GET(request: NextRequest) {
             gameType: true,
             initialPoints: true,
             basePoints: true,
-            uma: true,
-            oka: true
+            uma: true
           }
         },
         participants: {
@@ -95,15 +94,13 @@ export async function GET(request: NextRequest) {
         finalPoints: p.finalPoints,
         finalRank: p.finalRank,
         uma: p.uma,
-        oka: p.oka,
         settlement: p.settlement
       })),
       settings: {
         gameType: game.settings?.gameType,
         initialPoints: game.settings?.initialPoints,
         basePoints: game.settings?.basePoints,
-        uma: game.settings?.uma,
-        oka: game.settings?.oka
+        uma: game.settings?.uma
       }
     }))
 
