@@ -8,8 +8,10 @@ import PlayerStatus from '@/components/PlayerStatus'
 import PointAnimation from '@/components/PointAnimation'
 import ScoreInputForm from '@/components/ScoreInputForm'
 import RyukyokuForm from '@/components/RyukyokuForm'
+import MatchHistoryTable from '@/components/MatchHistoryTable'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSocket } from '@/hooks/useSocket'
+import { useMatchHistory } from '@/hooks/useMatchHistory'
 import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
@@ -54,6 +56,8 @@ export default function GamePage() {
   const previousGameStateRef = useRef<GameState | null>(null)
   const gameStateRef = useRef<GameState | null>(null)
   const pointChangesRef = useRef<Array<{ playerId: string; change: number; newPoints: number }>>([])
+
+  const { history } = useMatchHistory()
 
   const gameId = params.gameId as string
 
@@ -654,6 +658,9 @@ export default function GamePage() {
           isConnected={isConnected}
           gameType={gameInfo?.settings?.gameType || 'HANCHAN'}
         />
+
+        {/* 連続対局履歴 */}
+        <MatchHistoryTable history={history} />
 
         {/* プレイヤー状態 */}
         <PlayerStatus 

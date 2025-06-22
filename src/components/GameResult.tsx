@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useMatchHistory } from '@/hooks/useMatchHistory'
 
 interface PlayerResult {
   playerId: string
@@ -29,6 +30,7 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
   const [resultData, setResultData] = useState<GameResultData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  const { addResult } = useMatchHistory()
 
   const fetchGameResult = useCallback(async () => {
     try {
@@ -64,6 +66,33 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
   useEffect(() => {
     fetchGameResult()
   }, [fetchGameResult])
+
+  useEffect(() => {
+    if (resultData) {
+      const scores = resultData.results.map(r => ({
+        playerId: r.playerId,
+        name: r.name,
+        points: r.finalPoints
+      }))
+      addResult({ gameId: resultData.gameId, scores })
+    }
+  }, [resultData, addResult])
+
+  const handleRematch = async () => {
+    if (!resultData) return
+    try {
+      const res = await fetch(`/api/game/${resultData.gameId}/rematch`, { method: 'POST' })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        window.location.href = `/room/${data.data.roomCode}`
+      } else {
+        alert(data.error?.message || '再戦の作成に失敗しました')
+      }
+    } catch (err) {
+      console.error('Rematch failed:', err)
+      alert('再戦の作成に失敗しました')
+    }
+  }
 
 
 
@@ -326,6 +355,13 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
             className="bg-gray-500 text-white py-3 px-6 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
           >
             ゲームに戻る
+          </button>
+
+          <button
+            onClick={handleRematch}
+            className="bg-green-600 text-white py-3 px-6 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
+          >
+            もう一局
           </button>
           
           <button
