@@ -40,15 +40,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // 同じ名前のプレイヤーが既に参加していないか確認
-    const existingParticipant = game.participants.find(p => {
-      return game.participants.some(participant => {
-        // プレイヤー名で確認するため、プレイヤー情報を取得する必要がある
-        return false // 一旦スキップ
-      })
-    })
-
-    // より簡単な方法：現在参加しているプレイヤーの名前リストを取得
+    // 現在参加しているプレイヤー名を取得して重複をチェック
     const participantPlayers = await prisma.gameParticipant.findMany({
       where: { gameId: game.id },
       include: { player: true }
@@ -62,13 +54,30 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // プレイヤー作成
-    const player = await prisma.player.create({
-      data: {
-        name: validatedData.playerName,
-        createdAt: new Date()
+    // ログイン済みプレイヤーを使用（存在しない場合は作成）
+    const { cookies } = await import('next/headers')
+    const cookieStore = await cookies()
+    const currentPlayerId = cookieStore.get('player_id')?.value
+
+    let player = currentPlayerId
+      ? await prisma.player.findUnique({ where: { id: currentPlayerId } })
+      : null
+
+    if (player) {
+      if (player.name !== validatedData.playerName) {
+        player = await prisma.player.update({
+          where: { id: player.id },
+          data: { name: validatedData.playerName }
+        })
       }
-    })
+    } else {
+      player = await prisma.player.create({
+        data: {
+          name: validatedData.playerName,
+          createdAt: new Date()
+        }
+      })
+    }
 
     // トランザクションで次のポジション決定とゲーム参加を原子的に実行
     const participant = await prisma.$transaction(async (tx) => {
@@ -156,7 +165,7 @@ export async function POST(request: NextRequest) {
 
     // 参加プレイヤーの認証情報をCookieに設定
     response.cookies.set('player_id', player.id, {
-      httpOnly: false,
+      httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 30 * 24 * 60 * 60 // 30日
