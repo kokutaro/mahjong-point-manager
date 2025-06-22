@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { ScoreCalculationResult, validateHanFu } from '@/lib/score'
 
 interface GamePlayer {
   playerId: string
@@ -25,6 +26,8 @@ interface ScoreInputFormProps {
   gameState: GameState
   currentPlayer?: GamePlayer
   actionType: 'tsumo' | 'ron'
+  preselectedWinnerId?: string
+  preselectedLoserId?: string
   onSubmit: (scoreData: {
     winnerId: string
     han: number
@@ -35,19 +38,64 @@ interface ScoreInputFormProps {
   onCancel: () => void
 }
 
-export default function ScoreInputForm({ 
-  gameState, 
-  currentPlayer, 
-  actionType, 
-  onSubmit, 
-  onCancel 
+export default function ScoreInputForm({
+  gameState,
+  currentPlayer,
+  actionType,
+  preselectedWinnerId,
+  preselectedLoserId,
+  onSubmit,
+  onCancel
 }: ScoreInputFormProps) {
-  const [winnerId, setWinnerId] = useState(currentPlayer?.playerId || '')
-  const [loserId, setLoserId] = useState('')
+  const [winnerId, setWinnerId] = useState(
+    preselectedWinnerId || currentPlayer?.playerId || ''
+  )
+  const [loserId, setLoserId] = useState(preselectedLoserId || '')
   const [han, setHan] = useState(1)
   const [fu, setFu] = useState(30)
+  const [step, setStep] = useState(0)
+  const [scorePreview, setScorePreview] = useState<ScoreCalculationResult | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+
+  // Update state if preselected player changes
+  useEffect(() => {
+    if (preselectedWinnerId) setWinnerId(preselectedWinnerId)
+  }, [preselectedWinnerId])
+
+  useEffect(() => {
+    if (preselectedLoserId) setLoserId(preselectedLoserId)
+  }, [preselectedLoserId])
+
+  useEffect(() => {
+    const fetchPreview = async () => {
+      if (step !== 2) return
+      try {
+        const winner = gameState.players.find(p => p.playerId === winnerId)
+        if (!winner) return
+        const response = await fetch('/api/score/calculate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            han,
+            fu,
+            isOya: winner.position === gameState.currentOya,
+            isTsumo: actionType === 'tsumo',
+            honba: gameState.honba,
+            kyotaku: gameState.kyotaku
+          })
+        })
+        if (response.ok) {
+          const data = await response.json()
+          setScorePreview(data.data.result)
+        }
+      } catch (e) {
+        console.error('Preview fetch failed', e)
+        setScorePreview(null)
+      }
+    }
+    fetchPreview()
+  }, [step, han, fu, winnerId, actionType, gameState])
 
   const hanOptions = [
     { value: 1, label: '1翻' },
@@ -182,6 +230,24 @@ export default function ScoreInputForm({
 
   const isManganOrAbove = han >= 5
 
+  const handleHanSelect = (value: number) => {
+    setHan(value)
+    if (value >= 5) {
+      setStep(2)
+    } else {
+      setStep(1)
+    }
+  }
+
+  const handleFuSelect = (value: number) => {
+    setFu(value)
+    setStep(2)
+  }
+
+  const handleBack = () => {
+    setStep(Math.max(0, step - 1))
+  }
+
   return (
     <div className="bg-white rounded-lg shadow-lg p-3 sm:p-6 mb-6">
       <div className="flex justify-between items-center mb-4 sm:mb-6">
@@ -196,168 +262,124 @@ export default function ScoreInputForm({
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-        {/* 和了者選択 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            和了者
-          </label>
-          <select
-            value={winnerId}
-            onChange={(e) => handleWinnerChange(e.target.value)}
-            className={`w-full px-3 py-3 sm:py-2 border rounded-md focus:outline-none focus:ring-2 text-base transition-colors ${
-              validationErrors.winnerId 
-                ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
-            }`}
-            required
-          >
-            <option value="">選択してください</option>
-            {gameState.players.map((player) => (
-              <option key={player.playerId} value={player.playerId}>
-                {getPlayerDisplay(player)}
-              </option>
-            ))}
-          </select>
-          {validationErrors.winnerId && (
-            <p className="mt-1 text-sm text-red-600">{validationErrors.winnerId}</p>
-          )}
-        </div>
-
-        {/* 放銃者選択（ロンの場合のみ） */}
-        {actionType === 'ron' && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              放銃者
-            </label>
-            <select
-              value={loserId}
-              onChange={(e) => handleLoserChange(e.target.value)}
-              className={`w-full px-3 py-3 sm:py-2 border rounded-md focus:outline-none focus:ring-2 text-base transition-colors ${
-                validationErrors.loserId 
-                  ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                  : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
+      <div className="flex justify-between mb-4">
+        {['翻数', '符数', '確認'].map((label, idx) => (
+          <div key={label} className="flex-1 text-center">
+            <div
+              className={`w-8 h-8 mx-auto rounded-full flex items-center justify-center text-sm ${
+                step >= idx ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'
               }`}
-              required
             >
-              <option value="">選択してください</option>
-              {gameState.players
-                .filter(player => player.playerId !== winnerId)
-                .map((player) => (
-                  <option key={player.playerId} value={player.playerId}>
-                    {getPlayerDisplay(player)}
-                  </option>
-                ))}
-            </select>
-            {validationErrors.loserId && (
-              <p className="mt-1 text-sm text-red-600">{validationErrors.loserId}</p>
-            )}
+              {idx + 1}
+            </div>
+            <div className="mt-1 text-xs">{label}</div>
           </div>
-        )}
+        ))}
+      </div>
 
-        {/* 翻数選択 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            翻数
-          </label>
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+        {step === 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {hanOptions.map((option) => (
               <button
                 key={option.value}
                 type="button"
-                onClick={() => setHan(option.value)}
-                className={`p-3 sm:p-3 rounded-md border-2 transition-colors ${
+                onClick={() => handleHanSelect(option.value)}
+                className={`p-3 rounded-md border-2 transition-colors ${
                   han === option.value
                     ? 'border-blue-500 bg-blue-50 text-blue-700'
                     : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                 }`}
               >
-                <div className="font-semibold text-sm sm:text-base">{option.label}</div>
+                {option.label}
               </button>
             ))}
           </div>
-        </div>
+        )}
 
-        {/* 符数選択（満貫未満の場合のみ） */}
-        {!isManganOrAbove && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              符数
-            </label>
+        {step === 1 && (
+          <>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-              {fuOptions.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setFu(option.value)}
-                  className={`p-2 sm:p-2 rounded-md border-2 transition-colors ${
-                    fu === option.value
-                      ? 'border-green-500 bg-green-50 text-green-700'
-                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="font-medium text-xs sm:text-sm">{option.label}</div>
-                </button>
-              ))}
+              {fuOptions
+                .filter(opt => validateHanFu(han, opt.value))
+                .map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => handleFuSelect(option.value)}
+                    className={`p-2 rounded-md border-2 transition-colors ${
+                      fu === option.value
+                        ? 'border-green-500 bg-green-50 text-green-700'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
             </div>
-          </div>
+            <div className="flex justify-between">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="mt-4 bg-gray-500 text-white py-2 px-4 rounded-md"
+              >
+                戻る
+              </button>
+            </div>
+          </>
         )}
 
-        {/* 現在の選択内容表示 */}
-        <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
-          <h3 className="text-sm font-medium text-gray-700 mb-2">選択内容</h3>
-          <div className="space-y-1 text-xs sm:text-sm text-gray-600">
-            <div>和了: {actionType === 'tsumo' ? 'ツモ' : 'ロン'}</div>
-            <div>
-              翻数: {hanOptions.find(opt => opt.value === han)?.label}
-              {!isManganOrAbove && ` ${fu}符`}
+        {step === 2 && (
+          <>
+            <div className="bg-gray-50 rounded-lg p-3 space-y-1 text-sm text-gray-700">
+              <div>和了: {actionType === 'tsumo' ? 'ツモ' : 'ロン'}</div>
+              <div>
+                翻数: {hanOptions.find(opt => opt.value === han)?.label}
+                {!isManganOrAbove && ` ${fu}符`}
+              </div>
+              {winnerId && (
+                <div>和了者: {gameState.players.find(p => p.playerId === winnerId)?.name}</div>
+              )}
+              {actionType === 'ron' && loserId && (
+                <div>放銃者: {gameState.players.find(p => p.playerId === loserId)?.name}</div>
+              )}
+              <div>本場: {gameState.honba}本場</div>
+              <div>供託: {gameState.kyotaku}本</div>
+              {scorePreview && (
+                <div>
+                  支払い: {actionType === 'tsumo'
+                    ? scorePreview.payments.fromOya
+                      ? `親 ${scorePreview.payments.fromOya}点 / 子 ${scorePreview.payments.fromKo}点`
+                      : `子 ${scorePreview.payments.fromKo}点`
+                    : `${scorePreview.payments.fromLoser}点`}
+                </div>
+              )}
             </div>
-            {winnerId && (
-              <div>
-                和了者: {gameState.players.find(p => p.playerId === winnerId)?.name}
-              </div>
-            )}
-            {actionType === 'ron' && loserId && (
-              <div>
-                放銃者: {gameState.players.find(p => p.playerId === loserId)?.name}
-              </div>
-            )}
-            <div>本場: {gameState.honba}本場</div>
-            <div>供託: {gameState.kyotaku}本</div>
-          </div>
-        </div>
 
-        {/* エラー表示 */}
-        {validationErrors.submit && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-3">
-            <div className="flex">
-              <svg className="h-5 w-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <div className="text-sm text-red-800">
-                {validationErrors.submit}
+            {validationErrors.submit && (
+              <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                <div className="text-sm text-red-800">{validationErrors.submit}</div>
               </div>
+            )}
+
+            <div className="flex gap-3 sm:gap-4">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="flex-1 bg-gray-500 text-white py-2 rounded-md"
+              >
+                戻る
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting || !winnerId || (actionType === 'ron' && !loserId)}
+                className="flex-1 bg-blue-600 text-white py-2 rounded-md disabled:opacity-50"
+              >
+                {isSubmitting ? '計算中...' : '支払い'}
+              </button>
             </div>
-          </div>
+          </>
         )}
-
-        {/* 送信ボタン */}
-        <div className="flex gap-3 sm:gap-4">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="flex-1 bg-gray-500 text-white py-4 px-3 sm:py-3 sm:px-4 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors text-base font-medium"
-          >
-            キャンセル
-          </button>
-          <button
-            type="submit"
-            disabled={isSubmitting || !winnerId || (actionType === 'ron' && !loserId)}
-            className="flex-1 bg-blue-600 text-white py-4 px-3 sm:py-3 sm:px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-base font-medium"
-          >
-            {isSubmitting ? '計算中...' : '点数計算'}
-          </button>
-        </div>
       </form>
     </div>
   )
