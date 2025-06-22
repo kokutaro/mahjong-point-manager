@@ -133,6 +133,13 @@ export function useSocket() {
       }
     }
 
+    const handleSeatOrderUpdated = (data: any) => {
+      console.log('Seat order updated in useSocket:', data)
+      if (data.gameState) {
+        setGameState(data.gameState)
+      }
+    }
+
     socketInstance.on('connect', handleConnect)
     socketInstance.on('disconnect', handleDisconnect)
     socketInstance.on('connect_error', handleConnectError)
@@ -148,6 +155,7 @@ export function useSocket() {
     socketClient.onScoreUpdated(handleScoreUpdated)
     socketClient.onRiichiDeclared(handleRiichiDeclared)
     socketClient.onRyukyoku(handleRyukyoku)
+    socketClient.onSeatOrderUpdated(handleSeatOrderUpdated)
     socketClient.onError(handleError)
 
     return () => {
@@ -161,6 +169,7 @@ export function useSocket() {
       socketClient.offScoreUpdated(handleScoreUpdated)
       socketClient.offRiichiDeclared(handleRiichiDeclared)
       socketClient.offRyukyoku(handleRyukyoku)
+      socketClient.offSeatOrderUpdated(handleSeatOrderUpdated)
       socketClient.offError(handleError)
     }
   }, [reconnect])
