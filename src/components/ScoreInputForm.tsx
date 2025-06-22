@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { Modal, Stepper, Button as MantineButton } from '@mantine/core'
 import { ScoreCalculationResult, validateHanFu } from '@/lib/score'
 
 interface GamePlayer {
@@ -27,7 +28,6 @@ interface ScoreInputFormProps {
   currentPlayer?: GamePlayer
   actionType: 'tsumo' | 'ron'
   preselectedWinnerId?: string
-  preselectedLoserId?: string
   onSubmit: (scoreData: {
     winnerId: string
     han: number
@@ -43,14 +43,13 @@ export default function ScoreInputForm({
   currentPlayer,
   actionType,
   preselectedWinnerId,
-  preselectedLoserId,
   onSubmit,
   onCancel
 }: ScoreInputFormProps) {
   const [winnerId, setWinnerId] = useState(
     preselectedWinnerId || currentPlayer?.playerId || ''
   )
-  const [loserId, setLoserId] = useState(preselectedLoserId || '')
+  const [loserId, setLoserId] = useState('')
   const [han, setHan] = useState(1)
   const [fu, setFu] = useState(30)
   const [step, setStep] = useState(0)
@@ -63,9 +62,6 @@ export default function ScoreInputForm({
     if (preselectedWinnerId) setWinnerId(preselectedWinnerId)
   }, [preselectedWinnerId])
 
-  useEffect(() => {
-    if (preselectedLoserId) setLoserId(preselectedLoserId)
-  }, [preselectedLoserId])
 
   useEffect(() => {
     const fetchPreview = async () => {
@@ -226,112 +222,107 @@ export default function ScoreInputForm({
       delete newErrors.loserId
       setValidationErrors(newErrors)
     }
+    setStep(nextStepAfterLoser)
   }
 
   const isManganOrAbove = han >= 5
 
+  const confirmStep = actionType === 'ron' ? 3 : 2
+  const fuStep = actionType === 'ron' ? 2 : 1
+  const nextStepAfterLoser = 1
+
   const handleHanSelect = (value: number) => {
     setHan(value)
     if (value >= 5) {
-      setStep(2)
+      setStep(confirmStep)
     } else {
-      setStep(1)
+      setStep(fuStep)
     }
   }
 
   const handleFuSelect = (value: number) => {
     setFu(value)
-    setStep(2)
+    setStep(confirmStep)
   }
 
   const handleBack = () => {
-    setStep(Math.max(0, step - 1))
+    if (step === confirmStep) {
+      if (isManganOrAbove) {
+        setStep(actionType === 'ron' ? 1 : 0)
+      } else {
+        setStep(fuStep)
+      }
+    } else {
+      setStep(Math.max(0, step - 1))
+    }
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-3 sm:p-6 mb-6">
-      <div className="flex justify-between items-center mb-4 sm:mb-6">
-        <h2 className="text-lg sm:text-xl font-semibold text-gray-800">
-          点数入力 - {actionType === 'tsumo' ? 'ツモ' : 'ロン'}
-        </h2>
-        <button
-          onClick={onCancel}
-          className="text-gray-500 hover:text-gray-700 text-xl sm:text-2xl p-2 sm:p-0"
-        >
-          ×
-        </button>
-      </div>
-
-      <div className="flex justify-between mb-4">
-        {['翻数', '符数', '確認'].map((label, idx) => (
-          <div key={label} className="flex-1 text-center">
-            <div
-              className={`w-8 h-8 mx-auto rounded-full flex items-center justify-center text-sm ${
-                step >= idx ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'
-              }`}
-            >
-              {idx + 1}
+    <Modal opened onClose={onCancel} withCloseButton={false} centered>
+      <h2 className="text-lg font-semibold mb-4">
+        点数入力 - {actionType === 'tsumo' ? 'ツモ' : 'ロン'}
+      </h2>
+      <form onSubmit={handleSubmit}>
+        <Stepper active={step} allowNextStepsSelect={false} orientation="vertical">
+          {actionType === 'ron' && (
+            <Stepper.Step label="放銃者">
+              <div className="grid grid-cols-2 gap-2 mt-4">
+                {gameState.players
+                  .filter(p => p.playerId !== winnerId)
+                  .map(player => (
+                    <MantineButton
+                      key={player.playerId}
+                      fullWidth
+                      color={loserId === player.playerId ? 'red' : 'gray'}
+                      onClick={() => handleLoserChange(player.playerId)}
+                    >
+                      {player.name}
+                    </MantineButton>
+                  ))}
+              </div>
+            </Stepper.Step>
+          )}
+          <Stepper.Step label="翻数">
+            <div className="grid grid-cols-3 gap-2 mt-4">
+              {hanOptions.map(option => (
+                <MantineButton
+                  key={option.value}
+                  fullWidth
+                  color="blue"
+                  variant={han === option.value ? 'filled' : 'light'}
+                  onClick={() => handleHanSelect(option.value)}
+                >
+                  {option.label}
+                </MantineButton>
+              ))}
             </div>
-            <div className="mt-1 text-xs">{label}</div>
-          </div>
-        ))}
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-        {step === 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {hanOptions.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => handleHanSelect(option.value)}
-                className={`p-3 rounded-md border-2 transition-colors ${
-                  han === option.value
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {step === 1 && (
-          <>
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-              {fuOptions
-                .filter(opt => validateHanFu(han, opt.value))
-                .map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => handleFuSelect(option.value)}
-                    className={`p-2 rounded-md border-2 transition-colors ${
-                      fu === option.value
-                        ? 'border-green-500 bg-green-50 text-green-700'
-                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-            </div>
-            <div className="flex justify-between">
-              <button
-                type="button"
-                onClick={handleBack}
-                className="mt-4 bg-gray-500 text-white py-2 px-4 rounded-md"
-              >
-                戻る
-              </button>
-            </div>
-          </>
-        )}
-
-        {step === 2 && (
-          <>
-            <div className="bg-gray-50 rounded-lg p-3 space-y-1 text-sm text-gray-700">
+          </Stepper.Step>
+          <Stepper.Step label="符数">
+            {han < 5 && (
+              <>
+                <div className="grid grid-cols-3 gap-2 mt-4">
+                  {fuOptions
+                    .filter(opt => validateHanFu(han, opt.value))
+                    .map(option => (
+                      <MantineButton
+                        key={option.value}
+                        fullWidth
+                        color="green"
+                        variant={fu === option.value ? 'filled' : 'light'}
+                        onClick={() => handleFuSelect(option.value)}
+                      >
+                        {option.label}
+                      </MantineButton>
+                    ))}
+                </div>
+                <MantineButton className="mt-4" onClick={handleBack} variant="default">
+                  戻る
+                </MantineButton>
+              </>
+            )}
+          </Stepper.Step>
+          <Stepper.Step label="確認">
+            <div className="bg-gray-50 rounded-lg p-3 space-y-1 text-sm text-gray-700 mt-4">
               <div>和了: {actionType === 'tsumo' ? 'ツモ' : 'ロン'}</div>
               <div>
                 翻数: {hanOptions.find(opt => opt.value === han)?.label}
@@ -357,30 +348,27 @@ export default function ScoreInputForm({
             </div>
 
             {validationErrors.submit && (
-              <div className="bg-red-50 border border-red-200 rounded-md p-3">
+              <div className="bg-red-50 border border-red-200 rounded-md p-3 mt-4">
                 <div className="text-sm text-red-800">{validationErrors.submit}</div>
               </div>
             )}
 
-            <div className="flex gap-3 sm:gap-4">
-              <button
-                type="button"
-                onClick={handleBack}
-                className="flex-1 bg-gray-500 text-white py-2 rounded-md"
-              >
+            <div className="flex gap-3 mt-4">
+              <MantineButton variant="default" onClick={handleBack} fullWidth>
                 戻る
-              </button>
-              <button
+              </MantineButton>
+              <MantineButton
                 type="submit"
-                disabled={isSubmitting || !winnerId || (actionType === 'ron' && !loserId)}
-                className="flex-1 bg-blue-600 text-white py-2 rounded-md disabled:opacity-50"
+                loading={isSubmitting}
+                disabled={!winnerId || (actionType === 'ron' && !loserId)}
+                fullWidth
               >
-                {isSubmitting ? '計算中...' : '支払い'}
-              </button>
+                支払い
+              </MantineButton>
             </div>
-          </>
-        )}
+          </Stepper.Step>
+        </Stepper>
       </form>
-    </div>
+    </Modal>
   )
 }

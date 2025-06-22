@@ -42,7 +42,6 @@ export default function GamePage() {
   const [error, setError] = useState('')
   const [showScoreInput, setShowScoreInput] = useState(false)
   const [activeAction, setActiveAction] = useState<'tsumo' | 'ron' | null>(null)
-  const [showLoserSelect, setShowLoserSelect] = useState(false)
   const [selectedLoserId, setSelectedLoserId] = useState<string | null>(null)
   const [showPointAnimation, setShowPointAnimation] = useState(false)
   const [pointChanges, setPointChanges] = useState<Array<{ playerId: string; change: number; newPoints: number }>>([])
@@ -383,12 +382,7 @@ export default function GamePage() {
 
   const handleRon = () => {
     setActiveAction('ron')
-    setShowLoserSelect(true)
-  }
-
-  const handleLoserSelected = (playerId: string) => {
-    setSelectedLoserId(playerId)
-    setShowLoserSelect(false)
+    setSelectedLoserId(null)
     setShowScoreInput(true)
   }
 
@@ -719,25 +713,6 @@ export default function GamePage() {
           </div>
         )}
 
-        {/* 放銃者選択 */}
-        {showLoserSelect && activeAction === 'ron' && (
-          <div className="bg-white rounded-lg shadow-lg p-3 sm:p-6 mb-6">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-3 sm:mb-4">放銃者選択</h2>
-            <div className="grid grid-cols-2 gap-3">
-              {gameState.players
-                .filter(p => p.playerId !== currentPlayer?.playerId)
-                .map(player => (
-                  <button
-                    key={player.playerId}
-                    onClick={() => handleLoserSelected(player.playerId)}
-                    className="bg-red-500 text-white py-2 rounded-md hover:bg-red-600"
-                  >
-                    {player.name}
-                  </button>
-                ))}
-            </div>
-          </div>
-        )}
 
         {/* 点数入力フォーム */}
         {showScoreInput && activeAction && (
@@ -746,7 +721,6 @@ export default function GamePage() {
             currentPlayer={currentPlayer}
             actionType={activeAction}
             preselectedWinnerId={currentPlayer?.playerId}
-            preselectedLoserId={selectedLoserId || undefined}
             onSubmit={handleScoreSubmit}
             onCancel={() => {
               setShowScoreInput(false)
