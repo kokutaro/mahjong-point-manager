@@ -4,6 +4,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useSocket } from '@/hooks/useSocket'
 import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
+import { Reorder } from 'framer-motion'
+import { GripVertical } from 'lucide-react'
 
 interface GamePlayer {
   playerId: string
@@ -294,39 +296,34 @@ export default function RoomPage() {
     }
   }, [gameState])
 
-  const handleDragStart = (index: number) => (e: React.DragEvent<HTMLDivElement>) => {
-    e.dataTransfer.setData('text/plain', index.toString())
-  }
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-  }
-
-  const handleDrop = (index: number) => async (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    const fromIndex = Number(e.dataTransfer.getData('text/plain'))
-    if (fromIndex === index) return
-    const updated = [...seatOrder]
-    const [moved] = updated.splice(fromIndex, 1)
-    updated.splice(index, 0, moved)
-    setSeatOrder(updated)
-
-    try {
-      const response = await fetch(`/api/room/${roomCode}/seat-order`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          positions: updated.map((p, i) => ({ playerId: p.playerId, position: i }))
+  const updateSeatOrderOnServer = useCallback(
+    async (order: GamePlayer[]) => {
+      try {
+        const response = await fetch(`/api/room/${roomCode}/seat-order`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            positions: order.map((p, i) => ({ playerId: p.playerId, position: i }))
+          })
         })
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        throw new Error(data.error?.message || '席順の更新に失敗しました')
+        const data = await response.json()
+        if (!response.ok) {
+          throw new Error(data.error?.message || '席順の更新に失敗しました')
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '席順の更新に失敗しました')
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '席順の更新に失敗しました')
-    }
+    },
+    [roomCode]
+  )
+
+  const handleReorder = (newOrder: GamePlayer[]) => {
+    setSeatOrder(newOrder)
+  }
+
+  const handleReorderEnd = () => {
+    updateSeatOrderOnServer(seatOrder)
   }
 
   const isHost = user && roomInfo && user.playerId === roomInfo.hostPlayer?.id
@@ -395,18 +392,19 @@ export default function RoomPage() {
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">プレイヤー</h2>
           <div className="grid gap-4">
-            {seatOrder.length === 4 && isHost
-              ? seatOrder.map((player, idx) => (
-                  <div
+            {seatOrder.length === 4 && isHost ? (
+              <Reorder.Group axis="y" values={seatOrder} onReorder={handleReorder} onDragEnd={handleReorderEnd} className="grid gap-4">
+                {seatOrder.map((player, idx) => (
+                  <Reorder.Item
                     key={player.playerId}
-                    draggable
-                    onDragStart={handleDragStart(idx)}
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop(idx)}
-                    className="p-4 rounded-lg border-2 border-green-200 bg-green-50 cursor-move"
+                    value={player}
+                    className="p-4 rounded-lg border-2 border-green-200 bg-green-50"
+                    layout
+                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                   >
                     <div className="flex justify-between items-center">
                       <div className="flex items-center space-x-3">
+                        <GripVertical className="w-5 h-5 text-gray-400 cursor-grab" />
                         <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center font-semibold text-gray-700">
                           {getPositionName(idx)}
                         </div>
@@ -422,9 +420,11 @@ export default function RoomPage() {
                         )}
                       </div>
                     </div>
-                  </div>
-                ))
-              : [0, 1, 2, 3].map((position) => {
+                  </Reorder.Item>
+                ))}
+              </Reorder.Group>
+            ) : (
+              [0, 1, 2, 3].map((position) => {
                   const player = gameState?.players.find((p) => p.position === position)
                   return (
                     <div
@@ -454,7 +454,8 @@ export default function RoomPage() {
                       </div>
                     </div>
                   )
-                })}
+                })
+            )}
           </div>
         </div>
 
