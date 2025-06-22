@@ -9,8 +9,7 @@ const createRoomSchema = z.object({
   initialPoints: z.number().int().min(20000).max(50000).default(25000),
   basePoints: z.number().int().min(20000).max(50000).default(30000),
   hasTobi: z.boolean().default(true),
-  uma: z.array(z.number()).length(4).default([20, 10, -10, -20]),
-  oka: z.number().default(0)
+  uma: z.array(z.number()).length(4).default([20, 10, -10, -20])
 })
 
 // 6桁のランダムルームコード生成
@@ -64,8 +63,7 @@ export async function POST(request: NextRequest) {
         initialPoints: validatedData.initialPoints,
         basePoints: validatedData.basePoints,
         hasTobi: validatedData.hasTobi,
-        uma: validatedData.uma,
-        oka: validatedData.oka
+        uma: validatedData.uma
       }
     })
 
