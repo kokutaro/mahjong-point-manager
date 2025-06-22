@@ -123,6 +123,10 @@ export class SocketClient {
     this.socket?.on('ryukyoku', callback)
   }
 
+  onSeatOrderUpdated(callback: (data: any) => void) {
+    this.socket?.on('seat_order_updated', callback)
+  }
+
   onError(callback: (error: any) => void) {
     this.socket?.on('error', callback)
   }
@@ -155,6 +159,10 @@ export class SocketClient {
 
   offRyukyoku(callback?: (data: any) => void) {
     this.socket?.off('ryukyoku', callback)
+  }
+
+  offSeatOrderUpdated(callback?: (data: any) => void) {
+    this.socket?.off('seat_order_updated', callback)
   }
 
   offError(callback?: (error: any) => void) {
