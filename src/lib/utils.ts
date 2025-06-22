@@ -16,9 +16,10 @@ export function getRoundName(round: number): string {
   return `${winds[windIndex]}${roundNumber}局`
 }
 
-export function getPositionName(position: number): string {
+export function getPositionName(position: number, dealerPosition: number = 0): string {
   const positions = ['東', '南', '西', '北']
-  return positions[position] || '不明'
+  const relativeIndex = (position - dealerPosition + 4) % 4
+  return positions[relativeIndex] || '不明'
 }
 
 export function generateRoomCode(): string {

@@ -1,5 +1,7 @@
 'use client'
 
+import { getPositionName } from '@/lib/utils'
+
 interface GameState {
   gameId: string
   players: any[]
@@ -33,10 +35,6 @@ export default function GameInfo({ gameState, isConnected, gameType }: GameInfoP
     }
   }
 
-  const getPositionName = (position: number) => {
-    const positions = ['東', '南', '西', '北']
-    return positions[position] || '?'
-  }
 
   const getDealerName = () => {
     const dealer = gameState.players.find(p => p.position === gameState.currentOya)
@@ -83,7 +81,7 @@ export default function GameInfo({ gameState, isConnected, gameType }: GameInfoP
           </h1>
           <div className="flex items-center flex-wrap gap-2 sm:space-x-4 sm:gap-0 text-xs sm:text-sm text-gray-600">
             <span>
-              親: {getPositionName(gameState.currentOya)} {getDealerName()}
+              親: {getPositionName(gameState.currentOya, gameState.currentOya)} {getDealerName()}
             </span>
             {gameState.kyotaku > 0 && (
               <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs">
@@ -142,7 +140,7 @@ export default function GameInfo({ gameState, isConnected, gameType }: GameInfoP
         <div className="bg-gray-50 rounded-lg p-2 sm:p-3 text-center">
           <div className="text-gray-600 text-xs">親</div>
           <div className="font-semibold text-gray-800">
-            {getPositionName(gameState.currentOya)}
+            {getPositionName(gameState.currentOya, gameState.currentOya)}
           </div>
         </div>
         
@@ -175,7 +173,7 @@ export default function GameInfo({ gameState, isConnected, gameType }: GameInfoP
                   key={player.playerId}
                   className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs sm:text-sm"
                 >
-                  {getPositionName(player.position)} {player.name}
+                  {getPositionName(player.position, gameState.currentOya)} {player.name}
                 </span>
               ))}
           </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { getPositionName } from '@/lib/utils'
 import { Modal, Stepper, Button as MantineButton } from '@mantine/core'
 import { ScoreCalculationResult, validateHanFu } from '@/lib/score'
 
@@ -119,13 +120,9 @@ export default function ScoreInputForm({
     { value: 110, label: '110符' }
   ]
 
-  const getPositionName = (position: number) => {
-    const positions = ['東', '南', '西', '北']
-    return positions[position] || '?'
-  }
 
   const getPlayerDisplay = (player: GamePlayer) => {
-    const position = getPositionName(player.position)
+    const position = getPositionName(player.position, gameState.currentOya)
     const isDealerMark = player.position === gameState.currentOya ? ' (親)' : ''
     return `${position} ${player.name}${isDealerMark}`
   }

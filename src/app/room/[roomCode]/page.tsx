@@ -3,7 +3,8 @@
 import { useAuth } from '@/contexts/AuthContext'
 import { useSocket } from '@/hooks/useSocket'
 import { useParams, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useState, useRef } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { getPositionName } from '@/lib/utils'
 import { Reorder } from 'framer-motion'
 import { GripVertical } from 'lucide-react'
 import { useMediaQuery } from '@mantine/hooks'
@@ -297,10 +298,6 @@ export default function RoomPage() {
     }
   }
 
-  const getPositionName = (position: number) => {
-    const positions = ['東', '南', '西', '北']
-    return positions[position] || '?'
-  }
 
   const [seatOrder, setSeatOrder] = useState<GamePlayer[]>([])
   const seatOrderRef = useRef<GamePlayer[]>([])
