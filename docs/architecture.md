@@ -21,8 +21,10 @@
 ### インフラ・開発環境
 
 - **Docker** (開発環境・本番デプロイ)
+- **Vercel** (フロントエンド・API デプロイ予定)
 - **PostgreSQL** (データベース)
 - **Jest + Testing Library** (テスト環境)
+- **ESLint + TypeScript** (コード品質管理)
 
 ## システム構成
 
@@ -277,12 +279,17 @@ socket.emit('error', { message: string, code: string });
 
 ### テスト構成 (実装済み)
 
-- **Unit Tests**: 30テスト (全パス)
+- **Unit Tests**: 40+テスト (全パス)
   - 点数計算ロジック (`score.ts`)
   - 点数管理クラス (`point-manager.ts`)
   - ユーティリティ関数 (`utils.ts`)
+  - 精算計算（返し点・ウマ対応）
 - **Integration Tests**: API エンドポイント
+  - ルーム作成・参加
+  - ゲーム操作・点数計算
 - **Component Tests**: React コンポーネント
+  - ゲーム画面表示・操作
+  - 結果画面表示
 
 ### テストツール
 

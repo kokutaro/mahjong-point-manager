@@ -74,17 +74,17 @@ Content-Type: application/json
   "gameType": "TONPUU" | "HANCHAN",
   "settings": {
     "startingPoints": 25000,
+    "basePoints": 30000,
     "umaSettings": {
       "first": 20000,
       "second": 10000,
       "third": -10000,
       "fourth": -20000
     },
-    "hasOka": true,
     "hasTobi": true,
-    "hasYakitori": true,
-    "tobiPenalty": 20000,
-    "yakitoriPenalty": 20000
+    "hasYakitori": false,
+    "tobiPenalty": 0,
+    "yakitoriPenalty": 0
   },
   "creatorId": "プレイヤーID"
 }
@@ -488,7 +488,7 @@ io.to(roomCode).emit('game-finished', {
         finalPoints: 35000,
         rank: 1,
         uma: 20000,
-        oka: 10000,
+        rawScore: 10000,
         settlement: 30000
       }
     ]
