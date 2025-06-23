@@ -4,15 +4,16 @@ import ErrorDisplay, { ErrorInfo } from '@/components/ErrorDisplay'
 import GameEndScreen from '@/components/GameEndScreen'
 import GameInfo from '@/components/GameInfo'
 import GameResult from '@/components/GameResult'
+import MatchHistoryModal from '@/components/MatchHistoryModal'
+import MatchHistoryTable from '@/components/MatchHistoryTable'
+import MenuDrawer from '@/components/MenuDrawer'
 import PlayerStatus from '@/components/PlayerStatus'
 import PointAnimation from '@/components/PointAnimation'
-import ScoreInputForm from '@/components/ScoreInputForm'
 import RyukyokuForm from '@/components/RyukyokuForm'
-import MatchHistoryModal from '@/components/MatchHistoryModal'
-import MenuDrawer from '@/components/MenuDrawer'
+import ScoreInputForm from '@/components/ScoreInputForm'
 import { useAuth } from '@/contexts/AuthContext'
-import { useSocket } from '@/hooks/useSocket'
 import { useMatchHistory } from '@/hooks/useMatchHistory'
+import { useSocket } from '@/hooks/useSocket'
 import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
@@ -661,7 +662,8 @@ export default function GamePage() {
           isConnected={isConnected}
           gameType={gameInfo?.settings?.gameType || 'HANCHAN'}
         />
-
+        {/* 連続対局履歴 */}
+        <MatchHistoryTable history={history} />
 
         {/* プレイヤー状態 */}
         <PlayerStatus 
