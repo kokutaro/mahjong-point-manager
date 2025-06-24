@@ -74,6 +74,33 @@ function HomePageContent() {
     router.push('/room/create' as any)
   }
 
+  const handleResumeSession = async (sessionId: string) => {
+    try {
+      const response = await fetch(`/api/sessions/${sessionId}/active-game`, {
+        credentials: 'include'
+      })
+      const data = await response.json()
+      if (!response.ok || !data.success) {
+        throw new Error(data.error?.message || 'セッション再開に失敗しました')
+      }
+      const { gameId, roomCode, status } = data.data
+      if (status === 'WAITING') {
+        router.push(`/room/${roomCode}` as any)
+      } else {
+        router.push(`/game/${gameId}` as any)
+      }
+    } catch (err) {
+      setGlobalError(
+        err instanceof Error ? err.message : 'セッション再開に失敗しました'
+      )
+    }
+  }
+
+  const handleCreateSingleGame = () => {
+    // 単発対局モードを保存してルーム作成画面へ
+    setSessionMode(false)
+    router.push('/room/create' as any)
+  }
 
   const handleJoinRoom = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -175,7 +202,7 @@ function HomePageContent() {
                 {activeSessions.map((session) => (
                   <div
                     key={session.id}
-                    className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-center justify-between"
+                    className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
                   >
                     <div>
                       <h3 className="font-medium text-yellow-800">
@@ -185,12 +212,20 @@ function HomePageContent() {
                         {session.totalGames}局完了 · ホスト: {session.hostPlayer.name}
                       </p>
                     </div>
-                    <button
-                      onClick={() => router.push(`/sessions/${session.id}`)}
-                      className="bg-yellow-600 text-white py-2 px-4 rounded-md hover:bg-yellow-700 transition-colors"
-                    >
-                      セッション詳細
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleResumeSession(session.id)}
+                        className="bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
+                      >
+                        再入室
+                      </button>
+                      <button
+                        onClick={() => router.push(`/sessions/${session.id}`)}
+                        className="bg-yellow-600 text-white py-2 px-4 rounded-md hover:bg-yellow-700 transition-colors"
+                      >
+                        セッション詳細
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
