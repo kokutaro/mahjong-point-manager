@@ -6,6 +6,7 @@ import { useSessionStore, useUIStore } from '@/store/useAppStore'
 import { useAuth } from '@/contexts/AuthContext'
 import { io, Socket } from 'socket.io-client'
 import ForceEndConfirmModal from './ForceEndConfirmModal'
+import AlertModal from './AlertModal'
 import VotingProgress, { VoteOption, VoteState } from './VotingProgress'
 import { analyzeVotes, VoteResult } from '@/lib/vote-analysis'
 
@@ -57,6 +58,11 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
   // 強制終了システム用のstate
   const [showForceEndModal, setShowForceEndModal] = useState(false)
   const [isForceEnding, setIsForceEnding] = useState(false)
+  const [notification, setNotification] = useState<{
+    message: string
+    countdown?: number
+    action?: () => void
+  } | null>(null)
   
   // Zustand ストア
   const { setSession } = useSessionStore()
@@ -147,7 +153,7 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
     socketInstance.on('vote-cancelled', ({ message }: { message: string }) => {
       setIsWaitingForVotes(false)
       setContinueVotes({})
-      alert(message)
+      setNotification({ message, action: () => setNotification(null) })
     })
     
     // セッション強制終了通知
@@ -157,12 +163,13 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
     }) => {
       // ホスト以外のプレイヤーに通知
       if (user?.playerId !== endedBy.playerId) {
-        alert(`セッションが${endedBy.name}により強制終了されました。\n理由: ${reason}\n\n5秒後にホームページに遷移します。`)
-        
-        // 5秒後にホームページに遷移
-        setTimeout(() => {
-          window.location.href = '/'
-        }, 5000)
+        setNotification({
+          message: `セッションが${endedBy.name}により強制終了されました。\n理由: ${reason}\n\n5秒後にホームページに遷移します。`,
+          countdown: 5,
+          action: () => {
+            window.location.href = '/'
+          }
+        })
       }
     })
     
@@ -182,23 +189,28 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
     })
     
     // 全員合意によるセッション終了
-    socketInstance.on('session_ended_by_consensus', ({ reason, voteDetails }: { 
-      reason: string, 
-      voteDetails: any 
+    socketInstance.on('session_ended_by_consensus', ({ reason, voteDetails }: {
+      reason: string,
+      voteDetails: any
     }) => {
-      alert(`セッションが終了しました。\n理由: ${reason}\n\n5秒後にホームページに遷移します。`)
-      
-      setTimeout(() => {
-        window.location.href = '/'
-      }, 5000)
+      setNotification({
+        message: `セッションが終了しました。\n理由: ${reason}\n\n5秒後にホームページに遷移します。`,
+        countdown: 5,
+        action: () => {
+          window.location.href = '/'
+        }
+      })
     })
     
     // 継続合意によるプロセス開始
-    socketInstance.on('session_continue_agreed', ({ continueVotes }: { 
-      continueVotes: number 
+    socketInstance.on('session_continue_agreed', ({ continueVotes }: {
+      continueVotes: number
     }) => {
-      alert(`${continueVotes}名が継続を希望しています。継続プロセスを開始します。`)
-      
+      setNotification({
+        message: `${continueVotes}名が継続を希望しています。継続プロセスを開始します。`,
+        action: () => setNotification(null)
+      })
+
       // 既存の継続プロセスに移行
       resetSessionVote()
       handleContinueSession()
@@ -206,7 +218,10 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
     
     // 投票タイムアウト通知
     socketInstance.on('vote_timeout', () => {
-      alert('投票がタイムアウトしました。投票をリセットします。')
+      setNotification({
+        message: '投票がタイムアウトしました。投票をリセットします。',
+        action: () => setNotification(null)
+      })
       resetSessionVote()
     })
     
@@ -460,7 +475,10 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
         socket.emit('vote-timeout', { gameId: resultData.gameId })
       }
       
-      alert('投票がタイムアウトしました。投票をリセットします。')
+      setNotification({
+        message: '投票がタイムアウトしました。投票をリセットします。',
+        action: () => setNotification(null)
+      })
     }, 5 * 60 * 1000) // 5分
     
     setVoteTimeout(timeout)
@@ -952,6 +970,18 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
           onConfirm={handleForceEndConfirm}
           sessionName={resultData.sessionName}
           isLoading={isForceEnding}
+        />
+        <AlertModal
+          isOpen={notification !== null}
+          message={notification?.message || ''}
+          countdownSeconds={notification?.countdown}
+          onConfirm={() => {
+            if (notification?.action) {
+              notification.action()
+            } else {
+              setNotification(null)
+            }
+          }}
         />
       </div>
     </div>
