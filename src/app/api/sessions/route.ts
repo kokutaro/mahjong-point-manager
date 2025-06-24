@@ -5,11 +5,17 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const playerId = searchParams.get('playerId')
+    const status = searchParams.get('status')
     const limit = parseInt(searchParams.get('limit') || '10')
     const offset = parseInt(searchParams.get('offset') || '0')
 
     // 基本的なクエリ条件
     const whereCondition: any = {}
+
+    // ステータスによるフィルタリング
+    if (status) {
+      whereCondition.status = status
+    }
 
     // 特定プレイヤーのセッション履歴の場合
     if (playerId) {
