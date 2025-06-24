@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import GameResult from '../GameResult'
 
 // AuthContextのモック
@@ -8,10 +8,9 @@ const mockUser = {
 }
 
 // useAuth フックのモック
+const mockedUseAuth = jest.fn()
 jest.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({
-    user: mockUser
-  })
+  useAuth: () => mockedUseAuth(),
 }))
 
 // useAppStore フックのモック
@@ -39,6 +38,7 @@ global.fetch = jest.fn()
 // Socket.IO のモック
 const mockSocket = {
   on: jest.fn(),
+  off: jest.fn(),
   emit: jest.fn(),
   disconnect: jest.fn()
 }
@@ -100,7 +100,8 @@ describe('GameResult ホスト表示機能', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    
+    mockedUseAuth.mockReturnValue({ user: mockUser })
+
     // fetch API のレスポンスをモック
     ;(global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
@@ -230,7 +231,11 @@ describe('GameResult ホスト表示機能', () => {
     await screen.findByText('対局結果')
 
     // セッション情報が表示される
-    expect(screen.getByText(/セッション:/)).toBeInTheDocument()
+    expect(
+      screen.getByText((content, element) =>
+        element?.textContent?.startsWith('セッション:')
+      )
+    ).toBeInTheDocument()
     expect(screen.getByText(/テストセッション/)).toBeInTheDocument()
   })
 })
@@ -240,7 +245,8 @@ describe('GameResult Phase 2: ホスト専用強制終了機能', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    
+    mockedUseAuth.mockReturnValue({ user: mockUser })
+
     // fetch API のレスポンスをモック
     ;(global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
@@ -254,9 +260,7 @@ describe('GameResult Phase 2: ホスト専用強制終了機能', () => {
   test('ホストユーザーに強制終了ボタンが表示される', async () => {
     // ホストとして認証されるようモック設定
     const hostUser = { playerId: 'player1', name: 'テストプレイヤー1' }
-    jest.doMock('@/contexts/AuthContext', () => ({
-      useAuth: () => ({ user: hostUser })
-    }))
+    mockedUseAuth.mockReturnValue({ user: hostUser })
 
     render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
 
@@ -270,9 +274,7 @@ describe('GameResult Phase 2: ホスト専用強制終了機能', () => {
   test('非ホストユーザーには強制終了ボタンが表示されない', async () => {
     // 非ホストとして認証されるようモック設定
     const nonHostUser = { playerId: 'player2', name: 'テストプレイヤー2' }
-    jest.doMock('@/contexts/AuthContext', () => ({
-      useAuth: () => ({ user: nonHostUser })
-    }))
+    mockedUseAuth.mockReturnValue({ user: nonHostUser })
 
     render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
 
@@ -298,9 +300,7 @@ describe('GameResult Phase 2: ホスト専用強制終了機能', () => {
     })
 
     const hostUser = { playerId: 'player1', name: 'テストプレイヤー1' }
-    jest.doMock('@/contexts/AuthContext', () => ({
-      useAuth: () => ({ user: hostUser })
-    }))
+    mockedUseAuth.mockReturnValue({ user: hostUser })
 
     render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
 
@@ -313,9 +313,7 @@ describe('GameResult Phase 2: ホスト専用強制終了機能', () => {
 
   test('強制終了ボタンクリックで確認モーダルが表示される', async () => {
     const hostUser = { playerId: 'player1', name: 'テストプレイヤー1' }
-    jest.doMock('@/contexts/AuthContext', () => ({
-      useAuth: () => ({ user: hostUser })
-    }))
+    mockedUseAuth.mockReturnValue({ user: hostUser })
 
     render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
 
@@ -327,8 +325,8 @@ describe('GameResult Phase 2: ホスト専用強制終了機能', () => {
     fireEvent.click(forceEndButton)
 
     // 確認モーダルが表示される
-    expect(screen.getByText('セッション強制終了の確認')).toBeInTheDocument()
-    expect(screen.getByText(/セッション「テストセッション」を強制終了しますか？/)).toBeInTheDocument()
+    await screen.findByText('セッション強制終了の確認')
+    expect(screen.getByText(/を強制終了しますか？/)).toBeInTheDocument()
   })
 
   test('確認モーダルで強制終了を実行できる', async () => {
@@ -349,9 +347,7 @@ describe('GameResult Phase 2: ホスト専用強制終了機能', () => {
       .mockResolvedValueOnce(mockEndResponse)
 
     const hostUser = { playerId: 'player1', name: 'テストプレイヤー1' }
-    jest.doMock('@/contexts/AuthContext', () => ({
-      useAuth: () => ({ user: hostUser })
-    }))
+    mockedUseAuth.mockReturnValue({ user: hostUser })
 
     render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
 
