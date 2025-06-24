@@ -8,13 +8,25 @@ export async function GET(
   try {
     const { sessionId } = await params
 
-    const game = await prisma.game.findFirst({
+    // まず進行中もしくは待機中の対局を取得
+    let game = await prisma.game.findFirst({
       where: {
         sessionId,
         status: { in: ['WAITING', 'PLAYING'] }
       },
       orderBy: { sessionOrder: 'desc' }
     })
+
+    // 進行中の対局がない場合は最後に終了した対局を取得
+    if (!game) {
+      game = await prisma.game.findFirst({
+        where: {
+          sessionId,
+          status: 'FINISHED'
+        },
+        orderBy: { sessionOrder: 'desc' }
+      })
+    }
 
     if (!game) {
       return NextResponse.json(
