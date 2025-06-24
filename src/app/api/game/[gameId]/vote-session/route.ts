@@ -137,11 +137,36 @@ export async function POST(
       } else if (voteResult.action === 'continue' && voteResult.details.votedPlayers === totalPlayers) {
         // 継続プロセス開始
         console.log('🔄 Continue process triggered by votes')
-        
+
         io.to(gameInfo.roomCode).emit('session_continue_agreed', {
           continueVotes: voteResult.details.continueVotes
         })
-        
+
+        try {
+          const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
+          const res = await fetch(`${baseUrl}/api/game/${gameId}/rematch`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ continueSession: true })
+          })
+          const data = await res.json()
+
+          if (res.ok && data.success) {
+            io.to(gameInfo.roomCode).emit('new-room-ready', {
+              roomCode: data.data.roomCode,
+              gameId: data.data.gameId,
+              sessionId: data.data.sessionId
+            })
+            console.log(`🔄 Successfully created new room ${data.data.roomCode} for continuation`)
+          } else {
+            console.error('Failed to create new room:', data.error?.message)
+            io.to(gameInfo.roomCode).emit('error', { message: '新しいルーム作成に失敗しました' })
+          }
+        } catch (err) {
+          console.error('Error creating new room:', err)
+          io.to(gameInfo.roomCode).emit('error', { message: '新しいルーム作成に失敗しました' })
+        }
+
         // 投票状態をクリア
         if (gameVotes) {
           delete gameVotes[gameId]

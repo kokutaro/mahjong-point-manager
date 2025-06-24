@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
+import { useMatchHistory } from '@/hooks/useMatchHistory'
 import { useUIStore } from '@/store/useAppStore'
 import { useAuth } from '@/contexts/AuthContext'
 import { io, Socket } from 'socket.io-client'
@@ -30,6 +31,10 @@ interface GameResultData {
   sessionCode?: string
   sessionName?: string
   hostPlayerId?: string
+  nextGame?: {
+    id: string
+    roomCode: string
+  } | null
 }
 
 interface GameResultProps {
@@ -61,6 +66,21 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
     countdown?: number
     action?: () => void
   } | null>(null)
+
+  // Next game transition helper refs
+  const nextRoomCodeRef = useRef<string | null>(null)
+
+  const startNextGameCountdown = useCallback(() => {
+    const code = nextRoomCodeRef.current
+    if (!code) return
+    setNotification({
+      message: '次の対局の準備ができました。5秒後に自動的に遷移します。',
+      countdown: 5,
+      action: () => {
+        window.location.href = `/room/${code}`
+      },
+    })
+  }, [])
   
   // Zustand ストア
   const { isLoading, setLoading, setError: setGlobalError } = useUIStore()
@@ -86,6 +106,10 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
       if (data.success) {
         console.log('Setting result data:', data.data)
         setResultData(data.data)
+        if (data.data.nextGame) {
+          nextRoomCodeRef.current = data.data.nextGame.roomCode
+          startNextGameCountdown()
+        }
       } else {
         throw new Error(data.error?.message || '結果の取得に失敗しました')
       }
@@ -143,7 +167,9 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
     
     // 全員合意後の新ルーム通知
     socketInstance.on('new-room-ready', ({ roomCode }: { roomCode: string }) => {
-      window.location.href = `/room/${roomCode}`
+      nextRoomCodeRef.current = roomCode
+      setIsWaitingForVotes(false)
+      startNextGameCountdown()
     })
     
     // 投票キャンセル通知
@@ -203,14 +229,17 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
     socketInstance.on('session_continue_agreed', ({ continueVotes }: {
       continueVotes: number
     }) => {
-      setNotification({
-        message: `${continueVotes}名が継続を希望しています。継続プロセスを開始します。`,
-        action: () => setNotification(null)
-      })
+      startNextGameCountdown()
 
-      // 既存の継続プロセスに移行
+      if (!nextRoomCodeRef.current) {
+        setNotification({
+          message: `${continueVotes}名が継続を希望しています。次の対局を準備中です...`,
+          action: () => setNotification(null),
+        })
+      }
+
+      // move existing vote state into continuation phase
       resetSessionVote()
-      handleContinueSession()
     })
     
     // 投票タイムアウト通知
@@ -227,6 +256,7 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
       socketInstance.off('session_vote_update')
       socketInstance.off('session_ended_by_consensus')
       socketInstance.off('session_continue_agreed')
+      socketInstance.off('new-room-ready')
       socketInstance.off('vote_timeout')
       
       socketInstance.disconnect()
