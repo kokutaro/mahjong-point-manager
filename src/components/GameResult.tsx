@@ -45,7 +45,6 @@ interface GameResultProps {
 export default function GameResult({ gameId, onBack }: GameResultProps) {
   const [resultData, setResultData] = useState<GameResultData | null>(null)
   const [error, setError] = useState('')
-  const { addResult } = useMatchHistory()
   
   // 全員合意システム用のstate（従来の継続投票）
   const [continueVotes, setContinueVotes] = useState<Record<string, boolean>>({})
@@ -264,21 +263,7 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
     }
   }, [resultData, gameId])
 
-  useEffect(() => {
-    if (resultData) {
-      try {
-        const scores = resultData.results.map(r => ({
-          playerId: r.playerId,
-          name: r.name,
-          points: r.finalPoints
-        }))
-        addResult({ gameId: resultData.gameId, scores })
-      } catch (err) {
-        console.error('Failed to add result to match history:', err)
-        // LocalStorageエラーがあっても処理を継続
-      }
-    }
-  }, [resultData]) // addResultを依存配列から削除
+
 
   const handleContinueSession = () => {
     if (!resultData || !socket || !user) return

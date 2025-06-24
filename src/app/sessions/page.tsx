@@ -133,12 +133,6 @@ export default function SessionsPage() {
             
             <div className="flex gap-2">
               <button
-                onClick={() => router.push('/history')}
-                className="bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
-              >
-                単発対局履歴
-              </button>
-              <button
                 onClick={() => router.push('/')}
                 className="bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600 transition-colors"
               >

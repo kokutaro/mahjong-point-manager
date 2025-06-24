@@ -62,14 +62,12 @@ mahjong-point-manager/
 │   │   │   │   └── [gameId]/     # 個別ゲーム操作
 │   │   │   ├── room/             # ルーム管理API
 │   │   │   ├── score/            # 点数計算API
-│   │   │   ├── history/          # 履歴API
 │   │   │   └── stats/            # 統計API
 │   │   ├── game/                 # ゲーム画面
 │   │   │   └── [gameId]/         # 対局ページ
 │   │   ├── room/                 # ルーム管理
 │   │   │   ├── create/           # ルーム作成
 │   │   │   └── [roomCode]/       # ルーム参加・待機
-│   │   ├── history/              # 履歴・統計ページ
 │   │   ├── layout.tsx            # ルートレイアウト
 │   │   └── page.tsx              # ホームページ
 │   ├── components/               # React コンポーネント

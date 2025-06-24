@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { Button, TextInput, Paper, Title, Text } from '@mantine/core'
 import WebSocketDebug, { useWebSocketDebug } from '@/components/WebSocketDebug'
+import { useAuth } from '@/contexts/AuthContext'
 import { useSessionStore, useUIStore } from '@/store/useAppStore'
+import { Button, Paper, Text, TextInput, Title } from '@mantine/core'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useEffect, useState } from 'react'
 
 function HomePageContent() {
   const { user, isAuthenticated, login, isLoading } = useAuth()
@@ -20,7 +20,7 @@ function HomePageContent() {
   const { showDebug, setShowDebug } = useWebSocketDebug()
   
   // Zustand ストア
-  const { currentSession, sessionMode, setSessionMode } = useSessionStore()
+  const { currentSession, setSessionMode } = useSessionStore()
   const { setError: setGlobalError } = useUIStore()
 
   // アクティブセッション取得
@@ -72,6 +72,28 @@ function HomePageContent() {
     // セッションモードを保存してルーム作成画面へ
     setSessionMode(true)
     router.push('/room/create' as any)
+  }
+
+  const handleResumeSession = async (sessionId: string) => {
+    try {
+      const response = await fetch(`/api/sessions/${sessionId}/active-game`, {
+        credentials: 'include'
+      })
+      const data = await response.json()
+      if (!response.ok || !data.success) {
+        throw new Error(data.error?.message || 'セッション再開に失敗しました')
+      }
+      const { gameId, roomCode, status } = data.data
+      if (status === 'WAITING') {
+        router.push(`/room/${roomCode}` as any)
+      } else {
+        router.push(`/game/${gameId}` as any)
+      }
+    } catch (err) {
+      setGlobalError(
+        err instanceof Error ? err.message : 'セッション再開に失敗しました'
+      )
+    }
   }
 
   const handleCreateSingleGame = () => {
@@ -180,7 +202,7 @@ function HomePageContent() {
                 {activeSessions.map((session) => (
                   <div
                     key={session.id}
-                    className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-center justify-between"
+                    className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
                   >
                     <div>
                       <h3 className="font-medium text-yellow-800">
@@ -190,12 +212,20 @@ function HomePageContent() {
                         {session.totalGames}局完了 · ホスト: {session.hostPlayer.name}
                       </p>
                     </div>
-                    <button
-                      onClick={() => router.push(`/sessions/${session.id}`)}
-                      className="bg-yellow-600 text-white py-2 px-4 rounded-md hover:bg-yellow-700 transition-colors"
-                    >
-                      セッション詳細
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleResumeSession(session.id)}
+                        className="bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
+                      >
+                        再入室
+                      </button>
+                      <button
+                        onClick={() => router.push(`/sessions/${session.id}`)}
+                        className="bg-yellow-600 text-white py-2 px-4 rounded-md hover:bg-yellow-700 transition-colors"
+                      >
+                        セッション詳細
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -204,7 +234,7 @@ function HomePageContent() {
 
           <div className="grid gap-6">
             {/* 対局タイプ選択 */}
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-1 gap-6">
               {/* 連続対局セッション */}
               <div className="bg-green-50 rounded-lg p-6">
                 <h2 className="text-xl font-semibold text-green-800 mb-4">
@@ -218,22 +248,6 @@ function HomePageContent() {
                   className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
                 >
                   セッション作成
-                </button>
-              </div>
-
-              {/* 単発対局 */}
-              <div className="bg-emerald-50 rounded-lg p-6">
-                <h2 className="text-xl font-semibold text-emerald-800 mb-4">
-                  単発対局
-                </h2>
-                <p className="text-emerald-600 mb-4">
-                  1局のみの対局ルームを作成します
-                </p>
-                <button
-                  onClick={handleCreateSingleGame}
-                  className="w-full bg-emerald-600 text-white py-2 px-4 rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-colors"
-                >
-                  単発対局作成
                 </button>
               </div>
             </div>
@@ -278,7 +292,7 @@ function HomePageContent() {
           </div>
 
           {/* 履歴・統計 */}
-          <div className="mt-6 grid md:grid-cols-2 gap-6">
+          <div className="mt-6 grid md:grid-cols-1 gap-6">
             {/* セッション履歴 */}
             <div className="bg-purple-50 rounded-lg p-6">
               <h2 className="text-xl font-semibold text-purple-800 mb-4">
@@ -295,21 +309,6 @@ function HomePageContent() {
               </button>
             </div>
 
-            {/* 単発対局履歴 */}
-            <div className="bg-indigo-50 rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-indigo-800 mb-4">
-                単発対局履歴
-              </h2>
-              <p className="text-indigo-600 mb-4">
-                単発対局の履歴を確認できます
-              </p>
-              <button
-                onClick={() => router.push('/history')}
-                className="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
-              >
-                単発履歴
-              </button>
-            </div>
           </div>
 
           {/* ログアウト */}
