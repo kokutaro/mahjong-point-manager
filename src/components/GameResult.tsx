@@ -5,6 +5,9 @@ import { useMatchHistory } from '@/hooks/useMatchHistory'
 import { useSessionStore, useUIStore } from '@/store/useAppStore'
 import { useAuth } from '@/contexts/AuthContext'
 import { io, Socket } from 'socket.io-client'
+import ForceEndConfirmModal from './ForceEndConfirmModal'
+import VotingProgress, { VoteOption, VoteState } from './VotingProgress'
+import { analyzeVotes, VoteResult } from '@/lib/vote-analysis'
 
 interface PlayerResult {
   playerId: string
@@ -26,6 +29,7 @@ interface GameResultData {
   sessionId?: string
   sessionCode?: string
   sessionName?: string
+  hostPlayerId?: string
 }
 
 interface GameResultProps {
@@ -38,10 +42,21 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
   const [error, setError] = useState('')
   const { addResult } = useMatchHistory()
   
-  // 全員合意システム用のstate
+  // 全員合意システム用のstate（従来の継続投票）
   const [continueVotes, setContinueVotes] = useState<Record<string, boolean>>({})
   const [isWaitingForVotes, setIsWaitingForVotes] = useState(false)
   const [socket, setSocket] = useState<Socket | null>(null)
+  
+  // Phase 3: 3択投票システム用のstate
+  const [sessionVotes, setSessionVotes] = useState<VoteState>({})
+  const [isWaitingForSessionVotes, setIsWaitingForSessionVotes] = useState(false)
+  const [voteResult, setVoteResult] = useState<VoteResult | null>(null)
+  const [voteTimeout, setVoteTimeout] = useState<NodeJS.Timeout | null>(null)
+  const [voteStartTime, setVoteStartTime] = useState<string | null>(null)
+  
+  // 強制終了システム用のstate
+  const [showForceEndModal, setShowForceEndModal] = useState(false)
+  const [isForceEnding, setIsForceEnding] = useState(false)
   
   // Zustand ストア
   const { setSession } = useSessionStore()
@@ -135,7 +150,73 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
       alert(message)
     })
     
+    // セッション強制終了通知
+    socketInstance.on('session_force_ended', ({ reason, endedBy }: { 
+      reason: string, 
+      endedBy: { playerId: string, name: string } 
+    }) => {
+      // ホスト以外のプレイヤーに通知
+      if (user?.playerId !== endedBy.playerId) {
+        alert(`セッションが${endedBy.name}により強制終了されました。\n理由: ${reason}\n\n5秒後にホームページに遷移します。`)
+        
+        // 5秒後にホームページに遷移
+        setTimeout(() => {
+          window.location.href = '/'
+        }, 5000)
+      }
+    })
+    
+    // Phase 3: セッション投票関連のWebSocketイベント
+    socketInstance.on('session_vote_update', ({ votes, result, voterName }: { 
+      votes: VoteState, 
+      result: VoteResult, 
+      voterName: string 
+    }) => {
+      setSessionVotes(votes)
+      setVoteResult(result)
+      
+      // 投票が入った通知（自分以外）
+      if (user?.name !== voterName) {
+        console.log(`${voterName}が投票しました`)
+      }
+    })
+    
+    // 全員合意によるセッション終了
+    socketInstance.on('session_ended_by_consensus', ({ reason, voteDetails }: { 
+      reason: string, 
+      voteDetails: any 
+    }) => {
+      alert(`セッションが終了しました。\n理由: ${reason}\n\n5秒後にホームページに遷移します。`)
+      
+      setTimeout(() => {
+        window.location.href = '/'
+      }, 5000)
+    })
+    
+    // 継続合意によるプロセス開始
+    socketInstance.on('session_continue_agreed', ({ continueVotes }: { 
+      continueVotes: number 
+    }) => {
+      alert(`${continueVotes}名が継続を希望しています。継続プロセスを開始します。`)
+      
+      // 既存の継続プロセスに移行
+      resetSessionVote()
+      handleContinueSession()
+    })
+    
+    // 投票タイムアウト通知
+    socketInstance.on('vote_timeout', () => {
+      alert('投票がタイムアウトしました。投票をリセットします。')
+      resetSessionVote()
+    })
+    
     return () => {
+      // Phase 3: 新しいイベントリスナーのクリーンアップ
+      socketInstance.off('session_vote_update')
+      socketInstance.off('session_ended_by_consensus')
+      socketInstance.off('session_continue_agreed')
+      socketInstance.off('vote_timeout')
+      
       socketInstance.disconnect()
     }
   }, [resultData, gameId])
@@ -218,6 +299,191 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
     }
   }
 
+  // ホスト専用強制終了ハンドラー
+  const handleHostForceEnd = () => {
+    setShowForceEndModal(true)
+  }
+
+  const handleForceEndConfirm = async (reason: string) => {
+    if (!resultData) return
+    
+    try {
+      setIsForceEnding(true)
+      const response = await fetch(`/api/game/${resultData.gameId}/end`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ reason })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        if (response.status === 403) {
+          setGlobalError('ホスト権限が必要です')
+        } else if (response.status === 401) {
+          setGlobalError('認証が必要です')
+        } else {
+          setGlobalError(data.error?.message || 'セッション終了に失敗しました')
+        }
+        return
+      }
+
+      // 成功時はモーダルを閉じて、少し待ってからホームに遷移
+      setShowForceEndModal(false)
+      
+      // 他のプレイヤーが通知を確認できるよう2秒待機
+      setTimeout(() => {
+        window.location.href = '/'
+      }, 2000)
+
+    } catch (error) {
+      console.error('Force end failed:', error)
+      setGlobalError('セッション終了に失敗しました')
+    } finally {
+      setIsForceEnding(false)
+    }
+  }
+
+  const handleForceEndCancel = () => {
+    setShowForceEndModal(false)
+  }
+
+  // Phase 3: 3択投票システムのハンドラー
+  const handleSessionVote = async (vote: VoteOption) => {
+    if (!resultData || !socket || !user) return
+    
+    try {
+      // 投票状態を即座に更新
+      setSessionVotes(prev => ({ ...prev, [user.playerId]: vote }))
+      setIsWaitingForSessionVotes(true)
+      
+      // 投票開始時刻を記録
+      if (!voteStartTime) {
+        setVoteStartTime(new Date().toISOString())
+      }
+      
+      // サーバーに投票を送信
+      const response = await fetch(`/api/game/${resultData.gameId}/vote-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ vote })
+      })
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        // 失敗した場合は投票を取り消し
+        setSessionVotes(prev => {
+          const newVotes = { ...prev }
+          delete newVotes[user.playerId]
+          return newVotes
+        })
+        setGlobalError(data.error?.message || '投票に失敗しました')
+        return
+      }
+      
+      // 投票タイムアウトを設定
+      startVoteTimeout()
+      
+    } catch (error) {
+      console.error('Session vote failed:', error)
+      // 失敗した場合は投票を取り消し
+      setSessionVotes(prev => {
+        const newVotes = { ...prev }
+        delete newVotes[user.playerId]
+        return newVotes
+      })
+      setGlobalError('投票に失敗しました')
+    }
+  }
+
+  const handleCancelSessionVote = async () => {
+    if (!resultData || !socket || !user) return
+    
+    try {
+      // 投票取り消しをサーバーに送信
+      const response = await fetch(`/api/game/${resultData.gameId}/cancel-vote-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (response.ok) {
+        // ローカル状態を更新
+        setSessionVotes(prev => {
+          const newVotes = { ...prev }
+          delete newVotes[user.playerId]
+          return newVotes
+        })
+        
+        // 投票者が一人もいない場合は投票をリセット
+        const remainingVotes = Object.keys(sessionVotes).filter(id => id !== user.playerId)
+        if (remainingVotes.length === 0) {
+          resetSessionVote()
+        }
+      }
+    } catch (error) {
+      console.error('Cancel session vote failed:', error)
+      setGlobalError('投票の取り消しに失敗しました')
+    }
+  }
+
+  const resetSessionVote = () => {
+    setSessionVotes({})
+    setIsWaitingForSessionVotes(false)
+    setVoteResult(null)
+    setVoteStartTime(null)
+    
+    if (voteTimeout) {
+      clearTimeout(voteTimeout)
+      setVoteTimeout(null)
+    }
+  }
+
+  const startVoteTimeout = useCallback(() => {
+    if (voteTimeout) {
+      clearTimeout(voteTimeout)
+    }
+    
+    const timeout = setTimeout(() => {
+      // タイムアウト時の処理
+      console.log('Vote timeout reached')
+      resetSessionVote()
+      
+      // タイムアウト通知
+      if (socket && resultData) {
+        socket.emit('vote-timeout', { gameId: resultData.gameId })
+      }
+      
+      alert('投票がタイムアウトしました。投票をリセットします。')
+    }, 5 * 60 * 1000) // 5分
+    
+    setVoteTimeout(timeout)
+  }, [voteTimeout, socket, resultData])
+
+  // 投票結果の分析
+  useEffect(() => {
+    if (!resultData) return
+    
+    const result = analyzeVotes(sessionVotes, resultData.results.length)
+    setVoteResult(result)
+    
+    // 全員投票済みで結果が確定した場合の処理
+    if (result.action !== 'wait' && result.details.votedPlayers === result.details.totalPlayers) {
+      // タイムアウトをクリア
+      if (voteTimeout) {
+        clearTimeout(voteTimeout)
+        setVoteTimeout(null)
+      }
+      
+      // 自動的に次のアクションを実行（WebSocketイベントで処理される）
+    }
+  }, [sessionVotes, resultData, voteTimeout])
 
 
   const getRankColor = (rank: number) => {
@@ -352,8 +618,15 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {result.name}
+                      <div className="flex items-center">
+                        <div className="text-sm font-medium text-gray-900">
+                          {result.name}
+                        </div>
+                        {result.playerId === resultData.hostPlayerId && (
+                          <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full border border-yellow-300">
+                            👑 ホスト
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right">
@@ -385,7 +658,14 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
             {resultData.results.map((result) => (
               <div key={result.playerId} className="border rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <div className="font-medium text-gray-900">{result.name}</div>
+                  <div className="flex items-center">
+                    <div className="font-medium text-gray-900">{result.name}</div>
+                    {result.playerId === resultData.hostPlayerId && (
+                      <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full border border-yellow-300">
+                        👑 ホスト
+                      </span>
+                    )}
+                  </div>
                   <div className={`px-2 py-1 rounded text-sm font-medium ${getRankColor(result.rank)}`}>
                     {result.rank}位
                   </div>
@@ -479,10 +759,10 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
 
         {/* アクションボタン */}
         <div className="text-center">
-          <div className="mb-4">
+          <div className="mb-4 flex flex-wrap justify-center gap-3">
             <button
               onClick={onBack}
-              className="bg-gray-500 text-white py-3 px-6 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors mr-4"
+              className="bg-gray-500 text-white py-3 px-6 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
             >
               ゲームに戻る
             </button>
@@ -493,13 +773,45 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
             >
               ホームに戻る
             </button>
+
+            {/* ホスト専用強制終了ボタン */}
+            {user?.playerId === resultData.hostPlayerId && resultData.sessionId && !isWaitingForVotes && (
+              <button
+                onClick={handleHostForceEnd}
+                disabled={isForceEnding}
+                className="bg-red-600 text-white py-3 px-6 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors disabled:bg-red-400 disabled:cursor-not-allowed flex items-center"
+              >
+                {isForceEnding ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    処理中...
+                  </>
+                ) : (
+                  <>⚠️ セッション強制終了</>
+                )}
+              </button>
+            )}
           </div>
 
           {/* 継続オプション */}
           <div className="bg-green-50 p-4 rounded-lg">
-            <h3 className="text-lg font-semibold text-green-800 mb-3">対局を続けますか？</h3>
+            <h3 className="text-lg font-semibold text-green-800 mb-3">
+              {isWaitingForSessionVotes ? 'セッションをどうしますか？' : '対局を続けますか？'}
+            </h3>
             
-            {isWaitingForVotes ? (
+            {isWaitingForSessionVotes ? (
+              // Phase 3: 3択投票システムの進行状況表示
+              <VotingProgress
+                votes={sessionVotes}
+                players={resultData.results}
+                currentUser={user}
+                onCancelVote={handleCancelSessionVote}
+                timeRemaining={voteStartTime ? Math.max(0, Math.floor((5 * 60 * 1000 - (Date.now() - new Date(voteStartTime).getTime())) / 1000)) : undefined}
+              />
+            ) : isWaitingForVotes ? (
               <div className="space-y-4">
                 <div className="text-center text-green-700 font-medium">
                   全員の合意を待っています...
@@ -555,22 +867,67 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
                 </button>
               </div>
             ) : (
-              <div className="space-y-3">
-                {resultData.sessionId ? (
-                  <button
-                    onClick={handleContinueSession}
-                    className="w-full sm:w-auto bg-green-600 text-white py-3 px-6 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors mr-0 sm:mr-4 mb-3 sm:mb-0"
-                  >
-                    セッション継続（全員合意）
-                  </button>
-                ) : null}
+              <div className="space-y-4">
+                {/* Phase 3: 3択投票ボタン */}
+                {resultData.sessionId && (
+                  <div className="mb-4">
+                    <div className="text-sm text-green-700 mb-3 font-medium">
+                      💭 全員でセッションの方針を決めましょう
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <button
+                        onClick={() => handleSessionVote('continue')}
+                        className="bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors flex items-center justify-center"
+                      >
+                        <span className="mr-2">🔄</span>
+                        <span>セッション継続</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => handleSessionVote('end')}
+                        className="bg-red-600 text-white py-3 px-4 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors flex items-center justify-center"
+                      >
+                        <span className="mr-2">✋</span>
+                        <span>セッション終了</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => handleSessionVote('pause')}
+                        className="bg-yellow-600 text-white py-3 px-4 rounded-md hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-colors flex items-center justify-center"
+                      >
+                        <span className="mr-2">⏸️</span>
+                        <span>保留・様子見</span>
+                      </button>
+                    </div>
+                    <div className="text-xs text-green-600 mt-2 bg-green-100 p-2 rounded">
+                      <strong>継続:</strong> セッションを続ける | <strong>終了:</strong> セッションを終了する | <strong>保留:</strong> 他の人の判断を待つ
+                    </div>
+                  </div>
+                )}
                 
-                <button
-                  onClick={handleNewSession}
-                  className="w-full sm:w-auto bg-emerald-600 text-white py-3 px-6 rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-colors"
-                >
-                  新しいセッション
-                </button>
+                {/* 従来の継続・新規セッションボタン */}
+                <div className="border-t pt-4">
+                  <div className="text-sm text-gray-600 mb-3">
+                    または従来の方法でセッションを管理:
+                  </div>
+                  <div className="space-y-3 sm:space-y-0 sm:space-x-3 sm:flex">
+                    {resultData.sessionId && (
+                      <button
+                        onClick={handleContinueSession}
+                        className="w-full sm:w-auto bg-green-600 text-white py-3 px-6 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
+                      >
+                        セッション継続（全員合意）
+                      </button>
+                    )}
+                    
+                    <button
+                      onClick={handleNewSession}
+                      className="w-full sm:w-auto bg-emerald-600 text-white py-3 px-6 rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-colors"
+                    >
+                      新しいセッション
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
             
@@ -587,6 +944,15 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
             </div>
           </div>
         </div>
+
+        {/* 強制終了確認モーダル */}
+        <ForceEndConfirmModal
+          isOpen={showForceEndModal}
+          onClose={handleForceEndCancel}
+          onConfirm={handleForceEndConfirm}
+          sessionName={resultData.sessionName}
+          isLoading={isForceEnding}
+        />
       </div>
     </div>
   )

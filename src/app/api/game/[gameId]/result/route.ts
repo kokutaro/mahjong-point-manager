@@ -18,7 +18,11 @@ export async function GET(
         },
         result: true,
         settings: true,
-        session: true
+        session: {
+          include: {
+            hostPlayer: true
+          }
+        }
       }
     })
 
@@ -109,7 +113,8 @@ export async function GET(
       basePoints: game.settings?.basePoints || 30000,
       sessionId: game.sessionId,
       sessionCode: game.session?.sessionCode,
-      sessionName: game.session?.name
+      sessionName: game.session?.name,
+      hostPlayerId: game.session?.hostPlayerId
     }
 
     return NextResponse.json({

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { PointManager } from '@/lib/point-manager'
+import { requireAuth, checkHostAccess } from '@/lib/auth'
 // WebSocketインスタンスを直接プロセスから取得
 function getIO() {
   if ((process as any).__socketio) {
@@ -24,6 +25,19 @@ export async function POST(
     const validatedData = endGameRequestSchema.parse(body)
     const { gameId } = await params
 
+    // 認証確認
+    const player = await requireAuth()
+    
+    // ホスト権限チェック
+    const hasHostAccess = await checkHostAccess(gameId, player.playerId)
+    
+    if (!hasHostAccess) {
+      return NextResponse.json({
+        success: false,
+        error: { message: 'この操作にはホスト権限が必要です' }
+      }, { status: 403 })
+    }
+
     const pointManager = new PointManager(gameId)
     
     console.log('🏁 API: Starting force end game for gameId:', gameId, 'reason:', validatedData.reason)
@@ -41,10 +55,23 @@ export async function POST(
     const io = getIO()
     if (io && game?.roomCode) {
       console.log(`Game force ended: ${validatedData.reason}`)
+      
+      // 既存のgame_ended通知
       io.to(game.roomCode).emit('game_ended', {
         gameState: updatedGameState,
         reason: validatedData.reason,
         finalResults: true,
+        forced: true
+      })
+      
+      // 新しいセッション強制終了通知
+      io.to(game.roomCode).emit('session_force_ended', {
+        reason: validatedData.reason,
+        endedBy: {
+          playerId: player.playerId,
+          name: player.name
+        },
+        endedAt: new Date().toISOString(),
         forced: true
       })
     }
@@ -66,6 +93,14 @@ export async function POST(
           details: error.errors
         }
       }, { status: 400 })
+    }
+
+    // 認証エラーのハンドリング
+    if (error instanceof Error && error.message === 'Authentication required') {
+      return NextResponse.json({
+        success: false,
+        error: { message: '認証が必要です' }
+      }, { status: 401 })
     }
 
     console.error('Force end game failed:', error)

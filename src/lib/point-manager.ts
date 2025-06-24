@@ -891,7 +891,8 @@ export class PointManager {
         currentRound: true,
         currentOya: true,
         honba: true,
-        kyotaku: true
+        kyotaku: true,
+        sessionId: true
       }
     })
     return game
