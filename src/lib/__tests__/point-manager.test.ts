@@ -214,6 +214,7 @@ describe('PointManager', () => {
           currentOya: true,
           honba: true,
           kyotaku: true,
+          sessionId: true,
         },
       })
     })
