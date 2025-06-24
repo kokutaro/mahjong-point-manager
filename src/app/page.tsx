@@ -20,7 +20,7 @@ function HomePageContent() {
   const { showDebug, setShowDebug } = useWebSocketDebug()
   
   // Zustand ストア
-  const { currentSession, sessionMode, setSessionMode } = useSessionStore()
+  const { currentSession, setSessionMode } = useSessionStore()
   const { setError: setGlobalError } = useUIStore()
 
   // アクティブセッション取得
@@ -74,11 +74,6 @@ function HomePageContent() {
     router.push('/room/create' as any)
   }
 
-  const handleCreateSingleGame = () => {
-    // 単発対局モードを保存してルーム作成画面へ
-    setSessionMode(false)
-    router.push('/room/create' as any)
-  }
 
   const handleJoinRoom = async (e: React.FormEvent) => {
     e.preventDefault()
