@@ -9,12 +9,21 @@ const createRoomSchema = z.object({
   initialPoints: z.number().int().min(20000).max(50000).default(25000),
   basePoints: z.number().int().min(20000).max(50000).default(30000),
   hasTobi: z.boolean().default(true),
-  uma: z.array(z.number()).length(4).default([20, 10, -10, -20])
+  uma: z.array(z.number()).length(4).default([20, 10, -10, -20]),
+  // セッション関連の新しいフィールド
+  sessionMode: z.boolean().default(false),
+  existingSessionId: z.string().optional(),
+  sessionName: z.string().optional()
 })
 
 // 6桁のランダムルームコード生成
 function generateRoomCode(): string {
   return Math.random().toString(36).substr(2, 6).toUpperCase()
+}
+
+// 6桁のランダムセッションコード生成
+function generateSessionCode(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString()
 }
 
 export async function POST(request: NextRequest) {
@@ -67,12 +76,73 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // ゲーム作成
+    // セッション処理: 既存セッションまたは新規作成
+    let session
+    if (validatedData.existingSessionId) {
+      // 既存セッション継続
+      session = await prisma.gameSession.findUnique({
+        where: { id: validatedData.existingSessionId },
+        include: { participants: true }
+      })
+      
+      if (!session) {
+        return NextResponse.json({
+          success: false,
+          error: { message: '指定されたセッションが見つかりません' }
+        }, { status: 404 })
+      }
+    } else {
+      // 新規セッション作成
+      let sessionCode: string
+      let existingSession
+      do {
+        sessionCode = generateSessionCode()
+        existingSession = await prisma.gameSession.findFirst({
+          where: { sessionCode }
+        })
+      } while (existingSession)
+
+      session = await prisma.gameSession.create({
+        data: {
+          sessionCode,
+          hostPlayerId: hostPlayer.id,
+          name: validatedData.sessionName || null,
+          status: 'ACTIVE',
+          settingsId: gameSettings.id,
+          createdAt: new Date()
+        },
+        include: { participants: true }
+      })
+
+      // セッション参加者を作成（ホストのみ）
+      await prisma.sessionParticipant.create({
+        data: {
+          sessionId: session.id,
+          playerId: hostPlayer.id,
+          position: 0,
+          totalGames: 0,
+          totalSettlement: 0,
+          firstPlace: 0,
+          secondPlace: 0,
+          thirdPlace: 0,
+          fourthPlace: 0
+        }
+      })
+    }
+
+    // 次のセッションオーダーを計算
+    const nextSessionOrder = await prisma.game.count({
+      where: { sessionId: session.id }
+    }) + 1
+
+    // ゲーム作成（セッション付き）
     const game = await prisma.game.create({
       data: {
         roomCode,
         hostPlayerId: hostPlayer.id,
         settingsId: gameSettings.id,
+        sessionId: session.id,
+        sessionOrder: nextSessionOrder,
         status: 'WAITING',
         currentRound: 1,
         currentOya: 0,
@@ -98,6 +168,8 @@ export async function POST(request: NextRequest) {
       data: {
         gameId: game.id,
         roomCode,
+        sessionId: session.id,
+        sessionCode: session.sessionCode,
         hostPlayerId: hostPlayer.id,
         settings: validatedData
       }

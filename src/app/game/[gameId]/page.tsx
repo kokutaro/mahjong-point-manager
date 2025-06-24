@@ -4,11 +4,14 @@ import ErrorDisplay, { ErrorInfo } from '@/components/ErrorDisplay'
 import GameEndScreen from '@/components/GameEndScreen'
 import GameInfo from '@/components/GameInfo'
 import GameResult from '@/components/GameResult'
+import MatchHistoryModal from '@/components/MatchHistoryModal'
+import MenuDrawer from '@/components/MenuDrawer'
 import PlayerStatus from '@/components/PlayerStatus'
 import PointAnimation from '@/components/PointAnimation'
-import ScoreInputForm from '@/components/ScoreInputForm'
 import RyukyokuForm from '@/components/RyukyokuForm'
+import ScoreInputForm from '@/components/ScoreInputForm'
 import { useAuth } from '@/contexts/AuthContext'
+import { useMatchHistory } from '@/hooks/useMatchHistory'
 import { useSocket } from '@/hooks/useSocket'
 import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -54,6 +57,10 @@ export default function GamePage() {
   const previousGameStateRef = useRef<GameState | null>(null)
   const gameStateRef = useRef<GameState | null>(null)
   const pointChangesRef = useRef<Array<{ playerId: string; change: number; newPoints: number }>>([])
+
+  const { history } = useMatchHistory()
+  const [showMenu, setShowMenu] = useState(false)
+  const [showHistoryModal, setShowHistoryModal] = useState(false)
 
   const gameId = params.gameId as string
 
@@ -654,7 +661,7 @@ export default function GamePage() {
           isConnected={isConnected}
           gameType={gameInfo?.settings?.gameType || 'HANCHAN'}
         />
-
+        
         {/* プレイヤー状態 */}
         <PlayerStatus 
           gameState={gameState}
@@ -789,6 +796,24 @@ export default function GamePage() {
           </button>
         </div>
       </div>
+
+      <button
+        onClick={() => setShowMenu(true)}
+        className="fixed top-4 right-4 z-40 bg-white rounded-md shadow p-2"
+        aria-label="メニューを開く"
+      >
+        ☰
+      </button>
+      <MenuDrawer
+        isOpen={showMenu}
+        onClose={() => setShowMenu(false)}
+        onShowHistory={() => setShowHistoryModal(true)}
+      />
+      <MatchHistoryModal
+        isOpen={showHistoryModal}
+        onClose={() => setShowHistoryModal(false)}
+        history={history}
+      />
 
       {/* 点数変動アニメーション */}
       {showPointAnimation && gameState && (

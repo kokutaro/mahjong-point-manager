@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button, TextInput, Paper, Title, Text } from '@mantine/core'
 import WebSocketDebug, { useWebSocketDebug } from '@/components/WebSocketDebug'
+import { useSessionStore, useUIStore } from '@/store/useAppStore'
 
 function HomePageContent() {
   const { user, isAuthenticated, login, isLoading } = useAuth()
@@ -12,16 +13,42 @@ function HomePageContent() {
   const [roomCode, setRoomCode] = useState('')
   const [error, setError] = useState('')
   const [isJoining, setIsJoining] = useState(false)
+  const [activeSessions, setActiveSessions] = useState<any[]>([])
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get('redirect')
   const { showDebug, setShowDebug } = useWebSocketDebug()
+  
+  // Zustand ストア
+  const { currentSession, sessionMode, setSessionMode } = useSessionStore()
+  const { setError: setGlobalError } = useUIStore()
+
+  // アクティブセッション取得
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchActiveSessions()
+    }
+  }, [isAuthenticated])
 
   useEffect(() => {
     if (isAuthenticated && redirectTo) {
       router.replace(redirectTo as any)
     }
   }, [isAuthenticated, redirectTo, router])
+
+  const fetchActiveSessions = async () => {
+    try {
+      const response = await fetch('/api/sessions?status=ACTIVE', {
+        credentials: 'include'
+      })
+      const data = await response.json()
+      if (data.success) {
+        setActiveSessions(data.data.sessions || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch active sessions:', error)
+    }
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,6 +69,14 @@ function HomePageContent() {
   }
 
   const handleCreateRoom = () => {
+    // セッションモードを保存してルーム作成画面へ
+    setSessionMode(true)
+    router.push('/room/create' as any)
+  }
+
+  const handleCreateSingleGame = () => {
+    // 単発対局モードを保存してルーム作成画面へ
+    setSessionMode(false)
     router.push('/room/create' as any)
   }
 
@@ -135,21 +170,72 @@ function HomePageContent() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* ルーム作成 */}
-            <div className="bg-green-50 rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-green-800 mb-4">
-                新しいルームを作成
+          {/* アクティブセッション表示 */}
+          {activeSessions.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">
+                継続可能なセッション
               </h2>
-              <p className="text-green-600 mb-4">
-                新しい対局ルームを作成してホストになります
-              </p>
-              <button
-                onClick={handleCreateRoom}
-                className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
-              >
-                ルーム作成
-              </button>
+              <div className="grid gap-4">
+                {activeSessions.map((session) => (
+                  <div
+                    key={session.id}
+                    className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-center justify-between"
+                  >
+                    <div>
+                      <h3 className="font-medium text-yellow-800">
+                        {session.name || `セッション #${session.sessionCode}`}
+                      </h3>
+                      <p className="text-sm text-yellow-600">
+                        {session.totalGames}局完了 · ホスト: {session.hostPlayer.name}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => router.push(`/sessions/${session.id}`)}
+                      className="bg-yellow-600 text-white py-2 px-4 rounded-md hover:bg-yellow-700 transition-colors"
+                    >
+                      セッション詳細
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="grid gap-6">
+            {/* 対局タイプ選択 */}
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* 連続対局セッション */}
+              <div className="bg-green-50 rounded-lg p-6">
+                <h2 className="text-xl font-semibold text-green-800 mb-4">
+                  連続対局セッション
+                </h2>
+                <p className="text-green-600 mb-4">
+                  複数局を連続で楽しめるセッションを作成します
+                </p>
+                <button
+                  onClick={handleCreateRoom}
+                  className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
+                >
+                  セッション作成
+                </button>
+              </div>
+
+              {/* 単発対局 */}
+              <div className="bg-emerald-50 rounded-lg p-6">
+                <h2 className="text-xl font-semibold text-emerald-800 mb-4">
+                  単発対局
+                </h2>
+                <p className="text-emerald-600 mb-4">
+                  1局のみの対局ルームを作成します
+                </p>
+                <button
+                  onClick={handleCreateSingleGame}
+                  className="w-full bg-emerald-600 text-white py-2 px-4 rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-colors"
+                >
+                  単発対局作成
+                </button>
+              </div>
             </div>
 
             {/* ルーム参加 */}
@@ -193,35 +279,35 @@ function HomePageContent() {
 
           {/* 履歴・統計 */}
           <div className="mt-6 grid md:grid-cols-2 gap-6">
-            {/* 対局履歴 */}
+            {/* セッション履歴 */}
             <div className="bg-purple-50 rounded-lg p-6">
               <h2 className="text-xl font-semibold text-purple-800 mb-4">
-                対局履歴
+                セッション履歴
               </h2>
               <p className="text-purple-600 mb-4">
-                過去の対局結果を確認できます
+                連続対局セッションの履歴と統計を確認
               </p>
               <button
-                onClick={() => router.push('/history')}
+                onClick={() => router.push('/sessions')}
                 className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors"
               >
-                履歴を見る
+                セッション履歴
               </button>
             </div>
 
-            {/* 統計 */}
-            <div className="bg-orange-50 rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-orange-800 mb-4">
-                統計ダッシュボード
+            {/* 単発対局履歴 */}
+            <div className="bg-indigo-50 rounded-lg p-6">
+              <h2 className="text-xl font-semibold text-indigo-800 mb-4">
+                単発対局履歴
               </h2>
-              <p className="text-orange-600 mb-4">
-                あなたの成績と統計を確認できます
+              <p className="text-indigo-600 mb-4">
+                単発対局の履歴を確認できます
               </p>
               <button
-                onClick={() => router.push('/stats')}
-                className="w-full bg-orange-600 text-white py-2 px-4 rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-colors"
+                onClick={() => router.push('/history')}
+                className="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
               >
-                統計を見る
+                単発履歴
               </button>
             </div>
           </div>
