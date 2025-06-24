@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
-import { useSessionStore } from '@/store/useAppStore'
 
 export default function CreateRoomPage() {
   const { user, isAuthenticated, refreshAuth } = useAuth()
@@ -18,16 +17,7 @@ export default function CreateRoomPage() {
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
-  
-  // Zustand ストア
-  const { sessionMode, setSessionMode } = useSessionStore()
-  
-  // ホーム画面からのセッションモード設定を反映
-  useEffect(() => {
-    if (sessionMode) {
-      setSessionName('') // セッション名をリセット
-    }
-  }, [sessionMode])
+  const sessionMode = true
 
   const handleCreateRoom = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -54,7 +44,7 @@ export default function CreateRoomPage() {
           hasTobi,
           uma,
           sessionMode,
-          sessionName: sessionMode && sessionName ? sessionName : undefined
+          sessionName: sessionName ? sessionName : undefined
         }),
         credentials: 'include'
       })
@@ -158,45 +148,29 @@ export default function CreateRoomPage() {
                 セッション設定
               </label>
               <div className="space-y-4">
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="sessionMode"
-                    checked={sessionMode}
-                    onChange={(e) => setSessionMode(e.target.checked)}
-                    className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="sessionMode" className="ml-2 block text-sm text-gray-900">
-                    連続対局セッションとして作成
+                <div>
+                  <label htmlFor="sessionName" className="block text-sm font-medium text-gray-700 mb-2">
+                    セッション名（任意）
                   </label>
+                  <input
+                    type="text"
+                    id="sessionName"
+                    value={sessionName}
+                    onChange={(e) => setSessionName(e.target.value)}
+                    placeholder="例: 金曜日の麻雀会"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    セッション名を設定すると履歴で識別しやすくなります
+                  </p>
                 </div>
-                
-                {sessionMode && (
-                  <div>
-                    <label htmlFor="sessionName" className="block text-sm font-medium text-gray-700 mb-2">
-                      セッション名（任意）
-                    </label>
-                    <input
-                      type="text"
-                      id="sessionName"
-                      value={sessionName}
-                      onChange={(e) => setSessionName(e.target.value)}
-                      placeholder="例: 金曜日の麻雀会"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      セッション名を設定すると履歴で識別しやすくなります
-                    </p>
-                  </div>
-                )}
                 
                 <div className="bg-blue-50 p-3 rounded-lg">
                   <div className="text-sm text-blue-800">
                     <strong>セッションについて:</strong>
                     <ul className="mt-1 list-disc list-inside text-xs text-blue-700">
-                      <li>連続対局: 対局終了後に「もう1局」で継続可能</li>
-                      <li>単発対局: 1局のみのセッションとして管理</li>
-                      <li>どちらも履歴・統計で確認できます</li>
+                      <li>対局終了後に「もう1局」で継続できます</li>
+                      <li>履歴・統計でセッションを確認できます</li>
                     </ul>
                   </div>
                 </div>

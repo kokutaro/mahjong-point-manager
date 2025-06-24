@@ -233,11 +233,9 @@ src/
 │   │   ├── room/          # ルーム管理
 │   │   ├── score/         # 点数計算
 │   │   ├── sessions/      # セッション管理
-│   │   └── history/       # 履歴・統計
 │   ├── game/              # ゲーム画面
 │   ├── room/              # ルーム作成・参加
 │   ├── sessions/          # セッション履歴
-│   └── history/           # 単発対局履歴（旧）
 ├── components/            # React コンポーネント
 ├── hooks/                 # カスタムフック
 ├── lib/                   # ユーティリティ・ロジック

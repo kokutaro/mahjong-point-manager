@@ -104,8 +104,8 @@ describe('SessionHistoryTable', () => {
     expect(screen.getByText('ホスト: ホスト | 総対局数: 2局')).toBeInTheDocument()
 
     // プレイヤー名の表示を確認
-    expect(screen.getByText('プレイヤー1')).toBeInTheDocument()
-    expect(screen.getByText('プレイヤー2')).toBeInTheDocument()
+    expect(screen.getAllByText('プレイヤー1').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('プレイヤー2').length).toBeGreaterThan(0)
 
     // 対局結果の表示を確認
     expect(screen.getByText('1局')).toBeInTheDocument()
