@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import { useMatchHistory } from '@/hooks/useMatchHistory'
 import { useUIStore } from '@/store/useAppStore'
 import { useAuth } from '@/contexts/AuthContext'
@@ -63,6 +63,13 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
     countdown?: number
     action?: () => void
   } | null>(null)
+
+  // Next game transition helper refs
+  const nextRoomCodeRef = useRef<string | null>(null)
+  const notificationRef = useRef<typeof notification>(null)
+  useEffect(() => {
+    notificationRef.current = notification
+  }, [notification])
   
   // Zustand ストア
   const { isLoading, setLoading, setError: setGlobalError } = useUIStore()
@@ -145,7 +152,10 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
     
     // 全員合意後の新ルーム通知
     socketInstance.on('new-room-ready', ({ roomCode }: { roomCode: string }) => {
-      window.location.href = `/room/${roomCode}`
+      nextRoomCodeRef.current = roomCode
+      if (!notificationRef.current || notificationRef.current.countdown == null) {
+        window.location.href = `/room/${roomCode}`
+      }
     })
     
     // 投票キャンセル通知
@@ -207,7 +217,14 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
     }) => {
       setNotification({
         message: `${continueVotes}名が継続を希望しています。継続プロセスを開始します。`,
-        action: () => setNotification(null)
+        countdown: 5,
+        action: () => {
+          if (nextRoomCodeRef.current) {
+            window.location.href = `/room/${nextRoomCodeRef.current}`
+          } else {
+            setNotification(null)
+          }
+        }
       })
 
       // 既存の継続プロセスに移行
