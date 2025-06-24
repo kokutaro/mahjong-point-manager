@@ -771,13 +771,43 @@ export class PointManager {
    */
   async forceEndGame(reason: string = '強制終了'): Promise<void> {
     console.log('🏁 forceEndGame called with reason:', reason, 'gameId:', this.gameId)
-    
-    await prisma.game.update({
-      where: { id: this.gameId },
-      data: {
-        status: 'FINISHED',
-        endedAt: new Date()
+
+    await prisma.$transaction(async (tx) => {
+      await tx.game.update({
+        where: { id: this.gameId },
+        data: {
+          status: 'FINISHED',
+          endedAt: new Date()
+        }
+      })
+
+      const game = await tx.game.findUnique({
+        where: { id: this.gameId },
+        select: { sessionId: true }
+      })
+
+      if (game?.sessionId) {
+        await tx.gameSession.update({
+          where: { id: game.sessionId },
+          data: {
+            status: 'FINISHED',
+            endedAt: new Date()
+          }
+        })
       }
+
+      await tx.gameEvent.create({
+        data: {
+          gameId: this.gameId,
+          eventType: 'GAME_END',
+          eventData: {
+            reason,
+            forcedEnd: true
+          },
+          round: 0,
+          honba: 0
+        }
+      })
     })
 
     console.log('🏁 Game status updated to FINISHED in forceEndGame, calling calculateFinalResults')
@@ -790,23 +820,7 @@ export class PointManager {
     // セッション統計更新
     await this.updateSessionStatistics()
 
-    console.log('🏁 Session statistics updated in forceEndGame, creating game end event')
-
-    // イベント記録
-    await prisma.gameEvent.create({
-      data: {
-        gameId: this.gameId,
-        eventType: 'GAME_END',
-        eventData: { 
-          reason,
-          forcedEnd: true
-        },
-        round: 0,
-        honba: 0
-      }
-    })
-    
-    console.log('🏁 Force end game event created')
+    console.log('🏁 Session statistics updated in forceEndGame')
   }
 
   /**
