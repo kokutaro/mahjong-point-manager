@@ -26,12 +26,6 @@ jest.mock('@/store/useAppStore', () => ({
   })
 }))
 
-// useMatchHistory フックのモック
-jest.mock('@/hooks/useMatchHistory', () => ({
-  useMatchHistory: () => ({
-    addResult: jest.fn()
-  })
-}))
 
 // fetch API のモック
 global.fetch = jest.fn()
