@@ -4,7 +4,7 @@ import ErrorDisplay, { ErrorInfo } from '@/components/ErrorDisplay'
 import GameEndScreen from '@/components/GameEndScreen'
 import GameInfo from '@/components/GameInfo'
 import GameResult from '@/components/GameResult'
-import MatchHistoryModal from '@/components/MatchHistoryModal'
+import SessionHistoryModal from '@/components/SessionHistoryModal'
 import MenuDrawer from '@/components/MenuDrawer'
 import PlayerStatus from '@/components/PlayerStatus'
 import PointAnimation from '@/components/PointAnimation'
@@ -58,7 +58,6 @@ export default function GamePage() {
   const gameStateRef = useRef<GameState | null>(null)
   const pointChangesRef = useRef<Array<{ playerId: string; change: number; newPoints: number }>>([])
 
-  const { history } = useMatchHistory()
   const [showMenu, setShowMenu] = useState(false)
   const [showHistoryModal, setShowHistoryModal] = useState(false)
 
@@ -809,10 +808,10 @@ export default function GamePage() {
         onClose={() => setShowMenu(false)}
         onShowHistory={() => setShowHistoryModal(true)}
       />
-      <MatchHistoryModal
+      <SessionHistoryModal
         isOpen={showHistoryModal}
         onClose={() => setShowHistoryModal(false)}
-        history={history}
+        sessionId={gameInfo?.sessionId || null}
       />
 
       {/* 点数変動アニメーション */}

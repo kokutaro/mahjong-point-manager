@@ -58,6 +58,7 @@ export async function GET(
           id: game.id,
           roomCode: game.roomCode,
           status: game.status,
+          sessionId: game.sessionId,
           createdAt: game.createdAt,
           startedAt: game.startedAt,
           endedAt: game.endedAt,

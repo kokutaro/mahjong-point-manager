@@ -18,11 +18,6 @@ export default function MenuDrawer({ isOpen, onClose, onShowHistory }: MenuDrawe
     onClose()
   }
 
-  const handleSessions = () => {
-    router.push('/sessions')
-    onClose()
-  }
-
   return (
     <div className="fixed inset-0 z-50 flex">
       <div className="flex-1 bg-black bg-opacity-50" onClick={onClose} />
@@ -34,12 +29,7 @@ export default function MenuDrawer({ isOpen, onClose, onShowHistory }: MenuDrawe
         <ul className="space-y-2">
           <li>
             <button onClick={handleHistory} className="w-full text-left px-2 py-2 rounded hover:bg-gray-100">
-              📋 単発対局履歴
-            </button>
-          </li>
-          <li>
-            <button onClick={handleSessions} className="w-full text-left px-2 py-2 rounded hover:bg-gray-100">
-              📊 連続対局セッション
+              📋 セッション履歴
             </button>
           </li>
         </ul>
