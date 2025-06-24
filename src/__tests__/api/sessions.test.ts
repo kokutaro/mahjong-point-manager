@@ -79,6 +79,22 @@ describe('/api/sessions', () => {
         })
       )
     })
+
+    it('ステータスでセッションをフィルタリングできる', async () => {
+      mockPrisma.gameSession.findMany.mockResolvedValue([])
+      mockPrisma.gameSession.count.mockResolvedValue(0)
+
+      const request = new NextRequest('http://localhost:3000/api/sessions?status=ACTIVE')
+      await GET(request)
+
+      expect(mockPrisma.gameSession.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            status: 'ACTIVE'
+          })
+        })
+      )
+    })
   })
 
   describe('POST', () => {
