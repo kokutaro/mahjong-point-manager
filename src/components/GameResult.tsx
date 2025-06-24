@@ -66,7 +66,6 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
 
   // Next game transition helper refs
   const nextRoomCodeRef = useRef<string | null>(null)
-  const hasSentContinueRef = useRef(false)
 
   const startNextGameCountdown = useCallback(() => {
     const code = nextRoomCodeRef.current
@@ -162,7 +161,6 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
     // 全員合意後の新ルーム通知
     socketInstance.on('new-room-ready', ({ roomCode }: { roomCode: string }) => {
       nextRoomCodeRef.current = roomCode
-      hasSentContinueRef.current = false
       setIsWaitingForVotes(false)
       startNextGameCountdown()
     })
@@ -171,7 +169,6 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
     socketInstance.on('vote-cancelled', ({ message }: { message: string }) => {
       setIsWaitingForVotes(false)
       setContinueVotes({})
-      hasSentContinueRef.current = false
       setNotification({ message, action: () => setNotification(null) })
     })
     
@@ -234,11 +231,6 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
         })
       }
 
-      if (!hasSentContinueRef.current) {
-        hasSentContinueRef.current = true
-        handleContinueSession()
-      }
-
       // move existing vote state into continuation phase
       resetSessionVote()
     })
@@ -249,7 +241,6 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
         message: '投票がタイムアウトしました。投票をリセットします。',
         action: () => setNotification(null)
       })
-      hasSentContinueRef.current = false
       resetSessionVote()
     })
     
