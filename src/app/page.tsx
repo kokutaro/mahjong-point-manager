@@ -20,7 +20,7 @@ function HomePageContent() {
   const { showDebug, setShowDebug } = useWebSocketDebug()
   
   // Zustand ストア
-  const { currentSession, sessionMode, setSessionMode } = useSessionStore()
+  const { currentSession, setSessionMode } = useSessionStore()
   const { setError: setGlobalError } = useUIStore()
 
   // アクティブセッション取得
@@ -74,11 +74,6 @@ function HomePageContent() {
     router.push('/room/create' as any)
   }
 
-  const handleCreateSingleGame = () => {
-    // 単発対局モードを保存してルーム作成画面へ
-    setSessionMode(false)
-    router.push('/room/create' as any)
-  }
 
   const handleJoinRoom = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -221,21 +216,6 @@ function HomePageContent() {
                 </button>
               </div>
 
-              {/* 単発対局 */}
-              <div className="bg-emerald-50 rounded-lg p-6">
-                <h2 className="text-xl font-semibold text-emerald-800 mb-4">
-                  単発対局
-                </h2>
-                <p className="text-emerald-600 mb-4">
-                  1局のみの対局ルームを作成します
-                </p>
-                <button
-                  onClick={handleCreateSingleGame}
-                  className="w-full bg-emerald-600 text-white py-2 px-4 rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-colors"
-                >
-                  単発対局作成
-                </button>
-              </div>
             </div>
 
             {/* ルーム参加 */}
