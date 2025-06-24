@@ -5,7 +5,6 @@ import GameEndScreen from '@/components/GameEndScreen'
 import GameInfo from '@/components/GameInfo'
 import GameResult from '@/components/GameResult'
 import MatchHistoryModal from '@/components/MatchHistoryModal'
-import MatchHistoryTable from '@/components/MatchHistoryTable'
 import MenuDrawer from '@/components/MenuDrawer'
 import PlayerStatus from '@/components/PlayerStatus'
 import PointAnimation from '@/components/PointAnimation'
@@ -662,9 +661,7 @@ export default function GamePage() {
           isConnected={isConnected}
           gameType={gameInfo?.settings?.gameType || 'HANCHAN'}
         />
-        {/* 連続対局履歴 */}
-        <MatchHistoryTable history={history} />
-
+        
         {/* プレイヤー状態 */}
         <PlayerStatus 
           gameState={gameState}

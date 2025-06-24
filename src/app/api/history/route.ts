@@ -12,10 +12,11 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0')
     const gameType = searchParams.get('gameType') // 'TONPUU' | 'HANCHAN'
 
-    // 基本的なクエリ条件
+    // 基本的なクエリ条件（セッションに属さない単発対局のみ）
     const whereCondition: any = {
       status: 'FINISHED',
-      endedAt: { not: null }
+      endedAt: { not: null },
+      sessionId: null  // セッションに属さない対局のみ
     }
 
     // 特定プレイヤーの履歴の場合

@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useMatchHistory } from '@/hooks/useMatchHistory'
+import { useSessionStore, useUIStore } from '@/store/useAppStore'
+import { useAuth } from '@/contexts/AuthContext'
+import { io, Socket } from 'socket.io-client'
 
 interface PlayerResult {
   playerId: string
@@ -14,11 +17,15 @@ interface PlayerResult {
 
 interface GameResultData {
   gameId: string
+  roomCode: string
   results: PlayerResult[]
   gameType: 'TONPUU' | 'HANCHAN'
   endReason: string
   endedAt: string
   basePoints: number
+  sessionId?: string
+  sessionCode?: string
+  sessionName?: string
 }
 
 interface GameResultProps {
@@ -28,13 +35,22 @@ interface GameResultProps {
 
 export default function GameResult({ gameId, onBack }: GameResultProps) {
   const [resultData, setResultData] = useState<GameResultData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const { addResult } = useMatchHistory()
+  
+  // 全員合意システム用のstate
+  const [continueVotes, setContinueVotes] = useState<Record<string, boolean>>({})
+  const [isWaitingForVotes, setIsWaitingForVotes] = useState(false)
+  const [socket, setSocket] = useState<Socket | null>(null)
+  
+  // Zustand ストア
+  const { setSession } = useSessionStore()
+  const { isLoading, setLoading, setError: setGlobalError } = useUIStore()
+  const { user } = useAuth()
 
   const fetchGameResult = useCallback(async () => {
     try {
-      setIsLoading(true)
+      setLoading(true)
       setError('')
 
       const response = await fetch(`/api/game/${gameId}/result`, {
@@ -59,7 +75,7 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
       console.error('fetchGameResult error:', error)
       setError(error instanceof Error ? error.message : '結果の取得に失敗しました')
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }, [gameId])
 
@@ -67,30 +83,138 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
     fetchGameResult()
   }, [fetchGameResult])
 
+  // WebSocket接続とイベントハンドリング
+  useEffect(() => {
+    if (!resultData) return
+    
+    const socketInstance = io('/', {
+      query: { gameId }
+    })
+    
+    setSocket(socketInstance)
+    
+    // WebSocket接続完了後にルームに参加
+    socketInstance.on('connect', () => {
+      console.log('WebSocket connected, joining room for game result')
+      console.log('User:', user)
+      console.log('ResultData:', resultData)
+      if (user && resultData) {
+        console.log(`🔌 Attempting to join room: ${resultData.roomCode} with playerId: ${user.playerId}`)
+        socketInstance.emit('join_room', {
+          roomCode: resultData.roomCode,
+          playerId: user.playerId
+        })
+        console.log(`🔌 join_room event emitted for room ${resultData.roomCode}`)
+      }
+    })
+    
+    // ルーム参加成功の確認
+    socketInstance.on('game_state', (gameState) => {
+      console.log('🔌 Received game_state after joining room:', gameState)
+    })
+    
+    // エラーハンドリング
+    socketInstance.on('error', (error) => {
+      console.error('🔌 WebSocket error:', error)
+    })
+    
+    // セッション継続投票の受信
+    socketInstance.on('continue-vote', ({ playerId, vote }: { playerId: string, vote: boolean }) => {
+      setContinueVotes(prev => ({ ...prev, [playerId]: vote }))
+    })
+    
+    // 全員合意後の新ルーム通知
+    socketInstance.on('new-room-ready', ({ roomCode }: { roomCode: string }) => {
+      window.location.href = `/room/${roomCode}`
+    })
+    
+    // 投票キャンセル通知
+    socketInstance.on('vote-cancelled', ({ message }: { message: string }) => {
+      setIsWaitingForVotes(false)
+      setContinueVotes({})
+      alert(message)
+    })
+    
+    return () => {
+      socketInstance.disconnect()
+    }
+  }, [resultData, gameId])
+
   useEffect(() => {
     if (resultData) {
-      const scores = resultData.results.map(r => ({
-        playerId: r.playerId,
-        name: r.name,
-        points: r.finalPoints
-      }))
-      addResult({ gameId: resultData.gameId, scores })
+      try {
+        const scores = resultData.results.map(r => ({
+          playerId: r.playerId,
+          name: r.name,
+          points: r.finalPoints
+        }))
+        addResult({ gameId: resultData.gameId, scores })
+      } catch (err) {
+        console.error('Failed to add result to match history:', err)
+        // LocalStorageエラーがあっても処理を継続
+      }
     }
-  }, [resultData, addResult])
+  }, [resultData]) // addResultを依存配列から削除
 
-  const handleRematch = async () => {
+  const handleContinueSession = () => {
+    if (!resultData || !socket || !user) return
+    
+    // 投票を送信
+    setIsWaitingForVotes(true)
+    socket.emit('continue-vote', { 
+      gameId: resultData.gameId, 
+      playerId: user.playerId, 
+      vote: true 
+    })
+  }
+
+  const handleNewSession = async () => {
     if (!resultData) return
     try {
-      const res = await fetch(`/api/game/${resultData.gameId}/rematch`, { method: 'POST' })
+      setLoading(true)
+      const res = await fetch(`/api/game/${resultData.gameId}/rematch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          continueSession: false,
+          newSessionName: '新しいセッション'
+        })
+      })
       const data = await res.json()
       if (res.ok && data.success) {
+        // 新セッション情報を設定（LocalStorageエラーを無視）
+        try {
+          if (data.data.sessionId) {
+            setSession({
+              id: data.data.sessionId,
+              sessionCode: data.data.sessionCode,
+              name: '新しいセッション',
+              status: 'ACTIVE',
+              hostPlayerId: resultData.results[0].playerId,
+              totalGames: 0,
+              createdAt: new Date().toISOString()
+            })
+          }
+        } catch (storageErr) {
+          console.error('Failed to save session to localStorage:', storageErr)
+          // LocalStorageエラーは無視して処理継続
+        }
         window.location.href = `/room/${data.data.roomCode}`
       } else {
-        alert(data.error?.message || '再戦の作成に失敗しました')
+        setGlobalError(data.error?.message || '新セッション作成に失敗しました')
       }
     } catch (err) {
-      console.error('Rematch failed:', err)
-      alert('再戦の作成に失敗しました')
+      console.error('New session failed:', err)
+      // LocalStorageエラーとネットワークエラーを区別
+      if (err instanceof Error && err.name === 'QuotaExceededError') {
+        setGlobalError('ストレージ容量不足です。ブラウザのデータをクリアしてください。')
+      } else {
+        setGlobalError('新セッション作成に失敗しました')
+      }
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -176,6 +300,11 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
               <div className="mb-1">
                 {resultData.gameType === 'TONPUU' ? '東風戦' : '半荘戦'}
               </div>
+              {resultData.sessionId && (
+                <div className="text-sm mb-1">
+                  セッション: {resultData.sessionName || `#${resultData.sessionCode}`}
+                </div>
+              )}
               <div className="text-sm">
                 終了理由: {resultData.endReason}
               </div>
@@ -349,27 +478,114 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
         </div>
 
         {/* アクションボタン */}
-        <div className="text-center space-x-4">
-          <button
-            onClick={onBack}
-            className="bg-gray-500 text-white py-3 px-6 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
-          >
-            ゲームに戻る
-          </button>
+        <div className="text-center">
+          <div className="mb-4">
+            <button
+              onClick={onBack}
+              className="bg-gray-500 text-white py-3 px-6 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors mr-4"
+            >
+              ゲームに戻る
+            </button>
+            
+            <button
+              onClick={() => window.location.href = '/'}
+              className="bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+            >
+              ホームに戻る
+            </button>
+          </div>
 
-          <button
-            onClick={handleRematch}
-            className="bg-green-600 text-white py-3 px-6 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
-          >
-            もう一局
-          </button>
-          
-          <button
-            onClick={() => window.location.href = '/'}
-            className="bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-          >
-            ホームに戻る
-          </button>
+          {/* 継続オプション */}
+          <div className="bg-green-50 p-4 rounded-lg">
+            <h3 className="text-lg font-semibold text-green-800 mb-3">対局を続けますか？</h3>
+            
+            {isWaitingForVotes ? (
+              <div className="space-y-4">
+                <div className="text-center text-green-700 font-medium">
+                  全員の合意を待っています...
+                </div>
+                
+                {/* 投票状況の表示 */}
+                <div className="grid grid-cols-2 gap-2">
+                  {resultData.results.map((result) => {
+                    // 自分の場合は常に「合意」として表示
+                    const isMyself = user?.playerId === result.playerId
+                    const voteStatus = isMyself 
+                      ? true 
+                      : continueVotes[result.playerId]
+                    
+                    return (
+                      <div key={result.playerId} className="flex items-center justify-between p-2 bg-white rounded">
+                        <span className="text-sm font-medium">{result.name}</span>
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          voteStatus === true
+                            ? 'bg-green-100 text-green-800'
+                            : voteStatus === false
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {voteStatus === true 
+                            ? '合意' 
+                            : voteStatus === false 
+                              ? '辞退' 
+                              : '待機中'}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+                
+                <button
+                  onClick={() => {
+                    if (!resultData || !socket || !user) return
+                    
+                    // キャンセル投票を送信（vote: false）
+                    socket.emit('continue-vote', { 
+                      gameId: resultData.gameId, 
+                      playerId: user.playerId, 
+                      vote: false 
+                    })
+                    
+                    setIsWaitingForVotes(false)
+                    setContinueVotes({})
+                  }}
+                  className="w-full bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600"
+                >
+                  キャンセル
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {resultData.sessionId ? (
+                  <button
+                    onClick={handleContinueSession}
+                    className="w-full sm:w-auto bg-green-600 text-white py-3 px-6 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors mr-0 sm:mr-4 mb-3 sm:mb-0"
+                  >
+                    セッション継続（全員合意）
+                  </button>
+                ) : null}
+                
+                <button
+                  onClick={handleNewSession}
+                  className="w-full sm:w-auto bg-emerald-600 text-white py-3 px-6 rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-colors"
+                >
+                  新しいセッション
+                </button>
+              </div>
+            )}
+            
+            <div className="mt-3 text-sm text-green-700">
+              {resultData.sessionId ? (
+                <p>
+                  <strong>セッション継続:</strong> 全員が合意すると自動的に次局を開始
+                  <br />
+                  <strong>新しいセッション:</strong> 同じメンバーで新しいセッションを作成
+                </p>
+              ) : (
+                <p>同じメンバーで新しいセッションを開始します</p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

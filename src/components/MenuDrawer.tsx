@@ -1,5 +1,7 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
+
 interface MenuDrawerProps {
   isOpen: boolean
   onClose: () => void
@@ -7,10 +9,17 @@ interface MenuDrawerProps {
 }
 
 export default function MenuDrawer({ isOpen, onClose, onShowHistory }: MenuDrawerProps) {
+  const router = useRouter()
+  
   if (!isOpen) return null
 
   const handleHistory = () => {
     onShowHistory()
+    onClose()
+  }
+
+  const handleSessions = () => {
+    router.push('/sessions')
     onClose()
   }
 
@@ -25,7 +34,12 @@ export default function MenuDrawer({ isOpen, onClose, onShowHistory }: MenuDrawe
         <ul className="space-y-2">
           <li>
             <button onClick={handleHistory} className="w-full text-left px-2 py-2 rounded hover:bg-gray-100">
-              対局履歴を見る
+              📋 単発対局履歴
+            </button>
+          </li>
+          <li>
+            <button onClick={handleSessions} className="w-full text-left px-2 py-2 rounded hover:bg-gray-100">
+              📊 連続対局セッション
             </button>
           </li>
         </ul>

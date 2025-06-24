@@ -415,7 +415,12 @@ export class PointManager {
     // 最終結果計算
     await this.calculateFinalResults()
 
-    console.log('🏁 calculateFinalResults completed, creating game end event')
+    console.log('🏁 calculateFinalResults completed, updating session statistics')
+    
+    // セッション統計更新
+    await this.updateSessionStatistics()
+
+    console.log('🏁 Session statistics updated, creating game end event')
 
     // イベント記録
     await prisma.gameEvent.create({
@@ -620,10 +625,14 @@ export class PointManager {
       }
     }
 
-    // 最終結果テーブルに保存
-    await prisma.gameResult.create({
-      data: {
+    // 最終結果テーブルに保存（既存の場合は更新）
+    await prisma.gameResult.upsert({
+      where: { gameId: this.gameId },
+      create: {
         gameId: this.gameId,
+        results: results
+      },
+      update: {
         results: results
       }
     })
@@ -776,7 +785,12 @@ export class PointManager {
     // 最終結果計算
     await this.calculateFinalResults()
 
-    console.log('🏁 calculateFinalResults completed in forceEndGame, creating game end event')
+    console.log('🏁 calculateFinalResults completed in forceEndGame, updating session statistics')
+    
+    // セッション統計更新
+    await this.updateSessionStatistics()
+
+    console.log('🏁 Session statistics updated in forceEndGame, creating game end event')
 
     // イベント記録
     await prisma.gameEvent.create({
@@ -793,6 +807,75 @@ export class PointManager {
     })
     
     console.log('🏁 Force end game event created')
+  }
+
+  /**
+   * セッション統計更新
+   */
+  async updateSessionStatistics(): Promise<void> {
+    console.log('📊 Updating session statistics for gameId:', this.gameId)
+    
+    // ゲームのセッション情報を取得
+    const game = await prisma.game.findUnique({
+      where: { id: this.gameId },
+      include: {
+        participants: true,
+        session: true
+      }
+    })
+
+    if (!game || !game.sessionId) {
+      console.log('📊 No session found for game, skipping session statistics update')
+      return
+    }
+
+    console.log('📊 Found session:', game.sessionId, 'updating statistics for', game.participants.length, 'participants')
+
+    // 各参加者のセッション統計を更新
+    for (const participant of game.participants) {
+      const finalRank = participant.finalRank
+      const settlement = participant.settlement || 0
+
+      console.log('📊 Updating participant:', participant.playerId, 'rank:', finalRank, 'settlement:', settlement)
+      
+      if (finalRank === null || finalRank === undefined) {
+        console.log('📊 Warning: finalRank is null for participant:', participant.playerId, 'skipping statistics update')
+        continue
+      }
+
+      // セッション参加者が存在しない場合は作成
+      const sessionParticipant = await prisma.sessionParticipant.upsert({
+        where: {
+          sessionId_playerId: {
+            sessionId: game.sessionId,
+            playerId: participant.playerId
+          }
+        },
+        create: {
+          sessionId: game.sessionId,
+          playerId: participant.playerId,
+          position: participant.position,
+          totalGames: 1,
+          totalSettlement: settlement,
+          firstPlace: finalRank === 1 ? 1 : 0,
+          secondPlace: finalRank === 2 ? 1 : 0,
+          thirdPlace: finalRank === 3 ? 1 : 0,
+          fourthPlace: finalRank === 4 ? 1 : 0
+        },
+        update: {
+          totalGames: { increment: 1 },
+          totalSettlement: { increment: settlement },
+          firstPlace: finalRank === 1 ? { increment: 1 } : undefined,
+          secondPlace: finalRank === 2 ? { increment: 1 } : undefined,
+          thirdPlace: finalRank === 3 ? { increment: 1 } : undefined,
+          fourthPlace: finalRank === 4 ? { increment: 1 } : undefined
+        }
+      })
+
+      console.log('📊 Updated session participant:', sessionParticipant.id)
+    }
+
+    console.log('📊 Session statistics update completed')
   }
 
   /**

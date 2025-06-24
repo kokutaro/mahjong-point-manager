@@ -12,6 +12,9 @@ export interface GameState {
   kyotaku: number
   gamePhase: 'waiting' | 'playing' | 'finished'
   winds: ('east' | 'south' | 'west' | 'north')[]
+  sessionId?: string
+  sessionCode?: string
+  sessionName?: string
 }
 
 export interface GamePlayer {
@@ -66,7 +69,8 @@ export function initSocket(server: HTTPServer) {
           include: {
             participants: {
               include: { player: true }
-            }
+            },
+            session: true
           }
         })
 
@@ -188,6 +192,94 @@ export function initSocket(server: HTTPServer) {
       }
     })
 
+    // セッション継続投票
+    socket.on('continue-vote', async (data: { gameId: string, playerId: string, vote: boolean }) => {
+      try {
+        const { gameId, playerId, vote } = data
+        
+        const game = await prisma.game.findUnique({
+          where: { id: gameId },
+          include: {
+            participants: {
+              include: { player: true }
+            }
+          }
+        })
+
+        if (!game) {
+          socket.emit('error', { message: 'ゲームが見つかりません' })
+          return
+        }
+
+        // 投票を他のプレイヤーに通知
+        socket.to(game.roomCode).emit('continue-vote', { playerId, vote })
+        
+        // 投票状況をプロセス内メモリで管理
+        const voteKey = `votes_${gameId}`
+        if (!(process as any)[voteKey]) {
+          (process as any)[voteKey] = {}
+        }
+        
+        (process as any)[voteKey][playerId] = vote
+        console.log(`Vote received: ${playerId} voted ${vote} for game ${gameId}`)
+        
+        // 全員の投票をチェック
+        const votes = (process as any)[voteKey]
+        const allPlayers = game.participants.map(p => p.playerId)
+        const allVoted = allPlayers.every(pid => votes[pid] !== undefined)
+        const allAgreed = allPlayers.every(pid => votes[pid] === true)
+        
+        console.log(`Vote status for game ${gameId}:`, { votes, allVoted, allAgreed })
+        
+        if (allVoted && allAgreed) {
+          // 全員が合意した場合、新しいルームを作成
+          console.log(`All players agreed for game ${gameId}, creating new room...`)
+          
+          try {
+            const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/game/${gameId}/rematch`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                continueSession: true
+              })
+            })
+            
+            const result = await response.json()
+            
+            if (response.ok && result.success) {
+              // 新しいルームができたことを全員に通知
+              io?.to(game.roomCode).emit('new-room-ready', { 
+                roomCode: result.data.roomCode,
+                gameId: result.data.gameId,
+                sessionId: result.data.sessionId
+              })
+              
+              // 投票データをクリア
+              delete (process as any)[voteKey]
+              console.log(`Successfully created new room ${result.data.roomCode} for session continuation`)
+            } else {
+              console.error('Failed to create new room:', result.error?.message)
+              io?.to(game.roomCode).emit('error', { message: '新しいルーム作成に失敗しました' })
+            }
+          } catch (error) {
+            console.error('Error creating new room:', error)
+            io?.to(game.roomCode).emit('error', { message: '新しいルーム作成に失敗しました' })
+          }
+        } else if (allVoted && !allAgreed) {
+          // 誰かが反対した場合
+          console.log(`Not all players agreed for game ${gameId}, clearing votes`)
+          delete (process as any)[voteKey]
+          io?.to(game.roomCode).emit('vote-cancelled', { message: '全員の合意が得られませんでした' })
+        }
+        
+      } catch (error) {
+        console.error('Continue vote error:', error)
+        socket.emit('error', { message: '投票処理に失敗しました' })
+      }
+    })
+
     // 切断処理
     socket.on('disconnect', () => {
       console.log('Client disconnected:', socket.id)
@@ -208,7 +300,8 @@ async function getGameState(gameId: string): Promise<GameState> {
       participants: {
         include: { player: true },
         orderBy: { position: 'asc' }
-      }
+      },
+      session: true
     }
   })
 
@@ -231,7 +324,10 @@ async function getGameState(gameId: string): Promise<GameState> {
     honba: game.honba,
     kyotaku: game.kyotaku,
     gamePhase: game.status as 'waiting' | 'playing' | 'finished',
-    winds: ['east', 'south', 'west', 'north']
+    winds: ['east', 'south', 'west', 'north'],
+    sessionId: game.sessionId || undefined,
+    sessionCode: game.session?.sessionCode,
+    sessionName: game.session?.name || undefined
   }
 }
 

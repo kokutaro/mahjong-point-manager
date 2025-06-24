@@ -17,7 +17,8 @@ export async function GET(
           orderBy: { position: 'asc' }
         },
         result: true,
-        settings: true
+        settings: true,
+        session: true
       }
     })
 
@@ -100,11 +101,15 @@ export async function GET(
 
     const resultData = {
       gameId: game.id,
+      roomCode: game.roomCode,
       results,
       gameType: game.settings?.gameType || game.gameType,
       endReason,
       endedAt: game.endedAt?.toISOString() || new Date().toISOString(),
-      basePoints: game.settings?.basePoints || 30000
+      basePoints: game.settings?.basePoints || 30000,
+      sessionId: game.sessionId,
+      sessionCode: game.session?.sessionCode,
+      sessionName: game.session?.name
     }
 
     return NextResponse.json({
