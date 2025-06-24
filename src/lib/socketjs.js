@@ -122,20 +122,28 @@ function initSocket(server) {
           socket.to(game.roomCode).emit('continue-vote', { playerId, vote })
           console.log(`Broadcasting vote to room ${game.roomCode}: ${playerId} voted ${vote}`)
           
-          // 投票状況をプロセス内メモリで管理
+          // 投票状況をMapで管理（より安全）
           const voteKey = `votes_${gameId}`
-          if (!process[voteKey]) {
-            process[voteKey] = {}
+          if (!global.continueVotes) {
+            global.continueVotes = new Map()
+          }
+          if (!global.continueVotes.has(voteKey)) {
+            global.continueVotes.set(voteKey, new Map())
           }
           
-          process[voteKey][playerId] = vote
+          const gameVotes = global.continueVotes.get(voteKey)
+          gameVotes.set(playerId, vote)
           console.log(`Vote stored: ${playerId} voted ${vote} for game ${gameId}`)
           
           // 全員の投票をチェック
-          const votes = process[voteKey]
           const allPlayers = game.participants.map(p => p.playerId)
-          const allVoted = allPlayers.every(pid => votes[pid] !== undefined)
-          const allAgreed = allPlayers.every(pid => votes[pid] === true)
+          const votes = {}
+          allPlayers.forEach(pid => {
+            votes[pid] = gameVotes.get(pid)
+          })
+          
+          const allVoted = allPlayers.every(pid => gameVotes.has(pid))
+          const allAgreed = allPlayers.every(pid => gameVotes.get(pid) === true)
           
           console.log(`Vote status for game ${gameId}:`, { votes, allVoted, allAgreed, allPlayers })
           
@@ -165,20 +173,24 @@ function initSocket(server) {
                 })
                 
                 // 投票データをクリア
-                delete process[voteKey]
+                global.continueVotes.delete(voteKey)
                 console.log(`Successfully created new room ${result.data.roomCode} for session continuation`)
               } else {
                 console.error('Failed to create new room:', result.error?.message)
+                // エラー時も投票データをクリア
+                global.continueVotes.delete(voteKey)
                 io.to(game.roomCode).emit('error', { message: '新しいルーム作成に失敗しました' })
               }
             } catch (error) {
               console.error('Error creating new room:', error)
+              // エラー時も投票データをクリア
+              global.continueVotes.delete(voteKey)
               io.to(game.roomCode).emit('error', { message: '新しいルーム作成に失敗しました' })
             }
           } else if (vote === false) {
             // 誰かがキャンセル（vote: false）した場合、即座に投票をリセット
             console.log(`Player ${playerId} cancelled vote for game ${gameId}, clearing all votes`)
-            delete process[voteKey]
+            global.continueVotes.delete(voteKey)
             io.to(game.roomCode).emit('vote-cancelled', { message: `${game.participants.find(p => p.playerId === playerId)?.player.name || 'プレイヤー'}がキャンセルしました` })
           }
         } finally {
@@ -186,6 +198,11 @@ function initSocket(server) {
         }
       } catch (error) {
         console.error('Continue vote error:', error)
+        // エラー時は投票データをクリア
+        const voteKey = `votes_${data?.gameId}`
+        if (global.continueVotes && voteKey) {
+          global.continueVotes.delete(voteKey)
+        }
         socket.emit('error', { message: '投票処理に失敗しました' })
       }
     })
