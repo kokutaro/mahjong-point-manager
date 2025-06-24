@@ -9,7 +9,6 @@ export function clearLocalStorageOnQuotaError() {
   try {
     // 古いデータを削除
     const keysToRemove = [
-      'match_history',
       'mahjong-app-store',
       'game_state',
       'player_preferences'

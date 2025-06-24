@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { Button, TextInput, Paper, Title, Text } from '@mantine/core'
 import WebSocketDebug, { useWebSocketDebug } from '@/components/WebSocketDebug'
+import { useAuth } from '@/contexts/AuthContext'
 import { useSessionStore, useUIStore } from '@/store/useAppStore'
+import { Button, Paper, Text, TextInput, Title } from '@mantine/core'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useEffect, useState } from 'react'
 
 function HomePageContent() {
   const { user, isAuthenticated, login, isLoading } = useAuth()
@@ -199,7 +199,7 @@ function HomePageContent() {
 
           <div className="grid gap-6">
             {/* 対局タイプ選択 */}
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-1 gap-6">
               {/* 連続対局セッション */}
               <div className="bg-green-50 rounded-lg p-6">
                 <h2 className="text-xl font-semibold text-green-800 mb-4">
@@ -215,7 +215,6 @@ function HomePageContent() {
                   セッション作成
                 </button>
               </div>
-
             </div>
 
             {/* ルーム参加 */}
@@ -258,7 +257,7 @@ function HomePageContent() {
           </div>
 
           {/* 履歴・統計 */}
-          <div className="mt-6 grid md:grid-cols-2 gap-6">
+          <div className="mt-6 grid md:grid-cols-1 gap-6">
             {/* セッション履歴 */}
             <div className="bg-purple-50 rounded-lg p-6">
               <h2 className="text-xl font-semibold text-purple-800 mb-4">
@@ -275,21 +274,6 @@ function HomePageContent() {
               </button>
             </div>
 
-            {/* 単発対局履歴 */}
-            <div className="bg-indigo-50 rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-indigo-800 mb-4">
-                単発対局履歴
-              </h2>
-              <p className="text-indigo-600 mb-4">
-                単発対局の履歴を確認できます
-              </p>
-              <button
-                onClick={() => router.push('/history')}
-                className="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
-              >
-                単発履歴
-              </button>
-            </div>
           </div>
 
           {/* ログアウト */}
