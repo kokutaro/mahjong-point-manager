@@ -153,6 +153,8 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
     // 全員合意後の新ルーム通知
     socketInstance.on('new-room-ready', ({ roomCode }: { roomCode: string }) => {
       nextRoomCodeRef.current = roomCode
+      // reset waiting state once the next room is prepared
+      setIsWaitingForVotes(false)
       if (!notificationRef.current || notificationRef.current.countdown == null) {
         window.location.href = `/room/${roomCode}`
       }
@@ -227,9 +229,8 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
         }
       })
 
-      // 既存の継続プロセスに移行
+      // move existing vote state into continuation phase
       resetSessionVote()
-      handleContinueSession()
     })
     
     // 投票タイムアウト通知
