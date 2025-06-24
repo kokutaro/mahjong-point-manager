@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useMatchHistory } from '@/hooks/useMatchHistory'
-import { useSessionStore, useUIStore } from '@/store/useAppStore'
+import { useUIStore } from '@/store/useAppStore'
 import { useAuth } from '@/contexts/AuthContext'
 import { io, Socket } from 'socket.io-client'
 import ForceEndConfirmModal from './ForceEndConfirmModal'
@@ -59,7 +59,6 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
   const [isForceEnding, setIsForceEnding] = useState(false)
   
   // Zustand ストア
-  const { setSession } = useSessionStore()
   const { isLoading, setLoading, setError: setGlobalError } = useUIStore()
   const { user } = useAuth()
 
@@ -247,56 +246,6 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
       playerId: user.playerId, 
       vote: true 
     })
-  }
-
-  const handleNewSession = async () => {
-    if (!resultData) return
-    try {
-      setLoading(true)
-      const res = await fetch(`/api/game/${resultData.gameId}/rematch`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          continueSession: false,
-          newSessionName: '新しいセッション'
-        })
-      })
-      const data = await res.json()
-      if (res.ok && data.success) {
-        // 新セッション情報を設定（LocalStorageエラーを無視）
-        try {
-          if (data.data.sessionId) {
-            setSession({
-              id: data.data.sessionId,
-              sessionCode: data.data.sessionCode,
-              name: '新しいセッション',
-              status: 'ACTIVE',
-              hostPlayerId: resultData.results[0].playerId,
-              totalGames: 0,
-              createdAt: new Date().toISOString()
-            })
-          }
-        } catch (storageErr) {
-          console.error('Failed to save session to localStorage:', storageErr)
-          // LocalStorageエラーは無視して処理継続
-        }
-        window.location.href = `/room/${data.data.roomCode}`
-      } else {
-        setGlobalError(data.error?.message || '新セッション作成に失敗しました')
-      }
-    } catch (err) {
-      console.error('New session failed:', err)
-      // LocalStorageエラーとネットワークエラーを区別
-      if (err instanceof Error && err.name === 'QuotaExceededError') {
-        setGlobalError('ストレージ容量不足です。ブラウザのデータをクリアしてください。')
-      } else {
-        setGlobalError('新セッション作成に失敗しました')
-      }
-    } finally {
-      setLoading(false)
-    }
   }
 
   // ホスト専用強制終了ハンドラー
@@ -905,29 +854,6 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
                   </div>
                 )}
                 
-                {/* 従来の継続・新規セッションボタン */}
-                <div className="border-t pt-4">
-                  <div className="text-sm text-gray-600 mb-3">
-                    または従来の方法でセッションを管理:
-                  </div>
-                  <div className="space-y-3 sm:space-y-0 sm:space-x-3 sm:flex">
-                    {resultData.sessionId && (
-                      <button
-                        onClick={handleContinueSession}
-                        className="w-full sm:w-auto bg-green-600 text-white py-3 px-6 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
-                      >
-                        セッション継続（全員合意）
-                      </button>
-                    )}
-                    
-                    <button
-                      onClick={handleNewSession}
-                      className="w-full sm:w-auto bg-emerald-600 text-white py-3 px-6 rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-colors"
-                    >
-                      新しいセッション
-                    </button>
-                  </div>
-                </div>
               </div>
             )}
             
