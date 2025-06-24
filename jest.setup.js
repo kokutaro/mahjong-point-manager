@@ -35,15 +35,14 @@ jest.mock('socket.io-client', () => ({
 // Mock fetch globally
 global.fetch = jest.fn()
 
-// Mock Web APIs for Node.js environment
+// Simple Request/Response mocks for Next.js API routes
 global.Request = class Request {
   constructor(input, init) {
-    this.url = input
     this.method = init?.method || 'GET'
     this.headers = new Map(Object.entries(init?.headers || {}))
     this.body = init?.body
   }
-  
+
   async json() {
     return JSON.parse(this.body || '{}')
   }
@@ -55,7 +54,7 @@ global.Response = class Response {
     this.status = init?.status || 200
     this.headers = new Map(Object.entries(init?.headers || {}))
   }
-  
+
   static json(data, init) {
     return new Response(JSON.stringify(data), {
       ...init,
@@ -65,7 +64,7 @@ global.Response = class Response {
       },
     })
   }
-  
+
   async json() {
     return JSON.parse(this.body)
   }
