@@ -103,6 +103,21 @@ export async function GET(
         (endEvent.eventData as any).reason : '終了') : '終了'
 
 
+    let nextGame: { id: string, roomCode: string } | null = null
+    if (game.sessionId && game.sessionOrder != null) {
+      const ng = await prisma.game.findFirst({
+        where: {
+          sessionId: game.sessionId,
+          sessionOrder: game.sessionOrder + 1,
+          status: 'WAITING'
+        },
+        select: { id: true, roomCode: true }
+      })
+      if (ng) {
+        nextGame = { id: ng.id, roomCode: ng.roomCode }
+      }
+    }
+
     const resultData = {
       gameId: game.id,
       roomCode: game.roomCode,
@@ -114,7 +129,8 @@ export async function GET(
       sessionId: game.sessionId,
       sessionCode: game.session?.sessionCode,
       sessionName: game.session?.name,
-      hostPlayerId: game.session?.hostPlayerId
+      hostPlayerId: game.session?.hostPlayerId,
+      nextGame
     }
 
     return NextResponse.json({

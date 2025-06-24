@@ -31,6 +31,10 @@ interface GameResultData {
   sessionCode?: string
   sessionName?: string
   hostPlayerId?: string
+  nextGame?: {
+    id: string
+    roomCode: string
+  } | null
 }
 
 interface GameResultProps {
@@ -103,6 +107,10 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
       if (data.success) {
         console.log('Setting result data:', data.data)
         setResultData(data.data)
+        if (data.data.nextGame) {
+          nextRoomCodeRef.current = data.data.nextGame.roomCode
+          startNextGameCountdown()
+        }
       } else {
         throw new Error(data.error?.message || '結果の取得に失敗しました')
       }
