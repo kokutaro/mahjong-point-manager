@@ -67,6 +67,18 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
   // Next game transition helper refs
   const nextRoomCodeRef = useRef<string | null>(null)
   const hasSentContinueRef = useRef(false)
+
+  const startNextGameCountdown = useCallback(() => {
+    const code = nextRoomCodeRef.current
+    if (!code) return
+    setNotification({
+      message: '次の対局の準備ができました。5秒後に自動的に遷移します。',
+      countdown: 5,
+      action: () => {
+        window.location.href = `/room/${code}`
+      },
+    })
+  }, [])
   
   // Zustand ストア
   const { isLoading, setLoading, setError: setGlobalError } = useUIStore()
@@ -152,13 +164,7 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
       nextRoomCodeRef.current = roomCode
       hasSentContinueRef.current = false
       setIsWaitingForVotes(false)
-      setNotification({
-        message: '次の対局の準備ができました。5秒後に自動的に遷移します。',
-        countdown: 5,
-        action: () => {
-          window.location.href = `/room/${roomCode}`
-        }
-      })
+      startNextGameCountdown()
     })
     
     // 投票キャンセル通知
@@ -219,10 +225,14 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
     socketInstance.on('session_continue_agreed', ({ continueVotes }: {
       continueVotes: number
     }) => {
-      setNotification({
-        message: `${continueVotes}名が継続を希望しています。次の対局を準備中です...`,
-        action: () => setNotification(null)
-      })
+      startNextGameCountdown()
+
+      if (!nextRoomCodeRef.current) {
+        setNotification({
+          message: `${continueVotes}名が継続を希望しています。次の対局を準備中です...`,
+          action: () => setNotification(null),
+        })
+      }
 
       if (!hasSentContinueRef.current) {
         hasSentContinueRef.current = true
