@@ -26,14 +26,19 @@ export default function AlertModal({
       setCountdown(prev => {
         if (prev <= 1) {
           clearInterval(timer)
-          onConfirm()
           return 0
         }
         return prev - 1
       })
     }, 1000)
     return () => clearInterval(timer)
-  }, [isOpen, countdownSeconds, onConfirm])
+  }, [isOpen, countdownSeconds])
+
+  useEffect(() => {
+    if (isOpen && countdownSeconds != null && countdown === 0) {
+      onConfirm()
+    }
+  }, [isOpen, countdownSeconds, countdown, onConfirm])
 
   if (!isOpen) return null
 
