@@ -3,10 +3,10 @@ import { getSoloGameState } from '@/lib/solo/score-manager'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { gameId: string } }
+  { params }: { params: Promise<{ gameId: string }> }
 ) {
   try {
-    const { gameId } = params
+    const { gameId } = await params
 
     if (!gameId) {
       return NextResponse.json({
@@ -51,10 +51,10 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { gameId: string } }
+  { params }: { params: Promise<{ gameId: string }> }
 ) {
   try {
-    const { gameId } = params
+    const { gameId } = await params
     const body = await request.json()
 
     if (!gameId) {

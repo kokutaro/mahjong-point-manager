@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { CreateSoloGameSchema, DEFAULT_PLAYER_NAMES, validatePlayerNames, validatePlayerPositions } from '@/schemas/solo'
+import { authenticatePlayer } from '@/lib/solo/auth'
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,20 +45,18 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // ユーザー情報の取得（簡易的に Cookie から取得）
-    const userCookie = request.cookies.get('auth-user')
-    if (!userCookie) {
+    // プレイヤー認証
+    const authResult = await authenticatePlayer(request)
+    if (!authResult.success) {
+      const statusCode = authResult.error?.code === 'UNAUTHORIZED' ? 401 : 
+                        authResult.error?.code === 'PLAYER_NOT_FOUND' ? 404 : 500
       return NextResponse.json({
         success: false,
-        error: {
-          code: 'UNAUTHORIZED',
-          message: 'ログインが必要です'
-        }
-      }, { status: 401 })
+        error: authResult.error
+      }, { status: statusCode })
     }
 
-    const userData = JSON.parse(userCookie.value)
-    const hostPlayerId = userData.id
+    const hostPlayerId = authResult.playerId!
 
     // データベーストランザクション
     const result = await prisma.$transaction(async (tx) => {

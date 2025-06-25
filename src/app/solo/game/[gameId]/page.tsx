@@ -6,11 +6,11 @@ import { SoloGameState, SoloPlayerState } from '@/lib/solo/score-manager'
 import { getPlayerWind } from '@/schemas/solo'
 
 interface SoloGamePageProps {
-  params: { gameId: string }
+  params: Promise<{ gameId: string }>
 }
 
 export default function SoloGamePage({ params }: SoloGamePageProps) {
-  const { gameId } = params
+  const [gameId, setGameId] = useState<string>('')
   const router = useRouter()
   const [gameState, setGameState] = useState<SoloGameState | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -65,6 +65,15 @@ export default function SoloGamePage({ params }: SoloGamePageProps) {
       setIsStarting(false)
     }
   }
+
+  // パラメータの取得
+  useEffect(() => {
+    const getParams = async () => {
+      const resolvedParams = await params
+      setGameId(resolvedParams.gameId)
+    }
+    getParams()
+  }, [params])
 
   // 初期データ取得
   useEffect(() => {

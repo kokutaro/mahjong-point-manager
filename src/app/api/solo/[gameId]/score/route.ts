@@ -4,10 +4,10 @@ import { SoloScoreCalculationSchema, validateHanFu } from '@/schemas/solo'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { gameId: string } }
+  { params }: { params: Promise<{ gameId: string }> }
 ) {
   try {
-    const { gameId } = params
+    const { gameId } = await params
     const body = await request.json()
 
     if (!gameId) {
