@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { updateSoloGameScore } from '@/lib/solo/score-manager'
+import { SoloPointManager } from '@/lib/solo/solo-point-manager'
+import { calculateScore } from '@/lib/score'
 import { SoloScoreCalculationSchema, validateHanFu } from '@/schemas/solo'
 
 export async function POST(
@@ -69,15 +70,53 @@ export async function POST(
       }, { status: 400 })
     }
 
-    // 点数計算と更新
-    const result = await updateSoloGameScore(gameId, scoreInput)
+    const pointManager = new SoloPointManager(gameId)
+    
+    // 現在のゲーム状態を取得
+    const gameState = await pointManager.getGameState()
+    
+    // 勝者の位置を検証
+    const winner = gameState.players.find(p => p.position === scoreInput.winnerId)
+    if (!winner) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          code: 'PLAYER_NOT_FOUND',
+          message: 'プレイヤーが見つかりません'
+        }
+      }, { status: 404 })
+    }
+
+    const isOya = scoreInput.winnerId === gameState.currentOya
+
+    // 点数計算（既存のマルチプレイと同じロジックを使用）
+    const scoreResult = await calculateScore({
+      han: scoreInput.han,
+      fu: scoreInput.fu,
+      isOya,
+      isTsumo: scoreInput.isTsumo,
+      honba: gameState.honba,
+      kyotaku: gameState.kyotaku
+    })
+
+    // 点数分配（内部で親ローテーションとゲーム終了判定も実行）
+    const gameEndResult = await pointManager.distributeWinPoints(
+      scoreInput.winnerId,
+      scoreResult,
+      scoreInput.isTsumo,
+      scoreInput.loserId
+    )
+
+    // 更新されたゲーム状態
+    const updatedGameState = await pointManager.getGameState()
 
     return NextResponse.json({
       success: true,
       data: {
-        gameState: result.gameState,
-        scoreResult: result.scoreResult,
-        pointChanges: result.pointChanges
+        gameState: updatedGameState,
+        scoreResult,
+        gameEnded: gameEndResult.gameEnded,
+        reason: gameEndResult.reason
       }
     })
 
