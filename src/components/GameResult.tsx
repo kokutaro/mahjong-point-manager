@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useState, useRef } from 'react'
-import { useMatchHistory } from '@/hooks/useMatchHistory'
 import { useUIStore } from '@/store/useAppStore'
 import { useAuth } from '@/contexts/AuthContext'
 import { io, Socket } from 'socket.io-client'

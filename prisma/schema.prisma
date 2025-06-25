@@ -20,6 +20,7 @@ model Player {
   hostedSessions      GameSession[]
   hostedGames         Game[]
   sessionParticipants SessionParticipant[]
+  hostedSoloGames     SoloGame[]
 
   @@map("players")
 }
@@ -193,4 +194,70 @@ enum SessionStatus {
   PAUSED
   FINISHED
   CANCELLED
+}
+
+model SoloGame {
+  id            String         @id @default(cuid())
+  hostPlayerId  String
+  gameType      GameType       @default(HANCHAN)
+  status        GameStatus     @default(WAITING)
+  currentRound  Int            @default(1)
+  honba         Int            @default(0)
+  kyotaku       Int            @default(0)
+  startingOya   Int            @default(0)
+  currentOya    Int            @default(0)
+  initialPoints Int            @default(25000)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  startedAt     DateTime?
+  endedAt       DateTime?
+  hostPlayer    Player         @relation(fields: [hostPlayerId], references: [id])
+  players       SoloPlayer[]
+  events        SoloGameEvent[]
+  result        SoloGameResult?
+
+  @@map("solo_games")
+}
+
+model SoloPlayer {
+  id            String    @id @default(cuid())
+  soloGameId    String
+  position      Int
+  name          String
+  currentPoints Int       @default(25000)
+  isReach       Boolean   @default(false)
+  reachRound    Int?
+  finalPoints   Int?
+  finalRank     Int?
+  uma           Int?
+  oka           Int?
+  settlement    Int?
+  soloGame      SoloGame  @relation(fields: [soloGameId], references: [id], onDelete: Cascade)
+
+  @@unique([soloGameId, position])
+  @@map("solo_players")
+}
+
+model SoloGameEvent {
+  id        String         @id @default(cuid())
+  soloGameId String
+  position  Int?
+  eventType EventType
+  round     Int
+  honba     Int
+  eventData Json
+  createdAt DateTime       @default(now())
+  soloGame  SoloGame       @relation(fields: [soloGameId], references: [id], onDelete: Cascade)
+
+  @@map("solo_game_events")
+}
+
+model SoloGameResult {
+  id         String   @id @default(cuid())
+  soloGameId String   @unique
+  results    Json
+  createdAt  DateTime @default(now())
+  soloGame   SoloGame @relation(fields: [soloGameId], references: [id], onDelete: Cascade)
+
+  @@map("solo_game_results")
 }

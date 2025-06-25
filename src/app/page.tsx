@@ -102,6 +102,11 @@ function HomePageContent() {
     router.push('/room/create' as any)
   }
 
+  const handleCreateSoloGame = () => {
+    // 一人プレイモードの画面へ
+    router.push('/solo/create' as any)
+  }
+
   const handleJoinRoom = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!roomCode.trim()) {
@@ -234,7 +239,7 @@ function HomePageContent() {
 
           <div className="grid gap-6">
             {/* 対局タイプ選択 */}
-            <div className="grid md:grid-cols-1 gap-6">
+            <div className="grid md:grid-cols-2 gap-6">
               {/* 連続対局セッション */}
               <div className="bg-green-50 rounded-lg p-6">
                 <h2 className="text-xl font-semibold text-green-800 mb-4">
@@ -248,6 +253,22 @@ function HomePageContent() {
                   className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
                 >
                   セッション作成
+                </button>
+              </div>
+
+              {/* 一人プレイモード */}
+              <div className="bg-orange-50 rounded-lg p-6">
+                <h2 className="text-xl font-semibold text-orange-800 mb-4">
+                  一人プレイモード
+                </h2>
+                <p className="text-orange-600 mb-4">
+                  一人で4人分の点数を管理できるモードです
+                </p>
+                <button
+                  onClick={handleCreateSoloGame}
+                  className="w-full bg-orange-600 text-white py-2 px-4 rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-colors"
+                >
+                  一人プレイ開始
                 </button>
               </div>
             </div>
