@@ -226,8 +226,13 @@ function BaseScoreInputForm<
 
   const isManganOrAbove = han >= 5
 
-  const confirmStep = actionType === 'ron' ? 3 : 2
-  const fuStep = actionType === 'ron' ? 2 : 1
+  // ステップ計算の修正（soloモードを考慮）
+  const confirmStep = mode === 'solo' 
+    ? (actionType === 'ron' ? 4 : 3)
+    : (actionType === 'ron' ? 3 : 2)
+  const fuStep = mode === 'solo'
+    ? (actionType === 'ron' ? 3 : 2)
+    : (actionType === 'ron' ? 2 : 1)
   const nextStepAfterLoser = mode === 'solo' ? 2 : 1
 
   // ソロモード用の和了者選択ステップ
