@@ -39,9 +39,10 @@ interface GameResultData {
 interface GameResultProps {
   gameId: string
   onBack: () => void
+  isSoloPlay?: boolean
 }
 
-export default function GameResult({ gameId, onBack }: GameResultProps) {
+export default function GameResult({ gameId, onBack, isSoloPlay = false }: GameResultProps) {
   const [resultData, setResultData] = useState<GameResultData | null>(null)
   const [error, setError] = useState('')
   
@@ -90,7 +91,8 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
       setLoading(true)
       setError('')
 
-      const response = await fetch(`/api/game/${gameId}/result`, {
+      const apiUrl = isSoloPlay ? `/api/solo/${gameId}/result` : `/api/game/${gameId}/result`
+      const response = await fetch(apiUrl, {
         method: 'GET',
         credentials: 'include'
       })
@@ -124,9 +126,9 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
     fetchGameResult()
   }, [fetchGameResult])
 
-  // WebSocket接続とイベントハンドリング
+  // WebSocket接続とイベントハンドリング（マルチプレイのみ）
   useEffect(() => {
-    if (!resultData) return
+    if (!resultData || isSoloPlay) return
     
     const socketInstance = io('/', {
       query: { gameId }
@@ -754,8 +756,8 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
               ホームに戻る
             </button>
 
-            {/* ホスト専用強制終了ボタン */}
-            {user?.playerId === resultData.hostPlayerId && resultData.sessionId && !isWaitingForVotes && (
+            {/* ホスト専用強制終了ボタン（マルチプレイのみ） */}
+            {!isSoloPlay && user?.playerId === resultData.hostPlayerId && resultData.sessionId && !isWaitingForVotes && (
               <button
                 onClick={handleHostForceEnd}
                 disabled={isForceEnding}
@@ -776,7 +778,8 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
             )}
           </div>
 
-          {/* 継続オプション */}
+          {/* 継続オプション（マルチプレイのみ） */}
+          {!isSoloPlay && (
           <div className="bg-green-50 p-4 rounded-lg">
             <h3 className="text-lg font-semibold text-green-800 mb-3">
               {isWaitingForSessionVotes ? 'セッションをどうしますか？' : '対局を続けますか？'}
@@ -900,6 +903,7 @@ export default function GameResult({ gameId, onBack }: GameResultProps) {
               )}
             </div>
           </div>
+          )}
         </div>
 
         {/* 強制終了確認モーダル */}

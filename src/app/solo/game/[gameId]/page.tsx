@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { SoloGameState, SoloPlayerState } from '@/lib/solo/score-manager'
 import { getPlayerWind } from '@/schemas/solo'
+import GameEndScreen from '@/components/GameEndScreen'
+import GameResult from '@/components/GameResult'
 
 interface SoloGamePageProps {
   params: Promise<{ gameId: string }>
@@ -16,6 +18,9 @@ export default function SoloGamePage({ params }: SoloGamePageProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [isStarting, setIsStarting] = useState(false)
+  const [showGameEnd, setShowGameEnd] = useState(false)
+  const [showResult, setShowResult] = useState(false)
+  const [gameEndReason, setGameEndReason] = useState('')
 
   // ゲーム状態を取得
   const fetchGameState = useCallback(async () => {
@@ -87,6 +92,14 @@ export default function SoloGamePage({ params }: SoloGamePageProps) {
       loadData()
     }
   }, [gameId, fetchGameState])
+
+  // ゲーム終了の監視
+  useEffect(() => {
+    if (gameState && gameState.status === 'FINISHED' && !showGameEnd && !showResult) {
+      setGameEndReason('ゲーム終了')
+      setShowGameEnd(true)
+    }
+  }, [gameState, showGameEnd, showResult])
 
   if (isLoading) {
     return (
@@ -178,6 +191,71 @@ export default function SoloGamePage({ params }: SoloGamePageProps) {
           </div>
         </div>
       </div>
+    )
+  }
+
+  // ゲーム終了画面の表示
+  if (showGameEnd && gameState) {
+    return (
+      <>
+        <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50 p-4">
+          <div className="max-w-6xl mx-auto">
+            {/* ゲーム情報 */}
+            <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-800">一人プレイゲーム</h1>
+                  <p className="text-gray-600">
+                    {gameState.currentRound}局 {gameState.honba}本場
+                    {gameState.kyotaku > 0 && ` 供託${gameState.kyotaku}`}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-semibold text-orange-600">
+                    {getPlayerWind(gameState.currentOya as 0 | 1 | 2 | 3, gameState.currentOya as 0 | 1 | 2 | 3)}親
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {gameState.players[gameState.currentOya]?.name}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* プレイヤー点数表示 */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              {gameState.players.map((player) => (
+                <PlayerCard 
+                  key={player.position} 
+                  player={player} 
+                  isOya={player.position === gameState.currentOya}
+                  gameState={gameState}
+                  onStateUpdate={setGameState}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+        
+        <GameEndScreen
+          gameType="HANCHAN"
+          endReason={gameEndReason}
+          onShowResult={() => {
+            setShowGameEnd(false)
+            setShowResult(true)
+          }}
+        />
+      </>
+    )
+  }
+
+  // ゲーム結果画面の表示
+  if (showResult) {
+    return (
+      <GameResult 
+        gameId={gameId} 
+        onBack={() => setShowResult(false)}
+        isSoloPlay={true}
+      />
     )
   }
 
