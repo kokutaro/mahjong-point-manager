@@ -58,6 +58,7 @@ export async function GET(
 
     // 結果データを整形
     // finalRankがnullの場合は現在の点数で順位を計算
+    const basePoints = game.initialPoints || 25000
     const playersWithRank = game.players.map(player => {
       if (player.finalRank !== null && player.finalPoints !== null) {
         return player
@@ -68,7 +69,7 @@ export async function GET(
           finalPoints: player.currentPoints,
           finalRank: 0, // 後で計算
           uma: 0,
-          settlement: player.currentPoints - 25000
+          settlement: player.currentPoints - basePoints
         }
       }
     })
@@ -88,7 +89,7 @@ export async function GET(
       const rank = player.finalRank || player.calculatedRank
       const finalPoints = player.finalPoints || player.currentPoints
       const umaValue = uma[rank - 1] || 0
-      const settlement = (finalPoints - 25000) + umaValue
+      const settlement = (finalPoints - basePoints) + umaValue
 
       return {
         playerId: player.position.toString(),
@@ -122,7 +123,7 @@ export async function GET(
       gameType: 'HANCHAN' as const, // ソロプレイのデフォルト
       endReason,
       endedAt: game.endedAt?.toISOString() || new Date().toISOString(),
-      basePoints: 25000, // ソロプレイの標準基準点
+      basePoints, // 実際のゲームの初期点数を使用
       // セッション関連は全てundefined（ソロプレイには不要）
       sessionId: undefined,
       sessionCode: undefined,

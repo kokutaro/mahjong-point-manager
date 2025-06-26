@@ -662,7 +662,7 @@ export default function GameResult({ gameId, onBack, isSoloPlay = false }: GameR
                   <div className="flex justify-between">
                     <span className="text-gray-600">基準点差分:</span>
                     <span className="font-mono">
-                      {formatPoints(result.finalPoints - 30000)}
+                      {formatPoints(result.finalPoints - resultData.basePoints)}
                     </span>
                   </div>
                   
@@ -675,13 +675,13 @@ export default function GameResult({ gameId, onBack, isSoloPlay = false }: GameR
                           const othersTotal = resultData.results
                             .filter(r => r.rank !== 1)
                             .reduce((sum, r) => {
-                              const diff = r.finalPoints - 30000
+                              const diff = r.finalPoints - resultData.basePoints
                               return sum + (diff >= 0 ? Math.floor(diff / 1000) : Math.ceil(diff / 1000))
                             }, 0)
                           return othersTotal > 0 ? `+${-othersTotal}` : `${-othersTotal}`
                         } else {
                           // 1位以外の場合は通常計算
-                          const diff = result.finalPoints - 30000
+                          const diff = result.finalPoints - resultData.basePoints
                           if (diff >= 0) {
                             return `+${Math.floor(diff / 1000)}`
                           } else {
