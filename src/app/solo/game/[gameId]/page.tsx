@@ -386,7 +386,7 @@ function GameActions({ gameState, onStateUpdate, onError }: GameActionsProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          type: 'NORMAL_DRAW',
+          type: 'DRAW',
           tenpaiPlayers: tenpaiPositions,
         }),
         credentials: 'include'
