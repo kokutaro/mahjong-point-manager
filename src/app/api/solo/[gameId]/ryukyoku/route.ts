@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { processSoloRyukyoku } from '@/lib/solo/score-manager'
+import { SoloPointManager } from '@/lib/solo/solo-point-manager'
 import { SoloRyukyokuSchema } from '@/schemas/solo'
 
 export async function POST(
@@ -103,30 +103,38 @@ export async function POST(
     }
 
     // 流局処理
-    const gameState = await processSoloRyukyoku(gameId, tenpaiPlayers, currentReachPlayers)
-
-    // 結果メッセージの生成
-    let message = '流局しました'
+    const pointManager = new SoloPointManager(gameId)
+    
+    // 流局の理由を生成
+    let reason = '流局'
     if (type === 'ABORTIVE_DRAW') {
-      message = '途中流局しました'
+      reason = '途中流局'
     } else {
       const tenpaiCount = tenpaiPlayers.length
       if (tenpaiCount === 0) {
-        message = '全員ノーテン流局'
+        reason = '全員ノーテン流局'
       } else if (tenpaiCount === 4) {
-        message = '全員テンパイ流局'
+        reason = '全員テンパイ流局'
       } else {
-        message = `${tenpaiCount}人テンパイ流局`
+        reason = `${tenpaiCount}人テンパイ流局`
       }
     }
+
+    // 流局処理（内部で親ローテーションとゲーム終了判定も実行）
+    const gameEndResult = await pointManager.handleRyukyoku(reason, tenpaiPlayers)
+
+    // 更新されたゲーム状態
+    const updatedGameState = await pointManager.getGameState()
 
     return NextResponse.json({
       success: true,
       data: {
-        gameState,
+        gameState: updatedGameState,
         tenpaiPlayers,
         reachPlayers: currentReachPlayers,
-        message
+        message: reason,
+        gameEnded: gameEndResult.gameEnded,
+        reason: gameEndResult.reason
       }
     })
 
