@@ -228,7 +228,7 @@ function BaseScoreInputForm<
 
   const confirmStep = actionType === 'ron' ? 3 : 2
   const fuStep = actionType === 'ron' ? 2 : 1
-  const nextStepAfterLoser = 1
+  const nextStepAfterLoser = mode === 'solo' ? 2 : 1
 
   // ソロモード用の和了者選択ステップ
   const renderWinnerStep = () => (
@@ -241,7 +241,7 @@ function BaseScoreInputForm<
             color={winnerId === player.id ? 'green' : 'gray'}
             onClick={() => {
               handleWinnerChange(player.id)
-              setStep(actionType === 'ron' ? 1 : 0)
+              setStep(actionType === 'ron' ? 1 : 1)
             }}
           >
             {getPlayerDisplay(player)}
