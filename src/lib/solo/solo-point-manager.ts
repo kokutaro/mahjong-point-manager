@@ -108,7 +108,7 @@ export class SoloPointManager {
         await this.updatePoints(
           player.position,
           player.currentPoints + scoreResult.totalScore,
-          'WIN',
+          'TSUMO',
           `ツモ和了 ${scoreResult.totalScore}点`
         )
       } else {
@@ -131,7 +131,7 @@ export class SoloPointManager {
         await this.updatePoints(
           player.position,
           player.currentPoints - payment,
-          'LOSE',
+          'TSUMO',
           `ツモ支払い -${payment}点`
         )
       }
@@ -155,7 +155,7 @@ export class SoloPointManager {
       await this.updatePoints(
         winnerPosition,
         winner.currentPoints + scoreResult.totalScore,
-        'WIN',
+        'RON',
         `ロン和了 ${scoreResult.totalScore}点`
       )
     }
@@ -170,7 +170,7 @@ export class SoloPointManager {
       await this.updatePoints(
         loserPosition,
         loser.currentPoints - paymentAmount,
-        'LOSE',
+        'RON',
         `ロン支払い -${paymentAmount}点`
       )
     }
@@ -598,7 +598,7 @@ export class SoloPointManager {
   private async updatePoints(
     position: number,
     newPoints: number,
-    type: 'WIN' | 'LOSE' | 'RIICHI' | 'HONBA' | 'KYOTAKU',
+    type: 'TSUMO' | 'RON' | 'REACH' | 'RYUKYOKU',
     description: string
   ): Promise<void> {
     const player = await prisma.soloPlayer.findFirst({
@@ -619,8 +619,8 @@ export class SoloPointManager {
 
     // イベント記録
     await this.recordEvent({
-      position: type === 'WIN' ? position : undefined,
-      eventType: type === 'WIN' ? 'WIN' : 'LOSE',
+      position: position,
+      eventType: type,
       eventData: {
         position,
         pointChange: Math.abs(pointChange),
