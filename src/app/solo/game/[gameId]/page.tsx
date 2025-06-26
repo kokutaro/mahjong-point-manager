@@ -4,6 +4,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { SoloGameState, SoloPlayerState } from '@/lib/solo/score-manager'
 import { getPlayerWind } from '@/schemas/solo'
+import SoloScoreForm from '@/components/solo/SoloScoreForm'
+import SoloRyukyokuForm from '@/components/solo/SoloRyukyokuForm'
+import type { 
+  SoloGameState as SoloGameStateType, 
+  SoloGamePlayer,
+  ScoreSubmissionData
+} from '@/components/common'
 
 interface SoloGamePageProps {
   params: Promise<{ gameId: string }>
@@ -322,17 +329,155 @@ interface GameActionsProps {
 function GameActions({ gameState, onStateUpdate, onError }: GameActionsProps) {
   const [showScoreForm, setShowScoreForm] = useState(false)
   const [showRyukyokuForm, setShowRyukyokuForm] = useState(false)
+  const [scoreActionType, setScoreActionType] = useState<'tsumo' | 'ron'>('tsumo')
+
+  // 点数入力フォーム表示
+  const handleShowScoreForm = (actionType: 'tsumo' | 'ron') => {
+    setScoreActionType(actionType)
+    setShowScoreForm(true)
+  }
+
+  // 点数計算処理
+  const handleScoreSubmit = async (scoreData: ScoreSubmissionData) => {
+    try {
+      const response = await fetch(`/api/solo/${gameState.gameId}/score`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          han: scoreData.han,
+          fu: scoreData.fu,
+          winnerId: parseInt(scoreData.winnerId),
+          isOya: gameState.players.find(p => p.position.toString() === scoreData.winnerId)?.position === gameState.currentOya,
+          isTsumo: scoreData.isTsumo,
+          loserId: scoreData.loserId ? parseInt(scoreData.loserId) : undefined,
+        }),
+        credentials: 'include'
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error?.message || '点数計算に失敗しました')
+      }
+
+      if (result.success) {
+        onStateUpdate(result.data.gameState)
+        setShowScoreForm(false)
+        
+        if (result.data.gameEnded) {
+          alert(`ゲーム終了: ${result.data.reason}`)
+        }
+      }
+    } catch (error) {
+      onError(error instanceof Error ? error.message : '点数計算エラー')
+    }
+  }
+
+  // 流局処理
+  const handleRyukyokuSubmit = async (tenpaiPlayerIds: string[]) => {
+    try {
+      const tenpaiPositions = tenpaiPlayerIds.map(id => parseInt(id))
+      
+      const response = await fetch(`/api/solo/${gameState.gameId}/ryukyoku`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'DRAW',
+          tenpaiPlayers: tenpaiPositions,
+        }),
+        credentials: 'include'
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error?.message || '流局処理に失敗しました')
+      }
+
+      if (result.success) {
+        onStateUpdate(result.data.gameState)
+        setShowRyukyokuForm(false)
+        
+        if (result.data.gameEnded) {
+          alert(`ゲーム終了: ${result.data.reason}`)
+        }
+      }
+    } catch (error) {
+      onError(error instanceof Error ? error.message : '流局処理エラー')
+    }
+  }
+
+  // 強制終了処理
+  const handleForceEnd = async () => {
+    if (!confirm('ゲームを強制終了しますか？')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/solo/${gameState.gameId}/force-end`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          reason: '強制終了'
+        }),
+        credentials: 'include'
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error?.message || '強制終了に失敗しました')
+      }
+
+      if (result.success) {
+        onStateUpdate(result.data.gameState)
+        alert('ゲームを強制終了しました')
+      }
+    } catch (error) {
+      onError(error instanceof Error ? error.message : '強制終了エラー')
+    }
+  }
+
+  // ゲーム状態をSoloGameStateType用に変換
+  const convertedGameState: SoloGameStateType | null = gameState ? {
+    gameId: gameState.gameId,
+    status: gameState.status === 'FINISHED' ? 'FINISHED' : 'PLAYING',
+    currentRound: gameState.currentRound,
+    currentOya: gameState.currentOya,
+    honba: gameState.honba,
+    kyotaku: gameState.kyotaku,
+    players: gameState.players.map(p => ({
+      id: p.position.toString(),
+      name: p.name,
+      position: p.position,
+      points: p.points,
+      isReach: p.isReach
+    }))
+  } : null
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
       <h2 className="text-xl font-semibold text-gray-800 mb-4">ゲームアクション</h2>
       
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <button
-          onClick={() => setShowScoreForm(true)}
+          onClick={() => handleShowScoreForm('tsumo')}
           className="bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 transition-colors"
         >
-          和了
+          ツモ
+        </button>
+
+        <button
+          onClick={() => handleShowScoreForm('ron')}
+          className="bg-green-700 text-white py-3 px-4 rounded-md hover:bg-green-800 transition-colors"
+        >
+          ロン
         </button>
         
         <button
@@ -343,50 +488,30 @@ function GameActions({ gameState, onStateUpdate, onError }: GameActionsProps) {
         </button>
         
         <button
-          onClick={() => {/* TODO: 強制終了処理 */}}
+          onClick={handleForceEnd}
           className="bg-red-600 text-white py-3 px-4 rounded-md hover:bg-red-700 transition-colors"
         >
           強制終了
         </button>
-        
-        <button
-          onClick={() => {/* TODO: ゲーム終了処理 */}}
-          className="bg-purple-600 text-white py-3 px-4 rounded-md hover:bg-purple-700 transition-colors"
-        >
-          ゲーム終了
-        </button>
       </div>
 
-      {/* TODO: スコア入力フォーム */}
-      {showScoreForm && (
-        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="font-semibold">和了点数入力</h3>
-            <button
-              onClick={() => setShowScoreForm(false)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              ×
-            </button>
-          </div>
-          <p className="text-gray-600">和了点数入力フォームは次のバージョンで実装予定です</p>
-        </div>
+      {/* スコア入力フォーム */}
+      {showScoreForm && convertedGameState && (
+        <SoloScoreForm
+          gameState={convertedGameState}
+          actionType={scoreActionType}
+          onSubmit={handleScoreSubmit}
+          onCancel={() => setShowScoreForm(false)}
+        />
       )}
 
-      {/* TODO: 流局フォーム */}
-      {showRyukyokuForm && (
-        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="font-semibold">流局処理</h3>
-            <button
-              onClick={() => setShowRyukyokuForm(false)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              ×
-            </button>
-          </div>
-          <p className="text-gray-600">流局処理フォームは次のバージョンで実装予定です</p>
-        </div>
+      {/* 流局フォーム */}
+      {showRyukyokuForm && convertedGameState && (
+        <SoloRyukyokuForm
+          players={convertedGameState.players}
+          onSubmit={handleRyukyokuSubmit}
+          onCancel={() => setShowRyukyokuForm(false)}
+        />
       )}
     </div>
   )
