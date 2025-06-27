@@ -11,7 +11,7 @@
 
 - [ ] `npm run format` でコードフォーマット済み
 - [ ] `npm run lint` でリントエラーなし
-- [ ] `npm run typecheck` で型エラーなし
+- [ ] `npm run type-check` で型エラーなし
 - [ ] `npm run test` でテスト全パス
 - [ ] 新機能の場合、テストを追加済み
 - [ ] 破壊的変更がある場合、影響範囲を記載済み

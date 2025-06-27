@@ -455,7 +455,7 @@ npm run lint || {
 }
 
 # 型チェック
-npm run typecheck || {
+npm run type-check || {
   echo "❌ 型エラーが見つかりました。"
   exit 1
 }
@@ -522,7 +522,7 @@ jobs:
         run: npm run lint
       
       - name: Run type check
-        run: npm run typecheck
+        run: npm run type-check
       
       - name: Run tests
         run: npm run test:ci

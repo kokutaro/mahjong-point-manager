@@ -325,7 +325,7 @@ npm run format
 npm run lint
 
 # 3. 型チェック
-npm run typecheck
+npm run type-check
 
 # 4. テスト実行
 npm run test
