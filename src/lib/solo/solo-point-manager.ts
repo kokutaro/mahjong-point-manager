@@ -454,16 +454,16 @@ export class SoloPointManager {
       return
     }
 
-    // デフォルト設定
-    const defaultSettings = {
+    // ゲーム設定を使用（データベースに保存された値）
+    const gameSettings = {
       initialPoints: game.initialPoints,
-      basePoints: 30000,
-      uma: [20, 10, -10, -20]
+      basePoints: game.basePoints || 30000,
+      uma: Array.isArray(game.uma) ? game.uma as number[] : [15000, 5000, -5000, -15000]
     }
     
-    console.log('🏁 Using settings:', defaultSettings)
+    console.log('🏁 Using settings:', gameSettings)
     
-    const finalResults = this.calculateSettlement(players, defaultSettings)
+    const finalResults = this.calculateSettlement(players, gameSettings)
     await this.saveFinalResults(finalResults, players)
   }
 
@@ -499,27 +499,25 @@ export class SoloPointManager {
     const resultsWithDiff = sortedPlayers.map((player, index) => {
       const rank = index + 1
       const pointDiff = player.currentPoints - settings.basePoints
-      
-      // 3. 1000点単位での精算計算
       let roundedDiff: number
       if (pointDiff >= 0) {
-        // プラスの場合：切り捨て
         roundedDiff = Math.floor(pointDiff / 1000)
       } else {
-        // マイナスの場合：切り上げ
         roundedDiff = Math.ceil(pointDiff / 1000)
       }
 
-      const uma = settings.uma[index] || 0
-      
-      // 1位以外の精算計算：精算点数 + ウマ
-      let settlement: number
-      if (rank === 1) {
-        // 1位は後で調整
-        settlement = 0
+      // Find players with the same score
+      const tiedPlayers = sortedPlayers.filter(p => p.currentPoints === player.currentPoints);
+      let uma = 0;
+      if (tiedPlayers.length > 1) {
+        const tiedIndexes = tiedPlayers.map(p => sortedPlayers.indexOf(p));
+        const totalUma = tiedIndexes.reduce((sum, i) => sum + (settings.uma[i] || 0), 0);
+        uma = totalUma / tiedPlayers.length;
       } else {
-        settlement = roundedDiff + uma
+        uma = settings.uma[index] || 0;
       }
+      
+      const settlement = roundedDiff + uma
 
       return {
         position: player.position,

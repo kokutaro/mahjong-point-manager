@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    const { gameType, initialPoints, players } = validation.data
+    const { gameType, initialPoints, basePoints, uma, players } = validation.data
 
     // プレイヤー名の重複チェック
     if (!validatePlayerNames(players)) {
@@ -66,6 +66,8 @@ export async function POST(request: NextRequest) {
           hostPlayerId,
           gameType,
           initialPoints,
+          basePoints,
+          uma: uma,
           status: 'WAITING'
         }
       })
@@ -115,6 +117,8 @@ export async function POST(request: NextRequest) {
         gameId: result.soloGame.id,
         gameType: result.soloGame.gameType,
         initialPoints: result.soloGame.initialPoints,
+        basePoints: result.soloGame.basePoints,
+        uma: result.soloGame.uma,
         players: result.soloPlayers.map(p => ({
           position: p.position,
           name: p.name,

@@ -207,6 +207,8 @@ model SoloGame {
   startingOya   Int            @default(0)
   currentOya    Int            @default(0)
   initialPoints Int            @default(25000)
+  basePoints    Int            @default(30000)
+  uma           Json           @default("[15000, 5000, -5000, -15000]")
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   startedAt     DateTime?
