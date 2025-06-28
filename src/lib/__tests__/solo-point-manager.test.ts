@@ -1,5 +1,5 @@
-import { SoloPointManager } from '../solo/solo-point-manager';
 import { prisma } from '@/lib/prisma';
+import { SoloPointManager } from '../solo/solo-point-manager';
 
 // Mock Prisma
 jest.mock('@/lib/prisma', () => ({
@@ -75,13 +75,18 @@ describe('SoloPointManager', () => {
     
           const results = pointManager['calculateSettlement'](players, settings);
     
-          // 1位タイ (2名)
-          const tiedFirst = results.find(r => r.position === 0);
-          expect(tiedFirst.settlement).toBe(40); // 25 + 15
-    
-          // 3位タイ (2名)
-          const tiedThird = results.find(r => r.position === 2);
-          expect(tiedThird.settlement).toBe(-30); // -15 + -15
+          // 1位
+          expect(results[0].position).toBe(0);
+          expect(results[0].settlement).toBe(45); // 25 + 20
+          // 2位
+          expect(results[1].position).toBe(1);
+          expect(results[1].settlement).toBe(15); // 5 + 10
+          // 3位
+          expect(results[2].position).toBe(2);
+          expect(results[2].settlement).toBe(-25); // -15 + -10
+          // 4位 
+          expect(results[3].position).toBe(3);
+          expect(results[3].settlement).toBe(-35); // -15 + -20
     });
   });
 
