@@ -458,7 +458,24 @@ export class SoloPointManager {
     const gameSettings = {
       initialPoints: game.initialPoints,
       basePoints: game.basePoints || 30000,
-      uma: Array.isArray(game.uma) ? game.uma as number[] : [15000, 5000, -5000, -15000]
+      uma: (() => {
+        let umaArray: number[] = [15000, 5000, -5000, -15000]; // デフォルト値
+        if (game.uma) {
+          if (Array.isArray(game.uma)) {
+            umaArray = game.uma as number[];
+          } else if (typeof game.uma === 'string') {
+            try {
+              umaArray = JSON.parse(game.uma as string);
+            } catch (e) {
+              console.log('🏁 Solo Failed to parse uma JSON, using default');
+            }
+          } else if (typeof game.uma === 'object') {
+            // Prisma JSON型の場合
+            umaArray = game.uma as unknown as number[];
+          }
+        }
+        return umaArray;
+      })()
     }
     
     console.log('🏁 Using settings:', gameSettings)
@@ -499,25 +516,27 @@ export class SoloPointManager {
     const resultsWithDiff = sortedPlayers.map((player, index) => {
       const rank = index + 1
       const pointDiff = player.currentPoints - settings.basePoints
+      
+      // 3. 1000点単位での精算計算
       let roundedDiff: number
       if (pointDiff >= 0) {
+        // プラスの場合：切り捨て
         roundedDiff = Math.floor(pointDiff / 1000)
       } else {
+        // マイナスの場合：切り上げ
         roundedDiff = Math.ceil(pointDiff / 1000)
       }
 
-      // Find players with the same score
-      const tiedPlayers = sortedPlayers.filter(p => p.currentPoints === player.currentPoints);
-      let uma = 0;
-      if (tiedPlayers.length > 1) {
-        const tiedIndexes = tiedPlayers.map(p => sortedPlayers.indexOf(p));
-        const totalUma = tiedIndexes.reduce((sum, i) => sum + (settings.uma[i] || 0), 0);
-        uma = totalUma / tiedPlayers.length;
-      } else {
-        uma = settings.uma[index] || 0;
-      }
+      const uma = settings.uma[index] || 0
       
-      const settlement = roundedDiff + uma
+      // 1位以外の精算計算：精算点数 + ウマ
+      let settlement: number
+      if (rank === 1) {
+        // 1位は後で調整
+        settlement = 0
+      } else {
+        settlement = roundedDiff + uma
+      }
 
       return {
         position: player.position,
@@ -571,7 +590,8 @@ export class SoloPointManager {
           data: {
             finalPoints: result.finalPoints,
             finalRank: result.rank,
-            uma: result.uma
+            uma: result.uma,
+            settlement: result.settlement
           }
         })
       }
