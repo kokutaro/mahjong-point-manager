@@ -1,9 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { PointManager } from '@/lib/point-manager'
 import { SoloPointManager } from '@/lib/solo/solo-point-manager'
-import { MultiRyukyokuSchema } from '@/schemas/multi'
-import { SoloRyukyokuSchema } from '@/schemas/solo'
 import { PlayerIdentifierSchema } from '@/schemas/common'
 import { prisma } from '@/lib/prisma'
 import { 
@@ -13,12 +11,45 @@ import {
   validatePlayerPosition,
   AppError
 } from '@/lib/error-handler'
+import type { SoloGame, SoloPlayer } from '@prisma/client'
+
+// WebSocket 型定義
+interface SocketIOInstance {
+  to(room: string): {
+    emit(event: string, data: unknown): void
+  }
+}
+
+// 流局データ型
+
+type MultiplayerRyukyokuData = {
+  type: 'DRAW' | 'ABORTIVE_DRAW'
+  reason?: string
+  tenpaiPlayers: string[]
+}
+
+type SoloRyukyokuData = {
+  type: 'DRAW' | 'ABORTIVE_DRAW'
+  reason?: string
+  tenpaiPlayers: number[]
+}
+
+type SoloGameWithPlayers = SoloGame & {
+  players: SoloPlayer[]
+}
+
+// プロセスの型拡張
+declare global {
+  interface Process {
+    __socketio?: SocketIOInstance
+  }
+}
 
 // WebSocketインスタンスを直接プロセスから取得
-function getIO() {
-  if ((process as any).__socketio) {
+function getIO(): SocketIOInstance | null {
+  if (process.__socketio) {
     console.log('🔌 API: Found WebSocket instance in process')
-    return (process as any).__socketio
+    return process.__socketio
   }
   console.log('🔌 API: No WebSocket instance found in process')
   return null
@@ -57,7 +88,13 @@ export const POST = withErrorHandler(async (
 
   if (multiGame) {
     console.log('Processing as multiplayer ryukyoku')
-    return await processMultiplayerRyukyoku(gameId, validatedData)
+    // マルチプレイ用に型変換
+    const multiData: MultiplayerRyukyokuData = {
+      type: validatedData.type || 'DRAW',
+      reason: validatedData.reason,
+      tenpaiPlayers: (validatedData.tenpaiPlayers || []).map(id => String(id))
+    }
+    return await processMultiplayerRyukyoku(gameId, multiData)
   }
 
   // ソロプレイゲームかどうか確認
@@ -68,7 +105,19 @@ export const POST = withErrorHandler(async (
 
   if (soloGame) {
     console.log('Processing as solo ryukyoku')
-    return await processSoloRyukyoku(gameId, validatedData, soloGame)
+    // ソロプレイ用に型変換
+    const soloData: SoloRyukyokuData = {
+      type: validatedData.type || 'DRAW',
+      reason: validatedData.reason,
+      tenpaiPlayers: (validatedData.tenpaiPlayers || []).map(pos => {
+        const numPos = typeof pos === 'number' ? pos : parseInt(String(pos))
+        if (isNaN(numPos) || numPos < 0 || numPos > 3) {
+          throw new AppError('INVALID_PLAYER_POSITION', `無効なプレイヤー位置: ${pos}`, {}, 400)
+        }
+        return numPos
+      })
+    }
+    return await processSoloRyukyoku(gameId, soloData, soloGame)
   }
 
   throw new AppError('GAME_NOT_FOUND', 'ゲームが見つかりません', {}, 404)
@@ -77,12 +126,8 @@ export const POST = withErrorHandler(async (
 /**
  * マルチプレイゲームの流局処理
  */
-async function processMultiplayerRyukyoku(gameId: string, validatedData: any) {
-  // プレイヤーIDが文字列であることを確認
-  const tenpaiPlayers = validatedData.tenpaiPlayers || []
-  if (tenpaiPlayers.some((id: any) => typeof id !== 'string')) {
-    throw new AppError('VALIDATION_ERROR', 'マルチプレイゲームではプレイヤーIDは文字列である必要があります', {}, 400)
-  }
+async function processMultiplayerRyukyoku(gameId: string, validatedData: MultiplayerRyukyokuData) {
+  const tenpaiPlayers = validatedData.tenpaiPlayers
 
   const pointManager = new PointManager(gameId)
   
@@ -125,12 +170,8 @@ async function processMultiplayerRyukyoku(gameId: string, validatedData: any) {
 /**
  * ソロプレイゲームの流局処理
  */
-async function processSoloRyukyoku(gameId: string, validatedData: any, soloGame: any) {
-  // プレイヤーIDが数値（位置）であることを確認
-  const tenpaiPlayers = validatedData.tenpaiPlayers || []
-  if (tenpaiPlayers.some((id: any) => typeof id !== 'number')) {
-    throw new AppError('VALIDATION_ERROR', 'ソロプレイゲームではプレイヤーIDは位置番号（数値）である必要があります', {}, 400)
-  }
+async function processSoloRyukyoku(gameId: string, validatedData: SoloRyukyokuData, soloGame: SoloGameWithPlayers) {
+  const tenpaiPlayers = validatedData.tenpaiPlayers
 
   // ゲーム状態を事前チェック
   if (soloGame.status !== 'PLAYING') {
@@ -138,14 +179,14 @@ async function processSoloRyukyoku(gameId: string, validatedData: any, soloGame:
   }
 
   // プレイヤー位置の妥当性チェック
-  tenpaiPlayers.forEach((pos: number) => validatePlayerPosition(pos))
+  tenpaiPlayers.forEach(pos => validatePlayerPosition(pos))
 
   // リーチ者がテンパイ者に含まれているかチェック
   const currentReachPlayers = soloGame.players
-    .filter((p: any) => p.isReach)
-    .map((p: any) => p.position)
+    .filter((p) => p.isReach)
+    .map((p) => p.position)
   
-  const missingReachPlayers = currentReachPlayers.filter((pos: number) => !tenpaiPlayers.includes(pos))
+  const missingReachPlayers = currentReachPlayers.filter(pos => !tenpaiPlayers.includes(pos))
   if (missingReachPlayers.length > 0) {
     throw new AppError(
       'REACH_PLAYER_NOT_TENPAI', 

@@ -17,10 +17,10 @@ function HomePageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get('redirect')
-  const { showDebug, setShowDebug } = useWebSocketDebug()
+  const { showDebug } = useWebSocketDebug()
   
   // Zustand ストア
-  const { currentSession, setSessionMode } = useSessionStore()
+  const { setSessionMode } = useSessionStore()
   const { setError: setGlobalError } = useUIStore()
 
   // アクティブセッション取得
@@ -96,11 +96,6 @@ function HomePageContent() {
     }
   }
 
-  const handleCreateSingleGame = () => {
-    // 単発対局モードを保存してルーム作成画面へ
-    setSessionMode(false)
-    router.push('/room/create' as any)
-  }
 
   const handleCreateSoloGame = () => {
     // 一人プレイモードの画面へ

@@ -1,25 +1,51 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
-import { PointManager } from '@/lib/point-manager'
-import { declareSoloReach } from '@/lib/solo/score-manager'
-import { PlayerIdentifierSchema } from '@/schemas/common'
-import { prisma } from '@/lib/prisma'
-import { 
-  withErrorHandler, 
-  createSuccessResponse, 
-  validateSchema,
+import {
+  AppError,
+  createSuccessResponse,
+  validateNotAlreadyReach,
   validatePlayerExists,
   validatePlayerPosition,
+  validateSchema,
   validateSufficientPoints,
-  validateNotAlreadyReach,
-  AppError
+  withErrorHandler
 } from '@/lib/error-handler'
+import { PointManager } from '@/lib/point-manager'
+import { prisma } from '@/lib/prisma'
+import { declareSoloReach } from '@/lib/solo/score-manager'
+import { PlayerIdentifierSchema } from '@/schemas/common'
+import type { SoloGame, SoloPlayer } from '@prisma/client'
+import { NextRequest } from 'next/server'
+import { z } from 'zod'
+
+// WebSocket 型定義
+interface SocketIOInstance {
+  to(room: string): {
+    emit(event: string, data: unknown): void
+  }
+}
+
+// リーチデータ型
+type RiichiData = {
+  playerId: string | number
+  position?: number
+  round?: number
+}
+
+type SoloGameWithPlayers = SoloGame & {
+  players: SoloPlayer[]
+}
+
+// プロセスの型拡張
+declare global {
+  interface Process {
+    __socketio?: SocketIOInstance
+  }
+}
 
 // WebSocketインスタンスを直接プロセスから取得
-function getIO() {
-  if ((process as any).__socketio) {
+function getIO(): SocketIOInstance | null {
+  if (process.__socketio) {
     console.log('🔌 API: Found WebSocket instance in process')
-    return (process as any).__socketio
+    return process.__socketio
   }
   console.log('🔌 API: No WebSocket instance found in process')
   return null
@@ -73,7 +99,7 @@ export const POST = withErrorHandler(async (
 /**
  * マルチプレイゲームのリーチ宣言処理
  */
-async function processMultiplayerRiichi(gameId: string, validatedData: any) {
+async function processMultiplayerRiichi(gameId: string, validatedData: RiichiData) {
   // プレイヤーIDが文字列であることを確認
   const playerId = validatedData.playerId
   if (typeof playerId !== 'string') {
@@ -117,7 +143,7 @@ async function processMultiplayerRiichi(gameId: string, validatedData: any) {
 /**
  * ソロプレイゲームのリーチ宣言処理
  */
-async function processSoloRiichi(gameId: string, validatedData: any, soloGame: any) {
+async function processSoloRiichi(gameId: string, validatedData: RiichiData, soloGame: SoloGameWithPlayers) {
   // プレイヤーIDが数値（位置）であることを確認
   let position: number
   if (typeof validatedData.playerId === 'number') {
@@ -136,7 +162,7 @@ async function processSoloRiichi(gameId: string, validatedData: any, soloGame: a
     throw new AppError('GAME_NOT_PLAYING', `ゲーム状態が無効です。期待: PLAYING, 現在: ${soloGame.status}`, {}, 400)
   }
 
-  const player = soloGame.players.find((p: any) => p.position === position)
+  const player = soloGame.players.find((p) => p.position === position)
   validatePlayerExists(player, position.toString())
 
   // リーチ関連のチェック

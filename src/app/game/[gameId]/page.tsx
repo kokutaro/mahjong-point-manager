@@ -45,11 +45,9 @@ export default function GamePage() {
   const [error, setError] = useState('')
   const [showScoreInput, setShowScoreInput] = useState(false)
   const [activeAction, setActiveAction] = useState<'tsumo' | 'ron' | null>(null)
-  const [selectedLoserId, setSelectedLoserId] = useState<string | null>(null)
   const [showRyukyokuForm, setShowRyukyokuForm] = useState(false)
   const [showPointAnimation, setShowPointAnimation] = useState(false)
   const [pointChanges, setPointChanges] = useState<Array<{ playerId: string; change: number; newPoints: number }>>([])
-  const [previousGameState, setPreviousGameState] = useState<GameState | null>(null)
   const [showResult, setShowResult] = useState(false)
   const [showGameEnd, setShowGameEnd] = useState(false)
   const [gameEndReason, setGameEndReason] = useState('')
@@ -98,7 +96,6 @@ export default function GamePage() {
       console.log('No comparison state, setting initial state')
       previousGameStateRef.current = newGameState
       gameStateRef.current = newGameState
-      setPreviousGameState(newGameState)
       setGameState(newGameState)
       return
     }
@@ -150,7 +147,6 @@ export default function GamePage() {
       // 点数変動がない場合は即座に状態更新
       previousGameStateRef.current = newGameState
       gameStateRef.current = newGameState
-      setPreviousGameState(newGameState)
       setGameState(newGameState)
     }
     console.log('=== triggerPointAnimation END ===')
@@ -165,7 +161,6 @@ export default function GamePage() {
     if (gameStateRef.current) {
       console.log('Applying final game state:', gameStateRef.current)
       previousGameStateRef.current = gameStateRef.current
-      setPreviousGameState(gameStateRef.current)
       setGameState(gameStateRef.current)
       
       // ゲームが終了している場合は終了画面を表示
@@ -223,7 +218,7 @@ export default function GamePage() {
           previousGameStateRef.current = data.data.gameState
           gameStateRef.current = data.data.gameState
           setGameState(data.data.gameState)
-          setPreviousGameState(data.data.gameState)
+          previousGameStateRef.current = data.data.gameState
         } else {
           triggerPointAnimation(data.data.gameState)
         }
@@ -408,13 +403,11 @@ export default function GamePage() {
 
   const handleTsumo = () => {
     setActiveAction('tsumo')
-    setSelectedLoserId(null)
     setShowScoreInput(true)
   }
 
   const handleRon = () => {
     setActiveAction('ron')
-    setSelectedLoserId(null)
     setShowScoreInput(true)
   }
 
@@ -763,7 +756,6 @@ export default function GamePage() {
             onCancel={() => {
               setShowScoreInput(false)
               setActiveAction(null)
-              setSelectedLoserId(null)
             }}
           />
         )}

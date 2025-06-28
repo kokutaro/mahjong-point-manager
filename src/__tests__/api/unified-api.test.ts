@@ -3,12 +3,8 @@
  * 統合エンドポイントの動作を検証
  */
 
-const { createMocks } = require('node-mocks-http')
+import { createMocks } from 'node-mocks-http'
 import { GET, PATCH, POST } from '@/app/api/game/[gameId]/route'
-import { GET as RiichiPOST } from '@/app/api/game/[gameId]/riichi/route'
-import { POST as ScorePOST } from '@/app/api/game/[gameId]/score/route'
-import { POST as RyukyokuPOST } from '@/app/api/game/[gameId]/ryukyoku/route'
-import { GET as ResultGET } from '@/app/api/game/[gameId]/result/route'
 
 // Prismaクライアントのモック
 jest.mock('@/lib/prisma', () => ({
@@ -63,8 +59,8 @@ jest.mock('@/lib/point-manager', () => ({
   })),
 }))
 
-const { prisma } = require('@/lib/prisma')
-const { getSoloGameState, declareSoloReach } = require('@/lib/solo/score-manager')
+import { prisma } from '@/lib/prisma'
+import { getSoloGameState, declareSoloReach } from '@/lib/solo/score-manager'
 
 describe('統合API ユニットテスト', () => {
   beforeEach(() => {
@@ -357,15 +353,6 @@ describe('統合API ユニットテスト', () => {
       declareSoloReach.mockResolvedValue(mockGameState)
 
       // 統合リーチAPIのテスト（実際のファイルパスでテスト）
-      const mockRequest = {
-        json: async () => ({
-          playerId: 0, // 数値として送信
-          round: 1,
-        }),
-      }
-
-      const params = Promise.resolve({ gameId: 'solo-game-id' })
-
       // この部分は実際のリーチAPIインポートが必要
       // expect(declareSoloReach).toHaveBeenCalledWith('solo-game-id', 0, 1)
     })

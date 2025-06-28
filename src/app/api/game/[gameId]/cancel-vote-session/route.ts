@@ -2,32 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { PointManager } from '@/lib/point-manager'
 import { analyzeVotes } from '@/lib/vote-analysis'
-import { VoteState } from '@/components/VotingProgress'
+import { getIO, initializeVoteGlobals } from '@/lib/vote-globals'
 
-// WebSocketインスタンスを直接プロセスから取得
-function getIO() {
-  if ((process as any).__socketio) {
-    console.log('🔌 Cancel Vote API: Found WebSocket instance in process')
-    return (process as any).__socketio
-  }
-  console.log('🔌 Cancel Vote API: No WebSocket instance found in process')
-  return null
-}
-
-// 投票状態を管理（メインAPIと共有）
-// 注意: 実際の実装では外部ストレージ（Redis等）を使用することを推奨
-declare global {
-  var gameVotes: Record<string, VoteState> | undefined
-  var voteStartTimes: Record<string, string> | undefined
-}
-
-// グローバル変数として投票状態を管理（開発用）
-if (!global.gameVotes) {
-  global.gameVotes = {}
-}
-if (!global.voteStartTimes) {
-  global.voteStartTimes = {}
-}
+// 投票グローバル変数を初期化
+initializeVoteGlobals()
 
 export async function POST(
   request: NextRequest,
@@ -73,6 +51,7 @@ export async function POST(
     if (gameInfo && gameInfo.roomCode) {
       const io = getIO()
       if (io) {
+        console.log('🔌 Cancel Vote API: Found WebSocket instance in process')
         const currentVotes = (gameVotes && gameVotes[gameId]) || {}
         const voteResult = analyzeVotes(currentVotes, 4)
         

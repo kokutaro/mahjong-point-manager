@@ -20,8 +20,10 @@ jest.mock('@/lib/solo/auth', () => ({
   authenticatePlayer: jest.fn(),
 }));
 
+import { prisma } from '@/lib/prisma'
+
 describe('POST /api/solo/create', () => {
-  const mockPrisma = require('@/lib/prisma').prisma;
+  const mockPrisma = prisma as jest.Mocked<typeof prisma>
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -51,7 +53,7 @@ describe('POST /api/solo/create', () => {
     };
     const createdPlayers = mockGameData.players.map(p => ({ ...p, id: `player-id-${p.position}`, soloGameId: 'new-game-id', score: 25000 }));
 
-    mockPrisma.$transaction.mockImplementation(async (callback) => {
+    mockPrisma.$transaction.mockImplementation(async () => {
         mockPrisma.soloGame.create.mockResolvedValue(createdGame);
         mockPrisma.soloPlayer.createMany.mockResolvedValue({ count: 4 });
         return { soloGame: createdGame, soloPlayers: createdPlayers };

@@ -10,7 +10,6 @@ import SoloScoreForm from '@/components/solo/SoloScoreForm'
 import SoloRyukyokuForm from '@/components/solo/SoloRyukyokuForm'
 import type { 
   SoloGameState as SoloGameStateType, 
-  SoloGamePlayer,
   ScoreSubmissionData
 } from '@/components/common'
 

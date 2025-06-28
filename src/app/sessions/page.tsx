@@ -26,15 +26,6 @@ interface SessionSummary {
   settings: any
 }
 
-interface SessionsResponse {
-  sessions: SessionSummary[]
-  pagination: {
-    total: number
-    limit: number
-    offset: number
-    hasMore: boolean
-  }
-}
 
 export default function SessionsPage() {
   const router = useRouter()

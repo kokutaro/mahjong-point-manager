@@ -1,6 +1,12 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
 
+// ゲーム結果の型定義
+type GameResultItem = {
+  playerId: string
+  settlement: number
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ sessionId: string }> }
@@ -65,7 +71,7 @@ export async function GET(
         
         // GameResultから精算額を取得
         if (Array.isArray(gameResult.results)) {
-          gameResult.results.forEach((result: any) => {
+          (gameResult.results as GameResultItem[]).forEach((result) => {
             if (result.playerId && result.settlement !== undefined) {
               playerResults[result.playerId] = result.settlement
             }

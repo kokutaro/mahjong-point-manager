@@ -26,6 +26,36 @@
 - テスト・動作確認は修正を行った際は必ず行ってください。
 - E2Eテストとしてユーザ目線での動作が問題ないかしっかりと確認してください。playwright-mcp を利用して下さい。
 
+## Journaling workflow
+
+You (the AI agent) have to report what you did in this project at each end of the task in my Notion note.
+
+Create one in the page with the title "Log: <Job title>".
+Update the same note throughout the same session.
+
+Update this note at each end of the task with the following format:
+
+## Log: <task title>
+
+- **Prompt**: <受け取った指示>
+- **Issue**: <課題の内容>
+
+### What I did: <やったことの要約>
+
+...
+
+### How I did it: <どうやって解決したか>
+
+...
+
+### What were challenging: <難しかったこと>
+
+...
+
+### Future work (optional)
+
+- <今後の改善案など>
+
 ## プロジェクトの目的
 
 - **高品質で持続可能なコードベースの作成**

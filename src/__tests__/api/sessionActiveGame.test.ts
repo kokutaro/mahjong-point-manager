@@ -1,6 +1,5 @@
 import { GET } from '@/app/api/sessions/[sessionId]/active-game/route'
 import { prisma } from '@/lib/prisma'
-import { NextRequest } from 'next/server'
 
 jest.mock('@/lib/prisma', () => ({
   prisma: {

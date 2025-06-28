@@ -1,12 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { SoloPointManager } from '@/lib/solo/solo-point-manager'
 import { calculateScore } from '@/lib/score'
-import { SoloScoreCalculationSchema, validateHanFu } from '@/schemas/solo'
+import { SoloScoreCalculationSchema } from '@/schemas/solo'
 import { 
   withErrorHandler, 
   createSuccessResponse, 
   validateSchema,
-  validateGameState,
   validatePlayerExists,
   validateHanFuCombination,
   validatePlayerPosition
