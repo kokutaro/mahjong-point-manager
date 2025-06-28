@@ -499,25 +499,27 @@ export class SoloPointManager {
     const resultsWithDiff = sortedPlayers.map((player, index) => {
       const rank = index + 1
       const pointDiff = player.currentPoints - settings.basePoints
+      
+      // 3. 1000点単位での精算計算
       let roundedDiff: number
       if (pointDiff >= 0) {
+        // プラスの場合：切り捨て
         roundedDiff = Math.floor(pointDiff / 1000)
       } else {
+        // マイナスの場合：切り上げ
         roundedDiff = Math.ceil(pointDiff / 1000)
       }
 
-      // Find players with the same score
-      const tiedPlayers = sortedPlayers.filter(p => p.currentPoints === player.currentPoints);
-      let uma = 0;
-      if (tiedPlayers.length > 1) {
-        const tiedIndexes = tiedPlayers.map(p => sortedPlayers.indexOf(p));
-        const totalUma = tiedIndexes.reduce((sum, i) => sum + (settings.uma[i] || 0), 0);
-        uma = totalUma / tiedPlayers.length;
-      } else {
-        uma = settings.uma[index] || 0;
-      }
+      const uma = settings.uma[index] || 0
       
-      const settlement = roundedDiff + uma
+      // 1位以外の精算計算：精算点数 + ウマ
+      let settlement: number
+      if (rank === 1) {
+        // 1位は後で調整
+        settlement = 0
+      } else {
+        settlement = roundedDiff + uma
+      }
 
       return {
         position: player.position,
@@ -571,7 +573,8 @@ export class SoloPointManager {
           data: {
             finalPoints: result.finalPoints,
             finalRank: result.rank,
-            uma: result.uma
+            uma: result.uma,
+            settlement: result.settlement
           }
         })
       }
