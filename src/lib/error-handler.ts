@@ -183,6 +183,7 @@ export function validateSchema<T>(schema: z.ZodSchema<T>, data: unknown): T {
 /**
  * 非同期関数をラップしてエラーハンドリングを統一
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function withErrorHandler<T extends unknown[], R>(
   fn: (...args: T) => Promise<NextResponse>,
   defaultErrorMessage?: string
@@ -249,6 +250,7 @@ export function validateHostPermission(
 export function validateSufficientPoints(
   currentPoints: number,
   requiredPoints: number,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   playerId?: string
 ): void {
   if (currentPoints < requiredPoints) {

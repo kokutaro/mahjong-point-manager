@@ -3,8 +3,11 @@ import { calculateScore, type ScoreCalculationResult } from '@/lib/score'
 import { Server as HTTPServer } from 'http'
 import { Server as SocketIOServer } from 'socket.io'
 
+// WebSocket 型定義は直接SocketIOServerを使用
+
 // Node.js processオブジェクトの型拡張
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace NodeJS {
     interface Process {
       __socketio?: SocketIOServer
@@ -141,7 +144,8 @@ export function initSocket(server: HTTPServer) {
             io?.to(game.roomCode).emit('game_start', gameState)
           }
         }
-      } catch (error) {
+      } catch (error: unknown) {
+        console.error('プレイヤー準備エラー:', error)
         socket.emit('error', { message: 'プレイヤー準備に失敗しました' })
       }
     })
@@ -197,7 +201,8 @@ export function initSocket(server: HTTPServer) {
           scoreResult
         })
         
-      } catch (error) {
+      } catch (error: unknown) {
+        console.error('点数計算エラー:', error)
         socket.emit('error', { message: '点数計算に失敗しました' })
       }
     })

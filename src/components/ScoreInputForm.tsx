@@ -124,6 +124,7 @@ const ScoreInputForm = memo(function ScoreInputForm({
   ], [])
 
   // Memoized player display function
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getPlayerDisplay = useCallback((player: GamePlayer) => {
     const position = getPositionName(player.position, gameState.currentOya)
     const isDealerMark = player.position === gameState.currentOya ? ' (親)' : ''
@@ -206,6 +207,7 @@ const ScoreInputForm = memo(function ScoreInputForm({
   }
 
   // リアルタイムバリデーション
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleWinnerChange = (value: string) => {
     setWinnerId(value)
     if (validationErrors.winnerId) {

@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { ScoreCalculationResult } from '@/lib/score'
+import { EventType } from '@/types/game'
 
 // 型定義
 interface SoloPlayer {
@@ -643,10 +644,10 @@ export class SoloPointManager {
       where: { soloGameId: this.soloGameId },
       create: {
         soloGameId: this.soloGameId,
-        results: results
+        results: JSON.parse(JSON.stringify(results))
       },
       update: {
-        results: results
+        results: JSON.parse(JSON.stringify(results))
       }
     })
   }
@@ -706,8 +707,8 @@ export class SoloPointManager {
       data: {
         soloGameId: this.soloGameId,
         position: data.position,
-        eventType: data.eventType,
-        eventData: data.eventData,
+        eventType: data.eventType as EventType,
+        eventData: JSON.parse(JSON.stringify(data.eventData)),
         round: game?.currentRound || 0,
         honba: game?.honba || 0
       }

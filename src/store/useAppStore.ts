@@ -67,6 +67,7 @@ const initialState = {
 export const useAppStore = create<AppState>()(
   devtools(
     persist(
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       (set, get) => ({
         ...initialState,
         

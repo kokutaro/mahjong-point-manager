@@ -7,15 +7,21 @@ export interface SocketIOInstance {
   }
 }
 
+// socket.tsからSocketIOServerをインポート
+import { Server as SocketIOServer } from 'socket.io'
+
 // グローバル型定義
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace NodeJS {
     interface Process {
-      __socketio?: SocketIOInstance
+      __socketio?: SocketIOServer
     }
   }
   
+  // eslint-disable-next-line no-var
   var gameVotes: Record<string, VoteState> | undefined
+  // eslint-disable-next-line no-var
   var voteStartTimes: Record<string, string> | undefined
 }
 
@@ -30,7 +36,7 @@ export function initializeVoteGlobals() {
 }
 
 // WebSocketインスタンスを直接プロセスから取得
-export function getIO(): SocketIOInstance | null {
+export function getIO(): SocketIOServer | null {
   if (process.__socketio) {
     return process.__socketio
   }

@@ -16,7 +16,6 @@ import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type {
   GameInfo as GameInfoType,
-  GameStateData,
   ScoreUpdatedData,
   RiichiDeclaredData,
   RyukyokuData,

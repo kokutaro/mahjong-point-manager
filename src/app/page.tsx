@@ -32,7 +32,8 @@ function HomePageContent() {
 
   useEffect(() => {
     if (isAuthenticated && redirectTo) {
-      router.replace(redirectTo)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      router.replace(redirectTo as any)
     }
   }, [isAuthenticated, redirectTo, router])
 
@@ -61,7 +62,8 @@ function HomePageContent() {
       await login(playerName.trim())
       setError('')
       if (redirectTo) {
-        router.replace(redirectTo)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        router.replace(redirectTo as string as any)
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'ログインに失敗しました')

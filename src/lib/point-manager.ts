@@ -672,10 +672,10 @@ export class PointManager {
       where: { gameId: this.gameId },
       create: {
         gameId: this.gameId,
-        results: results
+        results: JSON.parse(JSON.stringify(results))
       },
       update: {
-        results: results
+        results: JSON.parse(JSON.stringify(results))
       }
     })
   }

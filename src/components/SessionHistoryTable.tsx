@@ -88,6 +88,7 @@ export default function SessionHistoryTable({ sessionId }: SessionHistoryTablePr
     if (sessionId) {
       fetchSessionDetails()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId])
 
   if (isLoading) {
