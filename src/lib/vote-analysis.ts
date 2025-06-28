@@ -79,7 +79,7 @@ export function analyzeVotes(votes: VoteState, totalPlayers: number): VoteResult
  * @param vote 投票選択肢
  * @returns 有効かどうか
  */
-export function isValidVote(vote: any): vote is VoteOption {
+export function isValidVote(vote: unknown): vote is VoteOption {
   return ['continue', 'end', 'pause'].includes(vote)
 }
 

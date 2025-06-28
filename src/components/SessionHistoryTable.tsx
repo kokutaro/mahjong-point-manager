@@ -39,7 +39,11 @@ interface SessionDetails {
   players: SessionPlayer[]
   gameResults: GameResult[]
   totalRow: Record<string, number>
-  settings: any
+  settings: {
+    gameType?: string
+    initialPoints?: number
+    uma?: number[]
+  } | null
 }
 
 interface SessionHistoryTableProps {

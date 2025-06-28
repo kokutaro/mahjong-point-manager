@@ -32,7 +32,7 @@ function HomePageContent() {
 
   useEffect(() => {
     if (isAuthenticated && redirectTo) {
-      router.replace(redirectTo as string as any)
+      router.replace(redirectTo)
     }
   }, [isAuthenticated, redirectTo, router])
 
@@ -61,7 +61,7 @@ function HomePageContent() {
       await login(playerName.trim())
       setError('')
       if (redirectTo) {
-        router.replace(redirectTo as string as any)
+        router.replace(redirectTo)
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'ログインに失敗しました')

@@ -82,7 +82,10 @@ export async function updateSoloGameScore(
  * ソロゲームの点数変更を計算
  */
 function calculateSoloPointChanges(
-  players: any[],
+  players: Array<{
+    position: number
+    currentPoints: number
+  }>,
   scoreInput: SoloScoreCalculationInput,
   scoreResult: ScoreCalculationResult
 ): { position: number; change: number }[] {

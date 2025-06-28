@@ -5,7 +5,12 @@ import { prisma } from '@/lib/prisma'
 export interface AuthResult {
   success: boolean
   playerId?: string
-  player?: any
+  player?: {
+    id: string
+    name: string
+    createdAt: Date
+    updatedAt: Date
+  }
   error?: {
     code: string
     message: string

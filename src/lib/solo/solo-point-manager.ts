@@ -1,6 +1,47 @@
 import { prisma } from '@/lib/prisma'
 import { ScoreCalculationResult } from '@/lib/score'
 
+// 型定義
+interface SoloPlayer {
+  id: string
+  position: number
+  name: string
+  currentPoints: number
+  isReach: boolean
+  finalRank?: number | null
+  settlement?: number | null
+}
+
+interface SoloGame {
+  id: string
+  currentRound: number
+  currentOya: number
+  honba: number
+  kyotaku: number
+  status: string
+  gameType?: string
+}
+
+interface SoloSettlementResult {
+  position: number
+  finalPoints: number
+  rank: number
+  pointDiff: number
+  roundedDiff: number
+  uma: number
+  settlement: number
+}
+
+interface EventData {
+  position?: number
+  pointChange?: number
+  description?: string
+  newPoints?: number
+  reason?: string
+  forcedEnd?: boolean
+  [key: string]: unknown
+}
+
 export interface SoloPointTransaction {
   id: string
   soloGameId: string
@@ -466,7 +507,7 @@ export class SoloPointManager {
           } else if (typeof game.uma === 'string') {
             try {
               umaArray = JSON.parse(game.uma as string);
-            } catch (e) {
+            } catch {  // eslint-disable-line @typescript-eslint/no-unused-vars
               console.log('🏁 Solo Failed to parse uma JSON, using default');
             }
           } else if (typeof game.uma === 'object') {
@@ -487,7 +528,7 @@ export class SoloPointManager {
   /**
    * 正確な精算計算（基準点方式）
    */
-  private calculateSettlement(players: any[], settings: {
+  private calculateSettlement(players: SoloPlayer[], settings: {
     initialPoints: number
     basePoints: number
     uma: number[]
@@ -578,7 +619,7 @@ export class SoloPointManager {
   /**
    * 最終結果をデータベースに保存
    */
-  private async saveFinalResults(results: any[], players: any[]) {
+  private async saveFinalResults(results: SoloSettlementResult[], players: SoloPlayer[]) {
     // 各参加者の最終結果を更新
     for (const result of results) {
       const player = players.find(p => p.position === result.position)
@@ -654,7 +695,7 @@ export class SoloPointManager {
   private async recordEvent(data: {
     position?: number
     eventType: string
-    eventData: any
+    eventData: EventData
   }): Promise<void> {
     const game = await prisma.soloGame.findUnique({
       where: { id: this.soloGameId },
@@ -665,7 +706,7 @@ export class SoloPointManager {
       data: {
         soloGameId: this.soloGameId,
         position: data.position,
-        eventType: data.eventType as any,
+        eventType: data.eventType,
         eventData: data.eventData,
         round: game?.currentRound || 0,
         honba: game?.honba || 0
@@ -715,7 +756,7 @@ export class SoloPointManager {
   /**
    * 局数による終了判定
    */
-  private checkRoundEnd(game: any, gameType?: string): { shouldEnd: boolean; reason?: string } {
+  private checkRoundEnd(game: SoloGame, gameType?: string): { shouldEnd: boolean; reason?: string } {
     const { currentRound, currentOya } = game
     
     console.log(`🎯 Solo Game end check: gameType=${gameType}, currentRound=${currentRound}, currentOya=${currentOya}`)

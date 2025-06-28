@@ -1,7 +1,17 @@
 import { prisma } from '@/lib/prisma'
-import { calculateScore } from '@/lib/score'
+import { calculateScore, type ScoreCalculationResult } from '@/lib/score'
 import { Server as HTTPServer } from 'http'
 import { Server as SocketIOServer } from 'socket.io'
+
+// Node.js processオブジェクトの型拡張
+declare global {
+  namespace NodeJS {
+    interface Process {
+      __socketio?: SocketIOServer
+      [key: string]: unknown
+    }
+  }
+}
 
 export interface GameState {
   gameId: string
@@ -28,7 +38,7 @@ export interface GamePlayer {
 
 export interface GameEvent {
   type: 'join' | 'ready' | 'score' | 'dealer_change' | 'game_end'
-  data: any
+  data: Record<string, unknown>
   timestamp: Date
 }
 
@@ -37,8 +47,8 @@ let io: SocketIOServer | null = null
 // Node.jsのprocessオブジェクトを使用してグローバル共有
 export function initSocket(server: HTTPServer) {
   // 既存のインスタンスがあれば再利用
-  if ((process as any).__socketio) {
-    io = (process as any).__socketio
+  if (process.__socketio) {
+    io = process.__socketio
     console.log('🔌 Reusing existing WebSocket instance')
     return io
   }
@@ -216,15 +226,16 @@ export function initSocket(server: HTTPServer) {
         
         // 投票状況をプロセス内メモリで管理
         const voteKey = `votes_${gameId}`
-        if (!(process as any)[voteKey]) {
-          (process as any)[voteKey] = {}
+        if (!process[voteKey]) {
+          process[voteKey] = {}
         }
         
-        (process as any)[voteKey][playerId] = vote
+        const voteStorage = process[voteKey] as Record<string, boolean>
+        voteStorage[playerId] = vote
         console.log(`Vote received: ${playerId} voted ${vote} for game ${gameId}`)
         
         // 全員の投票をチェック
-        const votes = (process as any)[voteKey]
+        const votes = voteStorage
         const allPlayers = game.participants.map(p => p.playerId)
         const allVoted = allPlayers.every(pid => votes[pid] !== undefined)
         const allAgreed = allPlayers.every(pid => votes[pid] === true)
@@ -257,7 +268,7 @@ export function initSocket(server: HTTPServer) {
               })
               
               // 投票データをクリア
-              delete (process as any)[voteKey]
+              delete process[voteKey]
               console.log(`Successfully created new room ${result.data.roomCode} for session continuation`)
             } else {
               console.error('Failed to create new room:', result.error?.message)
@@ -270,7 +281,7 @@ export function initSocket(server: HTTPServer) {
         } else if (allVoted && !allAgreed) {
           // 誰かが反対した場合
           console.log(`Not all players agreed for game ${gameId}, clearing votes`)
-          delete (process as any)[voteKey]
+          delete process[voteKey]
           io?.to(game.roomCode).emit('vote-cancelled', { message: '全員の合意が得られませんでした' })
         }
         
@@ -287,7 +298,7 @@ export function initSocket(server: HTTPServer) {
   });
 
   // processオブジェクトに保存
-  (process as any).__socketio = io
+  process.__socketio = io
   console.log('🔌 WebSocket instance saved to process object')
 
   return io
@@ -335,7 +346,7 @@ async function distributePoints(
   gameId: string,
   winnerId: string,
   loserId: string | undefined,
-  scoreResult: any,
+  scoreResult: ScoreCalculationResult,
   isTsumo: boolean
 ) {
   const participants = await prisma.gameParticipant.findMany({
@@ -421,8 +432,8 @@ export function getIO() {
   }
   
   // processオブジェクトをチェック
-  if ((process as any).__socketio) {
-    io = (process as any).__socketio
+  if (process.__socketio) {
+    io = process.__socketio
     console.log('🔌 getIO: Using process.__socketio instance')
     return io
   }

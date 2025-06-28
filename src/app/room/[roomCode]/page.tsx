@@ -10,6 +10,12 @@ import { GripVertical, QrCode } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { QRCodeSVG } from 'qrcode.react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type {
+  RoomInfo,
+  PlayerJoinedData,
+  GameStartedData,
+  SocketIOError
+} from '@/types/socket'
 
 interface GamePlayer {
   playerId: string
@@ -36,7 +42,7 @@ export default function RoomPage() {
   const { user, isAuthenticated, refreshAuth } = useAuth()
   const { socket, isConnected, joinRoom, gameState: socketGameState } = useSocket()
   const [gameState, setGameState] = useState<GameState | null>(null)
-  const [roomInfo, setRoomInfo] = useState<any>(null)
+  const [roomInfo, setRoomInfo] = useState<RoomInfo | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [isStarting, setIsStarting] = useState(false)
@@ -104,7 +110,7 @@ export default function RoomPage() {
   useEffect(() => {
     if (socket && user && roomCode && roomInfo && isConnected) {
       // プレイヤーがこのゲームに参加しているかチェック
-      const isParticipant = roomInfo.players?.some((p: any) => p.playerId === user.playerId)
+      const isParticipant = roomInfo.players?.some(p => p.playerId === user.playerId)
       console.log('WebSocket connection check:', { 
         isConnected,
         isParticipant, 
@@ -124,21 +130,23 @@ export default function RoomPage() {
           setGameState(state)
         })
 
-        socket.on('player_joined', (data: any) => {
+        socket.on('player_joined', (data: PlayerJoinedData) => {
           console.log('Player joined event received:', data)
           if (data.gameState) {
             setGameState(data.gameState)
             // ルーム情報も更新
-            setRoomInfo((prevRoomInfo: any) => ({
-              ...prevRoomInfo,
-              players: data.gameState.players
-            }))
+            setRoomInfo((prevRoomInfo: RoomInfo | null) => (
+              prevRoomInfo ? {
+                ...prevRoomInfo,
+                players: data.gameState?.players || prevRoomInfo.players
+              } : null
+            ))
           }
           // 念のためルーム情報を再取得
           setTimeout(() => fetchRoomInfo(), 100)
         })
 
-        socket.on('player_rejoined', (data: any) => {
+        socket.on('player_rejoined', (data: PlayerJoinedData) => {
           console.log('Player rejoined event received:', data)
           if (data.gameState) {
             setGameState(data.gameState)
@@ -147,7 +155,7 @@ export default function RoomPage() {
           setTimeout(() => fetchRoomInfo(), 100)
         })
 
-        socket.on('game_started', (data: any) => {
+        socket.on('game_started', (data: GameStartedData) => {
           console.log('Game started event received:', data)
           if (data.gameState) {
             setGameState(data.gameState)
@@ -156,7 +164,7 @@ export default function RoomPage() {
           }
         })
 
-        socket.on('error', (error: any) => {
+        socket.on('error', (error: SocketIOError) => {
           console.error('WebSocket error:', error)
           setError(error.message)
         })
@@ -288,7 +296,7 @@ export default function RoomPage() {
       }
 
       if (data.success) {
-        router.push(`/game/${data.data.gameId}` as any)
+        router.push(`/game/${data.data.gameId}`)
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'ゲーム開始に失敗しました')
@@ -532,12 +540,12 @@ export default function RoomPage() {
         )}
 
         {/* プレイヤーがルーム参加者でない場合の参加ボタン */}
-        {roomInfo && user && !roomInfo.players?.some((p: any) => p.playerId === user.playerId) && (
+        {roomInfo && user && !roomInfo.players?.some(p => p.playerId === user.playerId) && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
             <div className="text-yellow-800">
               {(() => {
                 // 同じ名前のプレイヤーが既に参加している場合は再参加ボタンを表示
-                const existingPlayerWithSameName = roomInfo.players?.find((p: any) => p.name === user.name)
+                const existingPlayerWithSameName = roomInfo.players?.find(p => p.name === user.name)
                 
                 if (existingPlayerWithSameName) {
                   return (

@@ -215,7 +215,7 @@ export default function GameResult({ gameId, onBack, isSoloPlay = false }: GameR
     // 全員合意によるセッション終了
     socketInstance.on('session_ended_by_consensus', ({ reason, voteDetails }: {
       reason: string,
-      voteDetails: any
+      voteDetails: Record<string, boolean>
     }) => {
       setNotification({
         message: `セッションが終了しました。\n理由: ${reason}\n\n5秒後にホームページに遷移します。`,

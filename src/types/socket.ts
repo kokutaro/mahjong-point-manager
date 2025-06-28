@@ -55,6 +55,51 @@ export interface SeatOrderUpdatedData {
   }>
 }
 
+export interface GameEndedData {
+  gameId: string
+  reason: string
+  gameState: GameStateData
+}
+
+export interface GameStartedData {
+  gameId: string
+  gameState: GameStateData
+}
+
+export interface RoomPlayer {
+  playerId: string
+  name: string
+  position: number
+  points: number
+  isReach: boolean
+  isConnected: boolean
+}
+
+export interface RoomInfo {
+  gameId: string
+  roomCode: string
+  status: 'WAITING' | 'STARTING' | 'PLAYING' | 'FINISHED'
+  hostPlayer?: {
+    id: string
+    name: string
+  }
+  players: RoomPlayer[]
+  currentRound: number
+  currentOya: number
+  honba: number
+  kyotaku: number
+  gamePhase: 'waiting' | 'playing' | 'finished'
+  settings?: {
+    gameType: 'TONPUU' | 'HANCHAN'
+    initialPoints: number
+    uma: number[]
+    hasTobi: boolean
+    hasYakitori: boolean
+    tobiPenalty: number
+    yakitoriPenalty: number
+  }
+}
+
 export interface GameStateData {
   gameId: string
   players: Array<{
@@ -70,6 +115,26 @@ export interface GameStateData {
   honba: number
   kyotaku: number
   gamePhase: 'waiting' | 'playing' | 'finished'
+}
+
+export interface GameInfo {
+  gameId: string
+  roomCode: string
+  sessionId?: string
+  settings?: {
+    gameType: 'TONPUU' | 'HANCHAN'
+    startingPoints: number
+    umaSettings?: {
+      first: number
+      second: number
+      third: number
+      fourth: number
+    }
+    hasTobi: boolean
+    hasYakitori: boolean
+    tobiPenalty: number
+    yakitoriPenalty: number
+  }
 }
 
 // Socket.IO エラーイベントの型

@@ -23,7 +23,11 @@ interface SessionSummary {
     totalSettlement: number
     gamesPlayed: number
   }[]
-  settings: any
+  settings: {
+    gameType?: string
+    initialPoints?: number
+    uma?: number[]
+  } | null
 }
 
 

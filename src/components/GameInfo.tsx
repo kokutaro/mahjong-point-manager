@@ -5,7 +5,14 @@ import { getPositionName } from '@/lib/utils'
 
 interface GameState {
   gameId: string
-  players: any[]
+  players: Array<{
+    playerId: string
+    name: string
+    position: number
+    points: number
+    isReach: boolean
+    isConnected: boolean
+  }>
   currentRound: number
   currentOya: number
   honba: number
