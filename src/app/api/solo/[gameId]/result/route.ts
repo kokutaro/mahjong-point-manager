@@ -1,60 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { 
+  withErrorHandler, 
+  createSuccessResponse, 
+  AppError
+} from '@/lib/error-handler'
 
-export async function GET(
+export const GET = withErrorHandler(async (
   request: NextRequest,
   { params }: { params: Promise<{ gameId: string }> }
-) {
-  try {
-    const { gameId } = await params
+) => {
+  const { gameId } = await params
 
-    if (!gameId) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          code: 'MISSING_GAME_ID',
-          message: 'ゲームIDが必要です'
-        }
-      }, { status: 400 })
-    }
-
-    // ゲーム情報と結果を取得
-    const game = await prisma.soloGame.findUnique({
-      where: { id: gameId },
-      include: {
-        players: {
-          orderBy: { position: 'asc' }
-        }
+  // ゲーム情報と結果を取得
+  const game = await prisma.soloGame.findUnique({
+    where: { id: gameId },
+    include: {
+      players: {
+        orderBy: { position: 'asc' }
       }
-    })
-
-    console.log('Solo game result query:', { gameId, game: game ? { 
-      id: game.id, 
-      status: game.status, 
-      players: game.players.map(p => ({
-        position: p.position,
-        name: p.name,
-        currentPoints: p.currentPoints,
-        finalPoints: p.finalPoints,
-        finalRank: p.finalRank,
-        uma: p.uma,
-        settlement: p.settlement
-      }))
-    } : null })
-
-    if (!game) {
-      return NextResponse.json({
-        success: false,
-        error: { message: 'ゲームが見つかりません' }
-      }, { status: 404 })
     }
+  })
 
-    if (game.status !== 'FINISHED') {
-      return NextResponse.json({
-        success: false,
-        error: { message: 'ゲームが終了していません' }
-      }, { status: 400 })
-    }
+  console.log('Solo game result query:', { gameId, game: game ? { 
+    id: game.id, 
+    status: game.status, 
+    players: game.players.map(p => ({
+      position: p.position,
+      name: p.name,
+      currentPoints: p.currentPoints,
+      finalPoints: p.finalPoints,
+      finalRank: p.finalRank,
+      uma: p.uma,
+      settlement: p.settlement
+    }))
+  } : null })
+
+  if (!game) {
+    throw new AppError('GAME_NOT_FOUND', 'ゲームが見つかりません', {}, 404)
+  }
+
+  if (game.status !== 'FINISHED') {
+    throw new AppError('GAME_NOT_FINISHED', 'ゲームが終了していません', { status: game.status }, 400)
+  }
 
     // 結果データを整形
     // finalRankがnullの場合は現在の点数で順位を計算
@@ -132,19 +120,5 @@ export async function GET(
       nextGame: null
     }
 
-    return NextResponse.json({
-      success: true,
-      data: resultData
-    })
-
-  } catch (error) {
-    console.error('Get solo game result failed:', error)
-    return NextResponse.json({
-      success: false,
-      error: { 
-        message: '結果の取得に失敗しました',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      }
-    }, { status: 500 })
-  }
-}
+  return createSuccessResponse(resultData)
+}, 'ソロゲーム結果の取得に失敗しました')

@@ -1,123 +1,62 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { declareSoloReach } from '@/lib/solo/score-manager'
-import { SoloReachSchema } from '@/schemas/solo'
+import { SoloRiichiSchema } from '@/schemas/solo'
+import { 
+  withErrorHandler, 
+  createSuccessResponse, 
+  validateSchema,
+  validateGameState,
+  validatePlayerExists,
+  validatePlayerPosition,
+  validateSufficientPoints,
+  validateNotAlreadyReach
+} from '@/lib/error-handler'
 
-export async function POST(
+export const POST = withErrorHandler(async (
   request: NextRequest,
   { params }: { params: Promise<{ gameId: string }> }
-) {
-  try {
-    const { gameId } = await params
-    const body = await request.json()
+) => {
+  const { gameId } = await params
+  const body = await request.json()
 
-    if (!gameId) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          code: 'MISSING_GAME_ID',
-          message: 'ゲームIDが必要です'
-        }
-      }, { status: 400 })
-    }
+  // バリデーション
+  const { position, round } = validateSchema(SoloRiichiSchema, body)
 
-    // バリデーション
-    const validation = SoloReachSchema.safeParse(body)
-    
-    if (!validation.success) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: '入力データが無効です',
-          details: validation.error.errors
-        }
-      }, { status: 400 })
-    }
+  // プレイヤー位置の妥当性チェック
+  validatePlayerPosition(position)
 
-    const { position, round } = validation.data
-
-    // ゲーム状態を事前チェック
-    const { prisma } = await import('@/lib/prisma')
-    const game = await prisma.soloGame.findUnique({
-      where: { id: gameId },
-      include: { 
-        players: {
-          where: { position }
-        }
+  // ゲーム状態を事前チェック
+  const { prisma } = await import('@/lib/prisma')
+  const game = await prisma.soloGame.findUnique({
+    where: { id: gameId },
+    include: { 
+      players: {
+        where: { position }
       }
-    })
-
-    if (!game) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          code: 'GAME_NOT_FOUND',
-          message: 'ゲームが見つかりません'
-        }
-      }, { status: 404 })
     }
+  })
 
-    if (game.status !== 'PLAYING') {
-      return NextResponse.json({
-        success: false,
-        error: {
-          code: 'GAME_NOT_PLAYING',
-          message: 'ゲームが進行中ではありません'
-        }
-      }, { status: 400 })
-    }
-
-    const player = game.players[0]
-    if (!player) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          code: 'PLAYER_NOT_FOUND',
-          message: '指定された位置のプレイヤーが見つかりません'
-        }
-      }, { status: 400 })
-    }
-
-    if (player.isReach) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          code: 'ALREADY_REACH',
-          message: 'このプレイヤーは既にリーチしています'
-        }
-      }, { status: 400 })
-    }
-
-    if (player.currentPoints < 1000) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          code: 'INSUFFICIENT_POINTS',
-          message: 'リーチ宣言には1000点が必要です'
-        }
-      }, { status: 400 })
-    }
-
-    // リーチ宣言処理
-    const gameState = await declareSoloReach(gameId, position, round)
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        gameState,
-        message: `${player.name}がリーチしました`
-      }
-    })
-
-  } catch (error) {
-    console.error('Solo reach declaration error:', error)
-    
-    return NextResponse.json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'リーチ宣言に失敗しました'
-      }
-    }, { status: 500 })
+  // ゲーム存在・状態チェック
+  if (!game) {
+    throw new Error('ゲームが見つかりません')
   }
-}
+  
+  if (game.status !== 'PLAYING') {
+    throw new Error(`ゲーム状態が無効です。期待: PLAYING, 現在: ${game.status}`)
+  }
+
+  const player = game.players[0]
+  validatePlayerExists(player, position.toString())
+
+  // リーチ関連のチェック
+  validateNotAlreadyReach(player.isReach, position.toString())
+  validateSufficientPoints(player.currentPoints, 1000, position.toString())
+
+  // リーチ宣言処理
+  const gameState = await declareSoloReach(gameId, position, round)
+
+  return createSuccessResponse({
+    gameState,
+    message: `${player.name}がリーチしました`
+  })
+}, 'ソロリーチ宣言に失敗しました')

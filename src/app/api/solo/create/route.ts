@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     // プレイヤー位置の妥当性チェック
-    if (!validatePlayerPositions(players)) {
+    if (!validatePlayerPositions(players.map(p => p.position))) {
       return NextResponse.json({
         success: false,
         error: {

@@ -32,7 +32,7 @@ export default function SoloGamePage({ params }: SoloGamePageProps) {
   // ゲーム状態を取得
   const fetchGameState = useCallback(async () => {
     try {
-      const response = await fetch(`/api/solo/${gameId}`, {
+      const response = await fetch(`/api/game/${gameId}`, {
         credentials: 'include'
       })
       const result = await response.json()
@@ -42,7 +42,8 @@ export default function SoloGamePage({ params }: SoloGamePageProps) {
       }
 
       if (result.success) {
-        setGameState(result.data)
+        // 統合APIからの正しいデータ構造を使用
+        setGameState(result.data.gameState)
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'エラーが発生しました')
@@ -53,7 +54,7 @@ export default function SoloGamePage({ params }: SoloGamePageProps) {
   const startGame = async () => {
     try {
       setIsStarting(true)
-      const response = await fetch(`/api/solo/${gameId}`, {
+      const response = await fetch(`/api/game/${gameId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
@@ -69,7 +70,8 @@ export default function SoloGamePage({ params }: SoloGamePageProps) {
       }
 
       if (result.success) {
-        setGameState(result.data)
+        // 統合APIからの正しいデータ構造を使用
+        setGameState(result.data.gameState || result.data)
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'ゲーム開始に失敗しました')
@@ -329,13 +331,13 @@ function PlayerCard({ player, isOya, gameState, onStateUpdate }: PlayerCardProps
   const handleReach = async () => {
     try {
       setIsReaching(true)
-      const response = await fetch(`/api/solo/${gameState.gameId}/reach`, {
+      const response = await fetch(`/api/game/${gameState.gameId}/riichi`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          position: player.position,
+          playerId: player.position,
           round: gameState.currentRound
         }),
         credentials: 'include'
@@ -418,7 +420,7 @@ function GameActions({ gameState, onStateUpdate, onError }: GameActionsProps) {
   // 点数計算処理
   const handleScoreSubmit = async (scoreData: ScoreSubmissionData) => {
     try {
-      const response = await fetch(`/api/solo/${gameState.gameId}/score`, {
+      const response = await fetch(`/api/game/${gameState.gameId}/score`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -427,7 +429,6 @@ function GameActions({ gameState, onStateUpdate, onError }: GameActionsProps) {
           han: scoreData.han,
           fu: scoreData.fu,
           winnerId: parseInt(scoreData.winnerId),
-          isOya: gameState.players.find(p => p.position.toString() === scoreData.winnerId)?.position === gameState.currentOya,
           isTsumo: scoreData.isTsumo,
           loserId: scoreData.loserId ? parseInt(scoreData.loserId) : undefined,
         }),
@@ -458,7 +459,7 @@ function GameActions({ gameState, onStateUpdate, onError }: GameActionsProps) {
     try {
       const tenpaiPositions = tenpaiPlayerIds.map(id => parseInt(id))
       
-      const response = await fetch(`/api/solo/${gameState.gameId}/ryukyoku`, {
+      const response = await fetch(`/api/game/${gameState.gameId}/ryukyoku`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -496,7 +497,7 @@ function GameActions({ gameState, onStateUpdate, onError }: GameActionsProps) {
     }
 
     try {
-      const response = await fetch(`/api/solo/${gameState.gameId}/force-end`, {
+      const response = await fetch(`/api/game/${gameState.gameId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -91,7 +91,7 @@ export default function GameResult({ gameId, onBack, isSoloPlay = false }: GameR
       setLoading(true)
       setError('')
 
-      const apiUrl = isSoloPlay ? `/api/solo/${gameId}/result` : `/api/game/${gameId}/result`
+      const apiUrl = `/api/game/${gameId}/result`
       const response = await fetch(apiUrl, {
         method: 'GET',
         credentials: 'include'

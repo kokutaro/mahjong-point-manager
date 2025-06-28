@@ -1,110 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSoloGameState } from '@/lib/solo/score-manager'
+import { 
+  withErrorHandler, 
+  createSuccessResponse, 
+  AppError
+} from '@/lib/error-handler'
 
-export async function GET(
+export const GET = withErrorHandler(async (
   request: NextRequest,
   { params }: { params: Promise<{ gameId: string }> }
-) {
-  try {
-    const { gameId } = await params
+) => {
+  const { gameId } = await params
 
-    if (!gameId) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          code: 'MISSING_GAME_ID',
-          message: 'ゲームIDが必要です'
-        }
-      }, { status: 400 })
-    }
+  // ゲーム状態を取得
+  const gameState = await getSoloGameState(gameId)
 
-    // ゲーム状態を取得
-    const gameState = await getSoloGameState(gameId)
+  return createSuccessResponse(gameState)
+}, 'ソロゲーム状態の取得に失敗しました')
 
-    return NextResponse.json({
-      success: true,
-      data: gameState
+export const PATCH = withErrorHandler(async (
+  request: NextRequest,
+  { params }: { params: Promise<{ gameId: string }> }
+) => {
+  const { gameId } = await params
+  const body = await request.json()
+
+  // ゲーム開始
+  if (body.action === 'start') {
+    const { prisma } = await import('@/lib/prisma')
+    
+    await prisma.soloGame.update({
+      where: { id: gameId },
+      data: { 
+        status: 'PLAYING',
+        startedAt: new Date()
+      }
     })
 
-  } catch (error) {
-    console.error('Solo game state fetch error:', error)
-    
-    if (error instanceof Error && error.message === 'ゲームが見つかりません') {
-      return NextResponse.json({
-        success: false,
-        error: {
-          code: 'GAME_NOT_FOUND',
-          message: 'ゲームが見つかりません'
-        }
-      }, { status: 404 })
-    }
+    const gameState = await getSoloGameState(gameId)
 
-    return NextResponse.json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'ゲーム状態の取得に失敗しました'
-      }
-    }, { status: 500 })
+    return createSuccessResponse(gameState)
   }
-}
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ gameId: string }> }
-) {
-  try {
-    const { gameId } = await params
-    const body = await request.json()
+  // ゲーム終了
+  if (body.action === 'finish') {
+    const { prisma } = await import('@/lib/prisma')
+    
+    const game = await prisma.soloGame.findUnique({
+      where: { id: gameId },
+      include: { players: true }
+    })
 
-    if (!gameId) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          code: 'MISSING_GAME_ID',
-          message: 'ゲームIDが必要です'
-        }
-      }, { status: 400 })
+    if (!game) {
+      throw new AppError('GAME_NOT_FOUND', 'ゲームが見つかりません', {}, 404)
     }
-
-    // ゲーム開始
-    if (body.action === 'start') {
-      const { prisma } = await import('@/lib/prisma')
-      
-      await prisma.soloGame.update({
-        where: { id: gameId },
-        data: { 
-          status: 'PLAYING',
-          startedAt: new Date()
-        }
-      })
-
-      const gameState = await getSoloGameState(gameId)
-
-      return NextResponse.json({
-        success: true,
-        data: gameState
-      })
-    }
-
-    // ゲーム終了
-    if (body.action === 'finish') {
-      const { prisma } = await import('@/lib/prisma')
-      
-      const game = await prisma.soloGame.findUnique({
-        where: { id: gameId },
-        include: { players: true }
-      })
-
-      if (!game) {
-        return NextResponse.json({
-          success: false,
-          error: {
-            code: 'GAME_NOT_FOUND',
-            message: 'ゲームが見つかりません'
-          }
-        }, { status: 404 })
-      }
 
       // 最終順位と精算を計算
       const sortedPlayers = [...game.players].sort((a, b) => b.currentPoints - a.currentPoints)
@@ -181,33 +130,12 @@ export async function PATCH(
         })
       })
 
-      return NextResponse.json({
-        success: true,
-        data: {
-          gameId,
-          status: 'FINISHED',
-          results
-        }
-      })
-    }
-
-    return NextResponse.json({
-      success: false,
-      error: {
-        code: 'INVALID_ACTION',
-        message: '無効なアクションです'
-      }
-    }, { status: 400 })
-
-  } catch (error) {
-    console.error('Solo game update error:', error)
-    
-    return NextResponse.json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'ゲーム更新に失敗しました'
-      }
-    }, { status: 500 })
+    return createSuccessResponse({
+      gameId,
+      status: 'FINISHED',
+      results
+    })
   }
-}
+
+  throw new AppError('INVALID_ACTION', '無効なアクションです', { action: body.action }, 400)
+}, 'ソロゲーム更新に失敗しました')

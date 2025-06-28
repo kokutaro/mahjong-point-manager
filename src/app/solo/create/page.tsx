@@ -42,7 +42,7 @@ export default function SoloCreatePage() {
         return
       }
 
-      if (!validatePlayerPositions(players)) {
+      if (!validatePlayerPositions(players.map(p => p.position))) {
         setError('プレイヤーの位置が無効です')
         return
       }
