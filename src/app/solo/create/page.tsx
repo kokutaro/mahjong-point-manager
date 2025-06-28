@@ -10,11 +10,20 @@ import {
   validatePlayerNames,
   validatePlayerPositions
 } from '@/schemas/solo'
+import { DEFAULT_UMA_SETTINGS } from '@/schemas/common'
 
 export default function SoloCreatePage() {
   const router = useRouter()
   const [gameType, setGameType] = useState<'TONPUU' | 'HANCHAN'>(DEFAULT_GAME_TYPE)
   const [initialPoints, setInitialPoints] = useState(DEFAULT_INITIAL_POINTS)
+  const [basePoints, setBasePoints] = useState(30000)
+  const [uma, setUma] = useState<number[]>([
+    DEFAULT_UMA_SETTINGS.first,
+    DEFAULT_UMA_SETTINGS.second,
+    DEFAULT_UMA_SETTINGS.third,
+    DEFAULT_UMA_SETTINGS.fourth
+  ])
+  const [umaPreset, setUmaPreset] = useState('ワンツー')
   const [playerNames, setPlayerNames] = useState([...DEFAULT_PLAYER_NAMES])
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState('')
@@ -23,6 +32,26 @@ export default function SoloCreatePage() {
     const newNames = [...playerNames]
     newNames[index] = name
     setPlayerNames(newNames)
+  }
+
+  const umaPresets = {
+    'ゴットー': [10, 5, -5, -10],
+    'ワンツー': [20, 10, -10, -20],
+    'ワンスリー': [30, 10, -10, -30]
+  }
+
+  const handleUmaPresetChange = (preset: string) => {
+    setUmaPreset(preset)
+    if (preset !== 'カスタム') {
+      setUma(umaPresets[preset as keyof typeof umaPresets])
+    }
+  }
+
+  const handleUmaChange = (index: number, value: number) => {
+    const newUma = [...uma]
+    newUma[index] = value
+    setUma(newUma)
+    setUmaPreset('カスタム') // 手動変更時はカスタムに切り替え
   }
 
   const handleCreateGame = async () => {
@@ -50,6 +79,8 @@ export default function SoloCreatePage() {
       const gameData: CreateSoloGameInput = {
         gameType,
         initialPoints,
+        basePoints,
+        uma,
         players
       }
 
@@ -138,6 +169,83 @@ export default function SoloCreatePage() {
                 <option value={30000}>30,000点</option>
                 <option value={35000}>35,000点</option>
               </select>
+            </div>
+
+            {/* 返し点 */}
+            <div>
+              <label htmlFor="basePoints" className="block text-sm font-medium text-gray-700 mb-2">
+                返し点（基準点）
+              </label>
+              <select
+                id="basePoints"
+                value={basePoints}
+                onChange={(e) => setBasePoints(Number(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              >
+                <option value={25000}>25,000点</option>
+                <option value={30000}>30,000点</option>
+                <option value={35000}>35,000点</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                精算計算の基準となる点数
+              </p>
+            </div>
+
+            {/* ウマ設定 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                ウマ設定
+              </label>
+              
+              {/* プリセット選択 */}
+              <div className="mb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {Object.keys(umaPresets).map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => handleUmaPresetChange(preset)}
+                      className={`p-3 rounded-lg border-2 text-sm transition-colors ${
+                        umaPreset === preset
+                          ? 'border-orange-500 bg-orange-50 text-orange-700'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="font-semibold">{preset}</div>
+                      <div className="text-xs text-gray-500">
+                        {umaPresets[preset as keyof typeof umaPresets].join(',')}
+                      </div>
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => handleUmaPresetChange('カスタム')}
+                    className={`p-3 rounded-lg border-2 text-sm transition-colors ${
+                      umaPreset === 'カスタム'
+                        ? 'border-orange-500 bg-orange-50 text-orange-700'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="font-semibold">カスタム</div>
+                    <div className="text-xs text-gray-500">手動設定</div>
+                  </button>
+                </div>
+              </div>
+
+              {/* 詳細設定 */}
+              <div className="grid grid-cols-4 gap-2">
+                {['1位', '2位', '3位', '4位'].map((rank, index) => (
+                  <div key={rank}>
+                    <label className="block text-xs text-gray-500 mb-1">{rank}</label>
+                    <input
+                      type="number"
+                      value={uma[index]}
+                      onChange={(e) => handleUmaChange(index, Number(e.target.value))}
+                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-orange-500"
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* プレイヤー名設定 */}

@@ -11,7 +11,8 @@ import {
   validatePlayerPositions,
   DEFAULT_PLAYER_NAMES,
   DEFAULT_INITIAL_POINTS,
-  DEFAULT_GAME_TYPE
+  DEFAULT_GAME_TYPE,
+  DEFAULT_UMA_SETTINGS
 } from './common'
 
 // ===== ソロプレイ専用スキーマ =====
@@ -47,10 +48,21 @@ export const CreateSoloPlayerSchema = z.object({
 })
 export type CreateSoloPlayerInput = z.infer<typeof CreateSoloPlayerSchema>
 
+// ウマ設定スキーマ
+export const UmaSettingsSchema = z.array(z.number().int()).length(4, 'ウマは4つの値が必要です').default([
+  DEFAULT_UMA_SETTINGS.first,
+  DEFAULT_UMA_SETTINGS.second,
+  DEFAULT_UMA_SETTINGS.third,
+  DEFAULT_UMA_SETTINGS.fourth
+])
+export type UmaSettings = z.infer<typeof UmaSettingsSchema>
+
 // ゲーム作成スキーマ
 export const CreateSoloGameSchema = z.object({
   gameType: GameTypeSchema.default(DEFAULT_GAME_TYPE),
   initialPoints: z.number().int().positive().default(DEFAULT_INITIAL_POINTS),
+  basePoints: z.number().int().positive().default(30000),
+  uma: UmaSettingsSchema,
   players: z.array(CreateSoloPlayerSchema).length(4, '4人のプレイヤーが必要です')
 }).refine(
   (data) => validatePlayerNames(data.players.map(p => ({ name: p.name }))),
@@ -63,6 +75,12 @@ export const CreateSoloGameSchema = z.object({
   {
     message: '無効なプレイヤー位置があります',
     path: ['players']
+  }
+).refine(
+  (data) => data.uma.reduce((sum, value) => sum + value, 0) === 0,
+  {
+    message: 'ウマの合計は0である必要があります',
+    path: ['uma']
   }
 )
 export type CreateSoloGameInput = z.infer<typeof CreateSoloGameSchema>

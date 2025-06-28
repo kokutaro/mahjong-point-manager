@@ -454,16 +454,16 @@ export class SoloPointManager {
       return
     }
 
-    // デフォルト設定
-    const defaultSettings = {
+    // ゲーム設定を使用（データベースに保存された値）
+    const gameSettings = {
       initialPoints: game.initialPoints,
-      basePoints: 30000,
-      uma: [20, 10, -10, -20]
+      basePoints: game.basePoints || 30000,
+      uma: Array.isArray(game.uma) ? game.uma as number[] : [15000, 5000, -5000, -15000]
     }
     
-    console.log('🏁 Using settings:', defaultSettings)
+    console.log('🏁 Using settings:', gameSettings)
     
-    const finalResults = this.calculateSettlement(players, defaultSettings)
+    const finalResults = this.calculateSettlement(players, gameSettings)
     await this.saveFinalResults(finalResults, players)
   }
 
