@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
+import { getCurrentPlayer, checkSessionAccess } from '@/lib/auth'
 
 // ゲーム結果の型定義
 type GameResultItem = {
@@ -13,6 +14,24 @@ export async function GET(
 ) {
   try {
     const { sessionId } = await params
+    
+    // 認証チェック
+    const currentPlayer = await getCurrentPlayer()
+    if (!currentPlayer) {
+      return NextResponse.json({
+        success: false,
+        error: { message: '認証が必要です' }
+      }, { status: 401 })
+    }
+
+    // セッション参加権限チェック
+    const hasAccess = await checkSessionAccess(sessionId, currentPlayer.playerId)
+    if (!hasAccess) {
+      return NextResponse.json({
+        success: false,
+        error: { message: 'このセッションにアクセスする権限がありません' }
+      }, { status: 403 })
+    }
 
     // セッション詳細とゲーム履歴を取得
     const session = await prisma.gameSession.findUnique({

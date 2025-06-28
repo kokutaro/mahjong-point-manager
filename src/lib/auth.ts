@@ -75,3 +75,20 @@ export async function checkHostAccess(gameId: string, playerId: string): Promise
     return false
   }
 }
+
+// セッション参加チェック
+export async function checkSessionAccess(sessionId: string, playerId: string): Promise<boolean> {
+  try {
+    const participant = await prisma.sessionParticipant.findFirst({
+      where: {
+        sessionId,
+        playerId
+      }
+    })
+
+    return !!participant
+  } catch (error) {
+    console.error('Session access check failed:', error)
+    return false
+  }
+}
