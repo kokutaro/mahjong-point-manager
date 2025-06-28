@@ -458,7 +458,24 @@ export class SoloPointManager {
     const gameSettings = {
       initialPoints: game.initialPoints,
       basePoints: game.basePoints || 30000,
-      uma: Array.isArray(game.uma) ? game.uma as number[] : [15000, 5000, -5000, -15000]
+      uma: (() => {
+        let umaArray: number[] = [15000, 5000, -5000, -15000]; // デフォルト値
+        if (game.uma) {
+          if (Array.isArray(game.uma)) {
+            umaArray = game.uma as number[];
+          } else if (typeof game.uma === 'string') {
+            try {
+              umaArray = JSON.parse(game.uma as string);
+            } catch (e) {
+              console.log('🏁 Solo Failed to parse uma JSON, using default');
+            }
+          } else if (typeof game.uma === 'object') {
+            // Prisma JSON型の場合
+            umaArray = game.uma as unknown as number[];
+          }
+        }
+        return umaArray;
+      })()
     }
     
     console.log('🏁 Using settings:', gameSettings)
