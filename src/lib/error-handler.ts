@@ -8,7 +8,7 @@ export class AppError extends Error {
   constructor(
     public code: ErrorCode,
     message: string,
-    public details?: any,
+    public details?: Record<string, unknown> | unknown[],
     public statusCode: number = 500
   ) {
     super(message)
@@ -17,7 +17,7 @@ export class AppError extends Error {
 }
 
 export class ValidationError extends AppError {
-  constructor(message: string, details?: any) {
+  constructor(message: string, details?: Record<string, unknown> | unknown[]) {
     super('VALIDATION_ERROR', message, details, 400)
     this.name = 'ValidationError'
   }
@@ -183,7 +183,7 @@ export function validateSchema<T>(schema: z.ZodSchema<T>, data: unknown): T {
 /**
  * 非同期関数をラップしてエラーハンドリングを統一
  */
-export function withErrorHandler<T extends any[], R>(
+export function withErrorHandler<T extends unknown[], R>(
   fn: (...args: T) => Promise<NextResponse>,
   defaultErrorMessage?: string
 ) {
@@ -310,7 +310,7 @@ export function validateHanFuCombination(han: number, fu: number): void {
 
 // ===== エラーロギング =====
 
-export function logError(error: unknown, context: string, metadata?: any): void {
+export function logError(error: unknown, context: string, metadata?: Record<string, unknown>): void {
   const timestamp = new Date().toISOString()
   const logData = {
     timestamp,
@@ -342,7 +342,7 @@ export function getErrorDetails(error: unknown): {
   type: string
   message: string
   code?: ErrorCode
-  details?: any
+  details?: Record<string, unknown> | unknown[]
 } {
   if (error instanceof AppError) {
     return {

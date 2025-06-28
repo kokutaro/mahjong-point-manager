@@ -1,6 +1,16 @@
 import { useEffect, useCallback, useState } from 'react'
 import { socketClient } from '@/lib/socket-client'
 import { Socket } from 'socket.io-client'
+import type {
+  SocketError,
+  SocketIOError,
+  PlayerConnectedData,
+  PlayerJoinedData,
+  ScoreUpdatedData,
+  RiichiDeclaredData,
+  RyukyokuData,
+  SeatOrderUpdatedData,
+} from '@/types/socket'
 
 export interface GameState {
   gameId: string
@@ -89,14 +99,14 @@ export function useSocket() {
       }
     }
 
-    const handleConnectError = (error: any) => {
+    const handleConnectError = (error: SocketIOError) => {
       console.error('WebSocket connection error:', error)
       setIsConnected(false)
       setError('接続エラーが発生しました。再接続を試行中...')
       reconnect()
     }
 
-    const handleError = (error: any) => {
+    const handleError = (error: SocketError) => {
       console.error('WebSocket error:', error)
       setError(error.message || '通信エラーが発生しました')
     }
@@ -106,35 +116,35 @@ export function useSocket() {
       setGameState(state)
     }
 
-    const handlePlayerConnected = (data: any) => {
+    const handlePlayerConnected = (data: PlayerConnectedData) => {
       console.log('Player connected:', data)
       if (data.gameState) {
         setGameState(data.gameState)
       }
     }
 
-    const handleScoreUpdated = (data: any) => {
+    const handleScoreUpdated = (data: ScoreUpdatedData) => {
       console.log('Score updated in useSocket:', data)
       if (data.gameState) {
         setGameState(data.gameState)
       }
     }
 
-    const handleRiichiDeclared = (data: any) => {
+    const handleRiichiDeclared = (data: RiichiDeclaredData) => {
       console.log('Riichi declared in useSocket:', data)
       if (data.gameState) {
         setGameState(data.gameState)
       }
     }
 
-    const handleRyukyoku = (data: any) => {
+    const handleRyukyoku = (data: RyukyokuData) => {
       console.log('Ryukyoku in useSocket:', data)
       if (data.gameState) {
         setGameState(data.gameState)
       }
     }
 
-    const handleSeatOrderUpdated = (data: any) => {
+    const handleSeatOrderUpdated = (data: SeatOrderUpdatedData) => {
       console.log('Seat order updated in useSocket:', data)
       if (data.gameState) {
         setGameState(data.gameState)
@@ -147,7 +157,7 @@ export function useSocket() {
     socketInstance.on('error', handleError)
     socketClient.onGameState(handleGameState)
     socketClient.onPlayerConnected(handlePlayerConnected)
-    socketClient.onPlayerJoined((data: any) => {
+    socketClient.onPlayerJoined((data: PlayerJoinedData) => {
       console.log('Player joined event in useSocket:', data)
       if (data.gameState) {
         setGameState(data.gameState)
@@ -259,11 +269,11 @@ export function useSocket() {
 }
 
 export function useGameEvents() {
-  const [scoreUpdate, setScoreUpdate] = useState<any>(null)
+  const [scoreUpdate, setScoreUpdate] = useState<ScoreUpdatedData | null>(null)
   const [gameStarted, setGameStarted] = useState(false)
 
   useEffect(() => {
-    const handleScoreUpdated = (data: any) => {
+    const handleScoreUpdated = (data: ScoreUpdatedData) => {
       setScoreUpdate(data)
     }
 

@@ -22,9 +22,7 @@ export interface MultiGamePlayer extends BasePlayerState {
 }
 
 // ソロプレイ用プレイヤー型
-export interface SoloGamePlayer extends BasePlayerState {
-  // 追加プロパティがあれば定義
-}
+export type SoloGamePlayer = BasePlayerState
 
 // マルチプレイ用ゲーム状態（既存との互換性維持）
 export interface MultiGameState extends BaseGameState {
@@ -76,7 +74,11 @@ export interface BaseScoreInputFormProps<
     isTsumo: boolean
     honba: number
     kyotaku: number
-  }) => Promise<any>
+  }) => Promise<{
+    winnerGain: number
+    loserLoss?: number
+    payments: Record<string, number>
+  }>
 }
 
 export interface BaseRyukyokuFormProps<TPlayer extends BasePlayerState> {

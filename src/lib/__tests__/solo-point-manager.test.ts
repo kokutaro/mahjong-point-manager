@@ -22,7 +22,7 @@ jest.mock('@/lib/prisma', () => ({
 
 describe('SoloPointManager', () => {
   let pointManager: SoloPointManager;
-  const mockPrisma = require('@/lib/prisma').prisma;
+  const mockPrisma = jest.requireMock('@/lib/prisma').prisma;
   const gameId = 'test-solo-game-id';
 
   beforeEach(() => {

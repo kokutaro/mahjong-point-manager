@@ -68,7 +68,6 @@ describe('Utils', () => {
     })
 
     test('風順が正しく循環する', () => {
-      const positions = [0, 1, 2, 3]
       const expectedWinds = ['東', '南', '西', '北']
       
       for (let oya = 0; oya < 4; oya++) {

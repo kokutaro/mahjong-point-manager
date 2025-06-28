@@ -70,10 +70,6 @@ const GameInfo = memo(function GameInfo({ gameState, isConnected, gameType }: Ga
     }
   }, [gameState.gamePhase, gameState.currentRound, gameType])
 
-  // Memoized reach players count
-  const reachPlayersCount = useMemo(() => {
-    return gameState.players.filter(p => p.isReach).length
-  }, [gameState.players])
 
   // Memoized color calculation
   const getGamePhaseColor = useCallback((phase: string) => {

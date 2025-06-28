@@ -2,6 +2,16 @@ import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
+export interface ScorePattern {
+  oyaPoints: number
+  koPoints: number
+  han: number
+  fu: number
+  oyaTsumoAll: number
+  koTsumoOya: number
+  koTsumoKo: number
+}
+
 export interface ScoreCalculationInput {
   han: number
   fu: number
@@ -115,7 +125,7 @@ function calculatePayments(params: {
   isTsumo: boolean
   mainPoints: number
   honba: number
-  scorePattern: any
+  scorePattern: ScorePattern
 }) {
   const { isOya, isTsumo, mainPoints, honba, scorePattern } = params
   
