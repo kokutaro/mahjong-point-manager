@@ -5,7 +5,12 @@ import { prisma } from '@/lib/prisma'
 export interface AuthResult {
   success: boolean
   playerId?: string
-  player?: any
+  player?: {
+    id: string
+    name: string
+    createdAt: Date
+    updatedAt: Date
+  }
   error?: {
     code: string
     message: string
@@ -74,6 +79,7 @@ export async function authenticatePlayer(request: NextRequest): Promise<AuthResu
  * 認証エラーレスポンスを生成
  */
 export function createAuthErrorResponse(authResult: AuthResult) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const statusCode = authResult.error?.code === 'UNAUTHORIZED' ? 401 : 
                     authResult.error?.code === 'PLAYER_NOT_FOUND' ? 404 : 500
   

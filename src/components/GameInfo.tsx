@@ -5,7 +5,14 @@ import { getPositionName } from '@/lib/utils'
 
 interface GameState {
   gameId: string
-  players: any[]
+  players: Array<{
+    playerId: string
+    name: string
+    position: number
+    points: number
+    isReach: boolean
+    isConnected: boolean
+  }>
   currentRound: number
   currentOya: number
   honba: number
@@ -70,10 +77,6 @@ const GameInfo = memo(function GameInfo({ gameState, isConnected, gameType }: Ga
     }
   }, [gameState.gamePhase, gameState.currentRound, gameType])
 
-  // Memoized reach players count
-  const reachPlayersCount = useMemo(() => {
-    return gameState.players.filter(p => p.isReach).length
-  }, [gameState.players])
 
   // Memoized color calculation
   const getGamePhaseColor = useCallback((phase: string) => {

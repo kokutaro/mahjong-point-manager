@@ -19,7 +19,6 @@ interface PointAnimationProps {
 
 export default function PointAnimation({ players, pointChanges, dealerPosition, onComplete }: PointAnimationProps) {
   const [currentPoints, setCurrentPoints] = useState<{ [playerId: string]: number }>({})
-  const [showChanges, setShowChanges] = useState(false)
   const [animationPhase, setAnimationPhase] = useState<'fadeIn' | 'counting' | 'fadeOut'>('fadeIn')
 
   useEffect(() => {
@@ -43,7 +42,6 @@ export default function PointAnimation({ players, pointChanges, dealerPosition, 
       console.log('Starting animation timeline')
       // フェーズ1: フェードイン (200ms)
       setAnimationPhase('fadeIn')
-      setShowChanges(true)
       await new Promise(resolve => setTimeout(resolve, 200))
 
       // フェーズ2: カウントアップ/ダウン (800ms)
@@ -100,8 +98,7 @@ export default function PointAnimation({ players, pointChanges, dealerPosition, 
           setTimeout(() => {
             setAnimationPhase('fadeOut')
             setTimeout(() => {
-              setShowChanges(false)
-              onComplete()
+                      onComplete()
             }, 200)
           }, 0)
         }

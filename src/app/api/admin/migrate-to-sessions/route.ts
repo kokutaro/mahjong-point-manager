@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     if (!dryRun) {
       // 実際に移行処理を実行
-      for (const [groupKey, games] of Object.entries(sessionGroups)) {
+      for (const [, games] of Object.entries(sessionGroups)) {
         // Phase 1: すべての対局をセッション化（単発対局も含む）
         const isMultiGame = games.length > 1
         const firstGame = games[0]

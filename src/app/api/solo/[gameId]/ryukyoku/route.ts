@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { SoloPointManager } from '@/lib/solo/solo-point-manager'
 import { SoloRyukyokuSchema } from '@/schemas/solo'
 import { 
@@ -17,7 +17,7 @@ export const POST = withErrorHandler(async (
   const body = await request.json()
 
   // バリデーション
-  const { type, tenpaiPlayers = [], reachPlayers = [] } = validateSchema(SoloRyukyokuSchema, body)
+  const { type, tenpaiPlayers = [] } = validateSchema(SoloRyukyokuSchema, body)
 
   // ゲーム状態を事前チェック
   const { prisma } = await import('@/lib/prisma')

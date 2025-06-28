@@ -2,7 +2,7 @@
 
 import WebSocketDebug, { useWebSocketDebug } from '@/components/WebSocketDebug'
 import { useAuth } from '@/contexts/AuthContext'
-import { useSessionStore, useUIStore } from '@/store/useAppStore'
+import { useSessionStore, useUIStore, type GameSession } from '@/store/useAppStore'
 import { Button, Paper, Text, TextInput, Title } from '@mantine/core'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useEffect, useState } from 'react'
@@ -13,14 +13,14 @@ function HomePageContent() {
   const [roomCode, setRoomCode] = useState('')
   const [error, setError] = useState('')
   const [isJoining, setIsJoining] = useState(false)
-  const [activeSessions, setActiveSessions] = useState<any[]>([])
+  const [activeSessions, setActiveSessions] = useState<GameSession[]>([])
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get('redirect')
-  const { showDebug, setShowDebug } = useWebSocketDebug()
+  const { showDebug } = useWebSocketDebug()
   
   // Zustand ストア
-  const { currentSession, setSessionMode } = useSessionStore()
+  const { setSessionMode } = useSessionStore()
   const { setError: setGlobalError } = useUIStore()
 
   // アクティブセッション取得
@@ -32,6 +32,7 @@ function HomePageContent() {
 
   useEffect(() => {
     if (isAuthenticated && redirectTo) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       router.replace(redirectTo as any)
     }
   }, [isAuthenticated, redirectTo, router])
@@ -61,7 +62,8 @@ function HomePageContent() {
       await login(playerName.trim())
       setError('')
       if (redirectTo) {
-        router.replace(redirectTo as any)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        router.replace(redirectTo as string as any)
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'ログインに失敗しました')
@@ -71,7 +73,7 @@ function HomePageContent() {
   const handleCreateRoom = () => {
     // セッションモードを保存してルーム作成画面へ
     setSessionMode(true)
-    router.push('/room/create' as any)
+    router.push('/room/create')
   }
 
   const handleResumeSession = async (sessionId: string) => {
@@ -85,9 +87,9 @@ function HomePageContent() {
       }
       const { gameId, roomCode, status } = data.data
       if (status === 'WAITING') {
-        router.push(`/room/${roomCode}` as any)
+        router.push(`/room/${roomCode}`)
       } else {
-        router.push(`/game/${gameId}` as any)
+        router.push(`/game/${gameId}`)
       }
     } catch (err) {
       setGlobalError(
@@ -96,15 +98,10 @@ function HomePageContent() {
     }
   }
 
-  const handleCreateSingleGame = () => {
-    // 単発対局モードを保存してルーム作成画面へ
-    setSessionMode(false)
-    router.push('/room/create' as any)
-  }
 
   const handleCreateSoloGame = () => {
     // 一人プレイモードの画面へ
-    router.push('/solo/create' as any)
+    router.push('/solo/create')
   }
 
   const handleJoinRoom = async (e: React.FormEvent) => {
@@ -137,7 +134,7 @@ function HomePageContent() {
       }
 
       if (data.success) {
-        router.push(`/room/${roomCode.trim().toUpperCase()}` as any)
+        router.push(`/room/${roomCode.trim().toUpperCase()}`)
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'ルーム参加に失敗しました')
@@ -214,7 +211,7 @@ function HomePageContent() {
                         {session.name || `セッション #${session.sessionCode}`}
                       </h3>
                       <p className="text-sm text-yellow-600">
-                        {session.totalGames}局完了 · ホスト: {session.hostPlayer.name}
+                        {session.totalGames}局完了 · ホスト: {session.hostPlayerId}
                       </p>
                     </div>
                     <div className="flex gap-2">

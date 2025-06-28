@@ -1,11 +1,25 @@
 import { prisma } from '@/lib/prisma'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { 
   withErrorHandler, 
   createSuccessResponse, 
   GameNotFoundError,
   AppError
 } from '@/lib/error-handler'
+import type { Game, GameParticipant, Player, GameResult, GameSettings, GameSession, SoloGame, SoloPlayer } from '@prisma/client'
+
+// 型定義
+type MultiplayerGameWithIncludes = Game & {
+  participants: (GameParticipant & { player: Player })[]
+  result: GameResult | null
+  settings: GameSettings | null
+  session: (GameSession & { hostPlayer: Player }) | null
+}
+
+type SoloGameWithIncludes = SoloGame & {
+  players: SoloPlayer[]
+}
+
 
 /**
  * 統合版ゲーム結果取得エンドポイント
@@ -65,7 +79,7 @@ export const GET = withErrorHandler(async (
 /**
  * マルチプレイゲームの結果処理
  */
-async function processMultiplayerResult(game: any, gameId: string, isSoloGame: boolean = false) {
+async function processMultiplayerResult(game: MultiplayerGameWithIncludes | SoloGameWithIncludes, gameId: string, isSoloGame: boolean = false) {
   if (game.status !== 'FINISHED') {
     throw new AppError('GAME_NOT_FINISHED', 'ゲームが終了していません', { status: game.status }, 400)
   }
@@ -73,30 +87,36 @@ async function processMultiplayerResult(game: any, gameId: string, isSoloGame: b
   console.log('Unified game result query:', { gameId, game: { 
     id: game.id, 
     status: game.status, 
-    players: isSoloGame ? game.players.map((p: any) => ({
-      position: p.position,
-      name: p.name,
-      currentPoints: p.currentPoints,
-      finalPoints: p.finalPoints,
-      finalRank: p.finalRank,
-      uma: p.uma,
-      settlement: p.settlement
-    })) : game.participants.map((p: any) => ({
-      playerId: p.playerId,
-      name: p.player.name,
-      finalPoints: p.finalPoints,
-      finalRank: p.finalRank,
-      uma: p.uma,
-      settlement: p.settlement
-    }))
+    players: isSoloGame 
+      ? (game as SoloGameWithIncludes).players.map((p) => ({
+          position: p.position,
+          name: p.name,
+          currentPoints: p.currentPoints,
+          finalPoints: p.finalPoints,
+          finalRank: p.finalRank,
+          uma: p.uma,
+          settlement: p.settlement
+        }))
+      : (game as MultiplayerGameWithIncludes).participants.map((p) => ({
+          playerId: p.playerId,
+          name: p.player.name,
+          finalPoints: p.finalPoints,
+          finalRank: p.finalRank,
+          uma: p.uma,
+          settlement: p.settlement
+        }))
   } })
 
-  const playersToProcess = isSoloGame ? game.players : game.participants
+  const playersToProcess = isSoloGame 
+    ? (game as SoloGameWithIncludes).players 
+    : (game as MultiplayerGameWithIncludes).participants
 
   // 結果データを整形
   // finalRankがnullの場合は現在の点数で順位を計算
-  const basePoints = isSoloGame ? game.initialPoints || 25000 : game.settings?.basePoints || 25000
-  const participantsWithRank = playersToProcess.map((participant: any) => {
+  const basePoints = isSoloGame 
+    ? (game as SoloGameWithIncludes).initialPoints || 25000 
+    : (game as MultiplayerGameWithIncludes).settings?.basePoints || 25000
+  const participantsWithRank = playersToProcess.map((participant) => {
     if (participant.finalRank !== null && participant.finalPoints !== null) {
       return participant
     } else {
@@ -113,15 +133,19 @@ async function processMultiplayerResult(game: any, gameId: string, isSoloGame: b
 
   // 現在の点数で順位を計算
   const sortedByPoints = participantsWithRank
-    .sort((a: any, b: any) => (b.finalPoints || b.currentPoints) - (a.finalPoints || a.currentPoints))
-    .map((participant: any, index: number) => ({
+    .sort((a, b) => (b.finalPoints || b.currentPoints) - (a.finalPoints || a.currentPoints))
+    .map((participant, index: number) => ({
       ...participant,
       calculatedRank: index + 1
     }))
 
-  const results = sortedByPoints.map((participant: any) => ({
-    playerId: isSoloGame ? participant.position.toString() : participant.playerId,
-    name: isSoloGame ? participant.name : participant.player.name,
+  const results = sortedByPoints.map((participant) => ({
+    playerId: isSoloGame 
+      ? participant.position?.toString() || '' 
+      : ('playerId' in participant ? participant.playerId || '' : ''),
+    name: isSoloGame 
+      ? ('name' in participant ? participant.name : '') 
+      : ('player' in participant ? participant.player?.name || '' : ''),
     finalPoints: participant.finalPoints || participant.currentPoints,
     rank: participant.finalRank || participant.calculatedRank,
     uma: participant.uma || 0,
@@ -141,10 +165,11 @@ async function processMultiplayerResult(game: any, gameId: string, isSoloGame: b
 
   const endReason = endEvent?.eventData ? 
     (typeof endEvent.eventData === 'object' && endEvent.eventData !== null && 'reason' in endEvent.eventData ? 
-      (endEvent.eventData as any).reason : '終了') : '終了'
+      (endEvent.eventData as { reason: string }).reason : '終了') : '終了'
 
   let nextGame: { id: string, roomCode: string } | null = null
-  if (game.sessionId && game.sessionOrder != null) {
+  if (!isSoloGame && 'sessionId' in game && 'sessionOrder' in game && 
+      game.sessionId && game.sessionOrder != null) {
     const ng = await prisma.game.findFirst({
       where: {
         sessionId: game.sessionId,
@@ -160,17 +185,17 @@ async function processMultiplayerResult(game: any, gameId: string, isSoloGame: b
 
   const resultData = {
     gameId: game.id,
-    roomCode: game.roomCode,
+    roomCode: isSoloGame ? `SOLO-${game.id}` : ('roomCode' in game ? game.roomCode : ''),
     results,
     gameMode: isSoloGame ? 'SOLO' : 'MULTIPLAYER',
-    gameType: isSoloGame ? 'HANCHAN' : (game.settings?.gameType || game.gameType),
+    gameType: isSoloGame ? 'HANCHAN' : ((game as MultiplayerGameWithIncludes).settings?.gameType || (game as MultiplayerGameWithIncludes).gameType),
     endReason,
     endedAt: game.endedAt?.toISOString() || new Date().toISOString(),
-    basePoints: isSoloGame ? (game.initialPoints || 25000) : (game.settings?.basePoints || 25000),
-    sessionId: isSoloGame ? undefined : game.sessionId,
-    sessionCode: isSoloGame ? undefined : game.session?.sessionCode,
-    sessionName: isSoloGame ? undefined : game.session?.name,
-    hostPlayerId: isSoloGame ? undefined : game.session?.hostPlayerId,
+    basePoints: isSoloGame ? ((game as SoloGameWithIncludes).initialPoints || 25000) : ((game as MultiplayerGameWithIncludes).settings?.basePoints || 25000),
+    sessionId: isSoloGame ? undefined : (game as MultiplayerGameWithIncludes).sessionId,
+    sessionCode: isSoloGame ? undefined : (game as MultiplayerGameWithIncludes).session?.sessionCode,
+    sessionName: isSoloGame ? undefined : (game as MultiplayerGameWithIncludes).session?.name,
+    hostPlayerId: isSoloGame ? undefined : (game as MultiplayerGameWithIncludes).session?.hostPlayerId,
     nextGame: isSoloGame ? null : nextGame
   }
 

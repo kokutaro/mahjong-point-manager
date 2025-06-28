@@ -58,7 +58,7 @@ export default function CreateRoomPage() {
       if (data.success) {
         // Refresh auth so the new player_id cookie is reflected in context
         await refreshAuth()
-        router.push(`/room/${data.data.roomCode}` as any)
+        router.push(`/room/${data.data.roomCode}`)
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'ルーム作成に失敗しました')

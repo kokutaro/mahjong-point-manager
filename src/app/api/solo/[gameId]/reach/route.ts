@@ -1,11 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { declareSoloReach } from '@/lib/solo/score-manager'
 import { SoloRiichiSchema } from '@/schemas/solo'
 import { 
   withErrorHandler, 
   createSuccessResponse, 
   validateSchema,
-  validateGameState,
   validatePlayerExists,
   validatePlayerPosition,
   validateSufficientPoints,

@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
+
+// ゲームタイプ別統計の型定義
+type GameTypeStats = {
+  totalGames: number
+  winRate: number
+  averageRank: number
+  totalSettlement: number
+  rankDistribution: { 1: number; 2: number; 3: number; 4: number }
+}
 
 // Enable caching for player statistics
 export const revalidate = 120 // Cache for 2 minutes
@@ -14,7 +24,7 @@ export async function GET(
     const gameType = searchParams.get('gameType') // 'TONPUU' | 'HANCHAN'
 
     // 基本的なクエリ条件
-    const whereCondition: any = {
+    const whereCondition: Prisma.GameParticipantWhereInput = {
       playerId: playerId,
       game: {
         status: 'FINISHED',
@@ -24,8 +34,15 @@ export async function GET(
 
     // ゲームタイプフィルター
     if (gameType) {
-      whereCondition.game.settings = {
-        gameType: gameType
+      // 有効なGameTypeかチェック
+      const validGameTypes = ['TONPUU', 'HANCHAN']
+      if (validGameTypes.includes(gameType)) {
+        if (!whereCondition.game) {
+          whereCondition.game = {}
+        }
+        whereCondition.game.settings = {
+          gameType: gameType as 'TONPUU' | 'HANCHAN'
+        }
       }
     }
 
@@ -110,7 +127,7 @@ export async function GET(
     const averagePoints = totalGames > 0 ? Math.round(totalPoints / totalGames) : 0
 
     // ゲームタイプ別統計
-    const gameTypeStats: Record<string, any> = {}
+    const gameTypeStats: Record<string, GameTypeStats> = {}
     const gameTypeGroups = participations.reduce((acc, p) => {
       const type = p.game.settings?.gameType || 'HANCHAN'
       if (!acc[type]) acc[type] = []

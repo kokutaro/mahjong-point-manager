@@ -39,7 +39,11 @@ interface SessionDetails {
   players: SessionPlayer[]
   gameResults: GameResult[]
   totalRow: Record<string, number>
-  settings: any
+  settings: {
+    gameType?: string
+    initialPoints?: number
+    uma?: number[]
+  } | null
 }
 
 interface SessionHistoryTableProps {
@@ -84,6 +88,7 @@ export default function SessionHistoryTable({ sessionId }: SessionHistoryTablePr
     if (sessionId) {
       fetchSessionDetails()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId])
 
   if (isLoading) {

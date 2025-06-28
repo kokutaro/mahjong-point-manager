@@ -1,4 +1,14 @@
 import { io, Socket } from 'socket.io-client'
+import type {
+  SocketError,
+  PlayerConnectedData,
+  PlayerJoinedData,
+  ScoreUpdatedData,
+  RiichiDeclaredData,
+  RyukyokuData,
+  SeatOrderUpdatedData,
+  GameStateData
+} from '@/types/socket'
 
 export class SocketClient {
   private socket: Socket | null = null
@@ -114,78 +124,78 @@ export class SocketClient {
   }
 
   // イベントリスナー登録
-  onGameState(callback: (gameState: any) => void) {
+  onGameState(callback: (gameState: GameStateData) => void) {
     this.socket?.on('game_state', callback)
   }
 
-  onPlayerJoined(callback: (data: any) => void) {
+  onPlayerJoined(callback: (data: PlayerJoinedData) => void) {
     this.socket?.on('player_joined', callback)
   }
 
-  onPlayerConnected(callback: (data: any) => void) {
+  onPlayerConnected(callback: (data: PlayerConnectedData) => void) {
     this.socket?.on('player_connected', callback)
   }
 
-  onGameStart(callback: (gameState: any) => void) {
+  onGameStart(callback: (gameState: GameStateData) => void) {
     this.socket?.on('game_start', callback)
     this.socket?.on('game_started', callback)
   }
 
-  onScoreUpdated(callback: (data: any) => void) {
+  onScoreUpdated(callback: (data: ScoreUpdatedData) => void) {
     this.socket?.on('score_updated', callback)
   }
 
-  onRiichiDeclared(callback: (data: any) => void) {
+  onRiichiDeclared(callback: (data: RiichiDeclaredData) => void) {
     this.socket?.on('riichi_declared', callback)
   }
 
-  onRyukyoku(callback: (data: any) => void) {
+  onRyukyoku(callback: (data: RyukyokuData) => void) {
     this.socket?.on('ryukyoku', callback)
   }
 
-  onSeatOrderUpdated(callback: (data: any) => void) {
+  onSeatOrderUpdated(callback: (data: SeatOrderUpdatedData) => void) {
     this.socket?.on('seat_order_updated', callback)
   }
 
-  onError(callback: (error: any) => void) {
+  onError(callback: (error: SocketError) => void) {
     this.socket?.on('error', callback)
   }
 
   // イベントリスナー削除
-  offGameState(callback?: (gameState: any) => void) {
+  offGameState(callback?: (gameState: GameStateData) => void) {
     this.socket?.off('game_state', callback)
   }
 
-  offPlayerJoined(callback?: (data: any) => void) {
+  offPlayerJoined(callback?: (data: PlayerJoinedData) => void) {
     this.socket?.off('player_joined', callback)
   }
 
-  offPlayerConnected(callback?: (data: any) => void) {
+  offPlayerConnected(callback?: (data: PlayerConnectedData) => void) {
     this.socket?.off('player_connected', callback)
   }
 
-  offGameStart(callback?: (gameState: any) => void) {
+  offGameStart(callback?: (gameState: GameStateData) => void) {
     this.socket?.off('game_start', callback)
     this.socket?.off('game_started', callback)
   }
 
-  offScoreUpdated(callback?: (data: any) => void) {
+  offScoreUpdated(callback?: (data: ScoreUpdatedData) => void) {
     this.socket?.off('score_updated', callback)
   }
 
-  offRiichiDeclared(callback?: (data: any) => void) {
+  offRiichiDeclared(callback?: (data: RiichiDeclaredData) => void) {
     this.socket?.off('riichi_declared', callback)
   }
 
-  offRyukyoku(callback?: (data: any) => void) {
+  offRyukyoku(callback?: (data: RyukyokuData) => void) {
     this.socket?.off('ryukyoku', callback)
   }
 
-  offSeatOrderUpdated(callback?: (data: any) => void) {
+  offSeatOrderUpdated(callback?: (data: SeatOrderUpdatedData) => void) {
     this.socket?.off('seat_order_updated', callback)
   }
 
-  offError(callback?: (error: any) => void) {
+  offError(callback?: (error: SocketError) => void) {
     this.socket?.off('error', callback)
   }
 }

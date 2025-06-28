@@ -34,7 +34,7 @@ jest.mock('../score', () => ({
 
 describe('PointManager', () => {
   let pointManager: PointManager
-  const mockPrisma = require('@/lib/prisma').prisma
+  const mockPrisma = jest.requireMock('@/lib/prisma').prisma
 
   beforeEach(() => {
     pointManager = new PointManager('test-game-id')

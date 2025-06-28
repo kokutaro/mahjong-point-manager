@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+
+// プロセスの型拡張（他のファイルで既に定義済み）
+
 export async function GET(request: NextRequest) {
   try {
     // WebSocketサーバーの状態をチェック
-    const socketio = (global as any).__socketio || (process as any).__socketio
+    const socketio = process.__socketio
     
     const status = {
       websocketInitialized: !!socketio,

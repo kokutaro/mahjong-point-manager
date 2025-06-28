@@ -10,7 +10,7 @@ import {
 // 汎用化されたRyukyokuForm
 function BaseRyukyokuForm<TPlayer extends BasePlayerState>({
   players,
-  mode,
+  mode, // eslint-disable-line @typescript-eslint/no-unused-vars
   onSubmit,
   onCancel
 }: BaseRyukyokuFormProps<TPlayer>) {

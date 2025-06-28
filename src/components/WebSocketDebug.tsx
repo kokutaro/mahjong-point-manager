@@ -3,6 +3,16 @@
 import { useState, useEffect } from 'react'
 import { AuthFallback } from '@/lib/auth-fallback'
 
+interface BrowserInfo {
+  isSafari: boolean
+  isMobile: boolean
+  isIOS: boolean
+  cookieSupported: boolean
+  fallbackSession?: {
+    playerId: string
+  }
+}
+
 interface WebSocketStatus {
   websocketInitialized: boolean
   environment: string
@@ -30,7 +40,7 @@ export default function WebSocketDebug({ show = false }: DebugProps) {
   const [status, setStatus] = useState<WebSocketStatus | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>('')
-  const [browserInfo, setBrowserInfo] = useState<any>(null)
+  const [browserInfo, setBrowserInfo] = useState<BrowserInfo | null>(null)
 
   const checkWebSocketStatus = async () => {
     setLoading(true)
@@ -58,7 +68,7 @@ export default function WebSocketDebug({ show = false }: DebugProps) {
       // ブラウザ情報を取得
       setBrowserInfo({
         ...AuthFallback.getBrowserInfo(),
-        fallbackSession: AuthFallback.getSession()
+        fallbackSession: AuthFallback.getSession() || undefined
       })
     }
   }, [show])

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { PointManager } from '@/lib/point-manager'
 import { SoloPointManager } from '@/lib/solo/solo-point-manager'
@@ -9,17 +9,52 @@ import {
   withErrorHandler, 
   createSuccessResponse, 
   validateSchema,
-  validateGameState,
   validatePlayerExists,
   validateHanFuCombination,
-  validatePlayerPosition
+  AppError
 } from '@/lib/error-handler'
 
+// WebSocket 型定義
+interface SocketIOInstance {
+  to(room: string): {
+    emit(event: string, data: unknown): void
+  }
+}
+
+// スコアデータ型
+
+type MultiplayerScoreData = {
+  winnerId: string
+  han: number
+  fu: number
+  isTsumo: boolean
+  loserId?: string
+  honba: number
+  kyotaku: number
+}
+
+type SoloScoreData = {
+  winnerId: number
+  han: number
+  fu: number
+  isTsumo: boolean
+  loserId?: number
+  honba: number
+  kyotaku: number
+}
+
+// プロセスの型拡張
+declare global {
+  interface Process {
+    __socketio?: SocketIOInstance
+  }
+}
+
 // WebSocketインスタンスを直接プロセスから取得
-function getIO() {
-  if ((process as any).__socketio) {
+function getIO(): SocketIOInstance | null {
+  if (process.__socketio) {
     console.log('🔌 API: Found WebSocket instance in process')
-    return (process as any).__socketio
+    return process.__socketio
   }
   console.log('🔌 API: No WebSocket instance found in process')
   return null
@@ -75,7 +110,17 @@ export const POST = withErrorHandler(async (
 
   if (multiGame) {
     console.log('Processing as multiplayer game')
-    return await processMultiplayerScore(gameId, validatedData)
+    // マルチプレイ用に型変換
+    const multiData: MultiplayerScoreData = {
+      winnerId: String(validatedData.winnerId),
+      han: validatedData.han,
+      fu: validatedData.fu,
+      isTsumo: validatedData.isTsumo,
+      loserId: validatedData.loserId ? String(validatedData.loserId) : undefined,
+      honba: validatedData.honba || 0,
+      kyotaku: validatedData.kyotaku || 0
+    }
+    return await processMultiplayerScore(gameId, multiData)
   }
 
   // ソロプレイゲームかどうか確認
@@ -85,7 +130,26 @@ export const POST = withErrorHandler(async (
 
   if (soloGame) {
     console.log('Processing as solo game')
-    return await processSoloScore(gameId, validatedData)
+    // ソロプレイ用に型変換
+    const soloData: SoloScoreData = {
+      winnerId: typeof validatedData.winnerId === 'number' ? validatedData.winnerId : parseInt(String(validatedData.winnerId)),
+      han: validatedData.han,
+      fu: validatedData.fu,
+      isTsumo: validatedData.isTsumo,
+      loserId: validatedData.loserId ? (typeof validatedData.loserId === 'number' ? validatedData.loserId : parseInt(String(validatedData.loserId))) : undefined,
+      honba: validatedData.honba || 0,
+      kyotaku: validatedData.kyotaku || 0
+    }
+    
+    // 位置の妥当性チェック
+    if (isNaN(soloData.winnerId) || soloData.winnerId < 0 || soloData.winnerId > 3) {
+      throw new AppError('INVALID_PLAYER_POSITION', `無効な勝者位置: ${validatedData.winnerId}`, {}, 400)
+    }
+    if (soloData.loserId !== undefined && (isNaN(soloData.loserId) || soloData.loserId < 0 || soloData.loserId > 3)) {
+      throw new AppError('INVALID_PLAYER_POSITION', `無効な敗者位置: ${validatedData.loserId}`, {}, 400)
+    }
+    
+    return await processSoloScore(gameId, soloData)
   }
 
   throw new Error('ゲームが見つかりません')
@@ -94,16 +158,9 @@ export const POST = withErrorHandler(async (
 /**
  * マルチプレイゲームの点数計算処理
  */
-async function processMultiplayerScore(gameId: string, validatedData: any) {
+async function processMultiplayerScore(gameId: string, validatedData: MultiplayerScoreData) {
   const pointManager = new PointManager(gameId)
   
-  // プレイヤーIDが文字列であることを確認
-  if (typeof validatedData.winnerId !== 'string') {
-    throw new Error('マルチプレイゲームではプレイヤーIDは文字列である必要があります')
-  }
-  if (validatedData.loserId && typeof validatedData.loserId !== 'string') {
-    throw new Error('マルチプレイゲームではプレイヤーIDは文字列である必要があります')
-  }
 
   // 現在のゲーム状態を取得
   const gameState = await pointManager.getGameState()
@@ -173,20 +230,8 @@ async function processMultiplayerScore(gameId: string, validatedData: any) {
 /**
  * ソロプレイゲームの点数計算処理
  */
-async function processSoloScore(gameId: string, validatedData: any) {
-  // プレイヤーIDが数値（位置）であることを確認
-  if (typeof validatedData.winnerId !== 'number') {
-    throw new Error('ソロプレイゲームではプレイヤーIDは位置番号（数値）である必要があります')
-  }
-  if (validatedData.loserId && typeof validatedData.loserId !== 'number') {
-    throw new Error('ソロプレイゲームではプレイヤーIDは位置番号（数値）である必要があります')
-  }
-
-  // プレイヤー位置の妥当性チェック
-  validatePlayerPosition(validatedData.winnerId)
-  if (validatedData.loserId !== undefined) {
-    validatePlayerPosition(validatedData.loserId)
-  }
+async function processSoloScore(gameId: string, validatedData: SoloScoreData) {
+  // プレイヤー位置の妥当性チェック（既にメイン関数で実行済み）
 
   const pointManager = new SoloPointManager(gameId)
   

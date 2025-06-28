@@ -32,7 +32,7 @@ Object.defineProperty(process, '__socketio', {
   writable: true
 })
 
-const { requireAuth, checkHostAccess } = require('@/lib/auth')
+import { requireAuth, checkHostAccess } from '@/lib/auth'
 
 describe('Game End API 権限チェック', () => {
   const mockGameId = 'test-game-id'

@@ -14,6 +14,15 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useSocket } from '@/hooks/useSocket'
 import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type {
+  GameInfo as GameInfoType,
+  ScoreUpdatedData,
+  RiichiDeclaredData,
+  RyukyokuData,
+  PlayerConnectedData,
+  GameEndedData,
+  SocketIOError
+} from '@/types/socket'
 
 interface GamePlayer {
   playerId: string
@@ -40,16 +49,14 @@ export default function GamePage() {
   const { user, isAuthenticated } = useAuth()
   const { socket, isConnected, error: socketError, isReconnecting, reconnectTimeLeft, manualReconnect, joinRoom } = useSocket()
   const [gameState, setGameState] = useState<GameState | null>(null)
-  const [gameInfo, setGameInfo] = useState<any>(null)
+  const [gameInfo, setGameInfo] = useState<GameInfoType | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [showScoreInput, setShowScoreInput] = useState(false)
   const [activeAction, setActiveAction] = useState<'tsumo' | 'ron' | null>(null)
-  const [selectedLoserId, setSelectedLoserId] = useState<string | null>(null)
   const [showRyukyokuForm, setShowRyukyokuForm] = useState(false)
   const [showPointAnimation, setShowPointAnimation] = useState(false)
   const [pointChanges, setPointChanges] = useState<Array<{ playerId: string; change: number; newPoints: number }>>([])
-  const [previousGameState, setPreviousGameState] = useState<GameState | null>(null)
   const [showResult, setShowResult] = useState(false)
   const [showGameEnd, setShowGameEnd] = useState(false)
   const [gameEndReason, setGameEndReason] = useState('')
@@ -98,7 +105,6 @@ export default function GamePage() {
       console.log('No comparison state, setting initial state')
       previousGameStateRef.current = newGameState
       gameStateRef.current = newGameState
-      setPreviousGameState(newGameState)
       setGameState(newGameState)
       return
     }
@@ -150,7 +156,6 @@ export default function GamePage() {
       // 点数変動がない場合は即座に状態更新
       previousGameStateRef.current = newGameState
       gameStateRef.current = newGameState
-      setPreviousGameState(newGameState)
       setGameState(newGameState)
     }
     console.log('=== triggerPointAnimation END ===')
@@ -165,7 +170,6 @@ export default function GamePage() {
     if (gameStateRef.current) {
       console.log('Applying final game state:', gameStateRef.current)
       previousGameStateRef.current = gameStateRef.current
-      setPreviousGameState(gameStateRef.current)
       setGameState(gameStateRef.current)
       
       // ゲームが終了している場合は終了画面を表示
@@ -223,7 +227,7 @@ export default function GamePage() {
           previousGameStateRef.current = data.data.gameState
           gameStateRef.current = data.data.gameState
           setGameState(data.data.gameState)
-          setPreviousGameState(data.data.gameState)
+          previousGameStateRef.current = data.data.gameState
         } else {
           triggerPointAnimation(data.data.gameState)
         }
@@ -270,7 +274,7 @@ export default function GamePage() {
         triggerPointAnimation(state, true)
       })
 
-      socket.on('score_updated', (data: any) => {
+      socket.on('score_updated', (data: ScoreUpdatedData) => {
         console.log('🔌 WebSocket: score_updated received', data)
         if (data.gameState) {
           triggerPointAnimation(data.gameState, true)
@@ -280,14 +284,14 @@ export default function GamePage() {
         setError('') // エラーをクリア
       })
 
-      socket.on('riichi_declared', (data: any) => {
+      socket.on('riichi_declared', (data: RiichiDeclaredData) => {
         console.log('🔌 WebSocket: riichi_declared received', data)
         console.log('🔌 Current user:', user?.playerId, 'Riichi player:', data.playerId)
         console.log('🔌 Current gameStateRef before trigger:', gameStateRef.current ? {
           players: gameStateRef.current.players.map(p => ({ name: p.name, points: p.points }))
         } : null)
         console.log('🔌 New gameState from WebSocket:', data.gameState ? {
-          players: data.gameState.players.map((p: any) => ({ name: p.name, points: p.points }))
+          players: data.gameState.players.map(p => ({ name: p.name, points: p.points }))
         } : null)
         
         if (data.gameState) {
@@ -296,7 +300,7 @@ export default function GamePage() {
         setError('') // エラーをクリア
       })
 
-      socket.on('ryukyoku', (data: any) => {
+      socket.on('ryukyoku', (data: RyukyokuData) => {
         console.log('🔌 WebSocket: ryukyoku received', data)
         if (data.gameState) {
           triggerPointAnimation(data.gameState, true)
@@ -304,21 +308,21 @@ export default function GamePage() {
         setError('') // エラーをクリア
       })
 
-      socket.on('player_connected', (data: any) => {
+      socket.on('player_connected', (data: PlayerConnectedData) => {
         console.log('🔌 WebSocket: player_connected received', data)
         if (data.gameState) {
           triggerPointAnimation(data.gameState, true)
         }
       })
 
-      socket.on('player_disconnected', (data: any) => {
+      socket.on('player_disconnected', (data: PlayerConnectedData) => {
         console.log('🔌 WebSocket: player_disconnected received', data)
         if (data.gameState) {
           triggerPointAnimation(data.gameState, true)
         }
       })
 
-      socket.on('game_ended', (data: any) => {
+      socket.on('game_ended', (data: GameEndedData) => {
         console.log('🔌 WebSocket: game_ended received', data)
         
         // 終了理由を保存
@@ -333,7 +337,7 @@ export default function GamePage() {
         setError('') // エラーをクリア
       })
 
-      socket.on('error', (error: any) => {
+      socket.on('error', (error: SocketIOError) => {
         console.error('WebSocket error:', error)
         setError(error.message)
       })
@@ -408,13 +412,11 @@ export default function GamePage() {
 
   const handleTsumo = () => {
     setActiveAction('tsumo')
-    setSelectedLoserId(null)
     setShowScoreInput(true)
   }
 
   const handleRon = () => {
     setActiveAction('ron')
-    setSelectedLoserId(null)
     setShowScoreInput(true)
   }
 
@@ -763,7 +765,6 @@ export default function GamePage() {
             onCancel={() => {
               setShowScoreInput(false)
               setActiveAction(null)
-              setSelectedLoserId(null)
             }}
           />
         )}

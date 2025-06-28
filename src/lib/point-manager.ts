@@ -1,6 +1,48 @@
 import { prisma } from '@/lib/prisma'
 import { ScoreCalculationResult } from '@/lib/score'
 
+// 型定義
+interface GameSettings {
+  initialPoints: number
+  basePoints?: number
+  uma: number[] | string | unknown
+  hasTobi?: boolean
+  gameType?: string
+}
+
+interface GameWithSettings {
+  id: string
+  currentRound: number
+  currentOya: number
+  honba: number
+  kyotaku: number
+  status: string
+  settings?: GameSettings | null
+}
+
+interface ParticipantWithPlayer {
+  id: string
+  playerId: string
+  position: number
+  currentPoints: number
+  isReach: boolean
+  finalRank?: number | null
+  settlement?: number | null
+  player?: {
+    name: string
+  }
+}
+
+interface SettlementResult {
+  playerId: string
+  finalPoints: number
+  rank: number
+  pointDiff: number
+  roundedDiff: number
+  uma: number
+  settlement: number
+}
+
 export interface PointTransaction {
   id: string
   gameId: string
@@ -455,7 +497,7 @@ export class PointManager {
         id: game.id, 
         settings: game.settings ? {
           initialPoints: game.settings.initialPoints,
-          basePoints: (game.settings as any).basePoints,
+          basePoints: (game.settings as GameSettings)?.basePoints || 30000,
           uma: game.settings.uma
         } : null
       } : null,
@@ -491,7 +533,7 @@ export class PointManager {
       } else if (typeof game.settings.uma === 'string') {
         try {
           umaArray = JSON.parse(game.settings.uma as string)
-        } catch (e) {
+        } catch (e) { // eslint-disable-line @typescript-eslint/no-unused-vars
           console.log('🏁 Failed to parse uma JSON, using default')
         }
       } else if (typeof game.settings.uma === 'object') {
@@ -502,7 +544,7 @@ export class PointManager {
 
     const settings = {
       initialPoints: game.settings.initialPoints || 25000,
-      basePoints: (game.settings as any).basePoints || 30000,
+      basePoints: (game.settings as GameSettings)?.basePoints || 30000,
       uma: umaArray
     }
     
@@ -515,7 +557,7 @@ export class PointManager {
   /**
    * 正確な精算計算（基準点方式）
    */
-  private calculateSettlement(participants: any[], settings: {
+  private calculateSettlement(participants: ParticipantWithPlayer[], settings: {
     initialPoints: number
     basePoints: number
     uma: number[]
@@ -606,7 +648,7 @@ export class PointManager {
   /**
    * 最終結果をデータベースに保存
    */
-  private async saveFinalResults(results: any[], participants: any[]) {
+  private async saveFinalResults(results: SettlementResult[], participants: ParticipantWithPlayer[]) {
     // 各参加者の最終結果を更新
     for (const result of results) {
       const participant = participants.find(p => p.playerId === result.playerId)
@@ -630,10 +672,10 @@ export class PointManager {
       where: { gameId: this.gameId },
       create: {
         gameId: this.gameId,
-        results: results
+        results: JSON.parse(JSON.stringify(results))
       },
       update: {
-        results: results
+        results: JSON.parse(JSON.stringify(results))
       }
     })
   }
@@ -731,7 +773,7 @@ export class PointManager {
   /**
    * 局数による終了判定
    */
-  private checkRoundEnd(game: any, gameType?: string): { shouldEnd: boolean; reason?: string } {
+  private checkRoundEnd(game: GameWithSettings, gameType?: string): { shouldEnd: boolean; reason?: string } {
     const { currentRound, currentOya } = game
     
     console.log(`🎯 Game end check: gameType=${gameType}, currentRound=${currentRound}, currentOya=${currentOya}`)

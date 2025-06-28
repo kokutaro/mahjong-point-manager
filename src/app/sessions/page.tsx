@@ -23,18 +23,13 @@ interface SessionSummary {
     totalSettlement: number
     gamesPlayed: number
   }[]
-  settings: any
+  settings: {
+    gameType?: string
+    initialPoints?: number
+    uma?: number[]
+  } | null
 }
 
-interface SessionsResponse {
-  sessions: SessionSummary[]
-  pagination: {
-    total: number
-    limit: number
-    offset: number
-    hasMore: boolean
-  }
-}
 
 export default function SessionsPage() {
   const router = useRouter()

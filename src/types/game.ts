@@ -49,7 +49,7 @@ export interface GameEvent {
   eventType: EventType
   round: number
   honba: number
-  eventData: Record<string, any>
+  eventData: Record<string, unknown>
   createdAt: Date
 }
 

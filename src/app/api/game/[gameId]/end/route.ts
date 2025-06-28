@@ -2,11 +2,26 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { PointManager } from '@/lib/point-manager'
 import { requireAuth, checkHostAccess } from '@/lib/auth'
+
+// WebSocket 型定義
+interface SocketIOInstance {
+  to(room: string): {
+    emit(event: string, data: unknown): void
+  }
+}
+
+// プロセスの型拡張
+declare global {
+  interface Process {
+    __socketio?: SocketIOInstance
+  }
+}
+
 // WebSocketインスタンスを直接プロセスから取得
-function getIO() {
-  if ((process as any).__socketio) {
+function getIO(): SocketIOInstance | null {
+  if (process.__socketio) {
     console.log('🔌 API: Found WebSocket instance in process')
-    return (process as any).__socketio
+    return process.__socketio
   }
   console.log('🔌 API: No WebSocket instance found in process')
   return null

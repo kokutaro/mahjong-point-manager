@@ -1,10 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { 
   withErrorHandler, 
   createSuccessResponse, 
   AppError
 } from '@/lib/error-handler'
+
+// イベントデータの型定義
+type EventData = {
+  reason?: string
+}
 
 export const GET = withErrorHandler(async (
   request: NextRequest,
@@ -102,7 +107,7 @@ export const GET = withErrorHandler(async (
 
     const endReason = endEvent?.eventData ? 
       (typeof endEvent.eventData === 'object' && endEvent.eventData !== null && 'reason' in endEvent.eventData ? 
-        (endEvent.eventData as any).reason : '終了') : '終了'
+        (endEvent.eventData as EventData).reason || '終了' : '終了') : '終了'
 
     const resultData = {
       gameId: game.id,

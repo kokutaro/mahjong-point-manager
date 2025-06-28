@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
+import type { Prisma } from '@prisma/client'
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,11 +11,15 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0')
 
     // 基本的なクエリ条件
-    const whereCondition: any = {}
+    const whereCondition: Prisma.GameSessionWhereInput = {}
 
     // ステータスによるフィルタリング
     if (status) {
-      whereCondition.status = status
+      // 有効なSessionStatusかチェック
+      const validStatuses = ['ACTIVE', 'PAUSED', 'FINISHED', 'CANCELLED']
+      if (validStatuses.includes(status)) {
+        whereCondition.status = status as 'ACTIVE' | 'PAUSED' | 'FINISHED' | 'CANCELLED'
+      }
     }
 
     // 特定プレイヤーのセッション履歴の場合

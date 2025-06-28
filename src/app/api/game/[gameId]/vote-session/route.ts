@@ -2,18 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAuth } from '@/lib/auth'
 import { PointManager } from '@/lib/point-manager'
-import { analyzeVotes, isValidVote, VoteResult } from '@/lib/vote-analysis'
-import { VoteState } from '@/components/VotingProgress'
+import { analyzeVotes } from '@/lib/vote-analysis'
+import { getIO, initializeVoteGlobals } from '@/lib/vote-globals'
 
-// WebSocketインスタンスを直接プロセスから取得
-function getIO() {
-  if ((process as any).__socketio) {
-    console.log('🔌 Vote API: Found WebSocket instance in process')
-    return (process as any).__socketio
-  }
-  console.log('🔌 Vote API: No WebSocket instance found in process')
-  return null
-}
+// 投票グローバル変数を初期化
+initializeVoteGlobals()
 
 // 投票リクエストのスキーマ
 const voteSchema = z.object({
@@ -22,20 +15,6 @@ const voteSchema = z.object({
   })
 })
 
-// 投票状態を管理（実際の実装ではRedisやDBの使用を推奨）
-// gameId -> { playerId -> vote }
-declare global {
-  var gameVotes: Record<string, VoteState> | undefined
-  var voteStartTimes: Record<string, string> | undefined
-}
-
-// グローバル変数として投票状態を管理（開発用）
-if (!global.gameVotes) {
-  global.gameVotes = {}
-}
-if (!global.voteStartTimes) {
-  global.voteStartTimes = {}
-}
 
 export async function POST(
   request: NextRequest,
@@ -97,6 +76,7 @@ export async function POST(
     // WebSocket通知
     const io = getIO()
     if (io && gameInfo.roomCode) {
+      console.log('🔌 Vote API: Found WebSocket instance in process')
       // 投票状況をブロードキャスト
       io.to(gameInfo.roomCode).emit('session_vote_update', {
         votes: gameVotes[gameId],

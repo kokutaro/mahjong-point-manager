@@ -1,7 +1,5 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-
 interface MenuDrawerProps {
   isOpen: boolean
   onClose: () => void
@@ -9,7 +7,6 @@ interface MenuDrawerProps {
 }
 
 export default function MenuDrawer({ isOpen, onClose, onShowHistory }: MenuDrawerProps) {
-  const router = useRouter()
   
   if (!isOpen) return null
 

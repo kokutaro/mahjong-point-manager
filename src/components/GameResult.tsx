@@ -54,6 +54,7 @@ export default function GameResult({ gameId, onBack, isSoloPlay = false }: GameR
   // Phase 3: 3択投票システム用のstate
   const [sessionVotes, setSessionVotes] = useState<VoteState>({})
   const [isWaitingForSessionVotes, setIsWaitingForSessionVotes] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [voteResult, setVoteResult] = useState<VoteResult | null>(null)
   const [voteTimeout, setVoteTimeout] = useState<NodeJS.Timeout | null>(null)
   const [voteStartTime, setVoteStartTime] = useState<string | null>(null)
@@ -120,6 +121,7 @@ export default function GameResult({ gameId, onBack, isSoloPlay = false }: GameR
     } finally {
       setLoading(false)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId])
 
   useEffect(() => {
@@ -213,9 +215,10 @@ export default function GameResult({ gameId, onBack, isSoloPlay = false }: GameR
     })
     
     // 全員合意によるセッション終了
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     socketInstance.on('session_ended_by_consensus', ({ reason, voteDetails }: {
       reason: string,
-      voteDetails: any
+      voteDetails: Record<string, boolean>
     }) => {
       setNotification({
         message: `セッションが終了しました。\n理由: ${reason}\n\n5秒後にホームページに遷移します。`,
@@ -262,10 +265,12 @@ export default function GameResult({ gameId, onBack, isSoloPlay = false }: GameR
       
       socketInstance.disconnect()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resultData, gameId])
 
 
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleContinueSession = () => {
     if (!resultData || !socket || !user) return
     
@@ -446,6 +451,7 @@ export default function GameResult({ gameId, onBack, isSoloPlay = false }: GameR
     }, 5 * 60 * 1000) // 5分
     
     setVoteTimeout(timeout)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [voteTimeout, socket, resultData])
 
   // 投票結果の分析
