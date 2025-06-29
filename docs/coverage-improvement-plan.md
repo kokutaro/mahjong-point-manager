@@ -1,6 +1,6 @@
 # Test Coverage Improvement Plan
 
-Current overall coverage is around **27%**. To reach 80%+, we will incrementally target the most critical modules first.
+Current overall coverage is now around **30%**. To reach 80%+, we will incrementally target the most critical modules first.
 
 ## Priorities
 
