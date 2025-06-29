@@ -1,6 +1,6 @@
 # Test Coverage Improvement Plan
 
-Current overall coverage is now around **33%**. To reach 80%+, we will incrementally target the most critical modules first.
+Current overall coverage is now around **36%**. To reach 80%+, we will incrementally target the most critical modules first.
 
 ## Priorities
 
@@ -33,7 +33,7 @@ Each phase should include updating existing tests, writing new ones, and refacto
 
 ## Next Steps
 
-1. Create test stubs for the core modules.
+1. Finalize remaining Phase 3 tests and start Phase 4 tasks.
 2. Establish mocks for Prisma and Socket.io.
-3. Gradually expand coverage following the priority order above.
+3. Expand coverage of vote-session and solo API routes, plus additional UI components.
 4. Monitor coverage reports on every PR until the 80% goal is met.
