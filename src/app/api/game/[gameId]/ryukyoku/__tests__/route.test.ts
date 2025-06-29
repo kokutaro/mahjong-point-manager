@@ -3,6 +3,17 @@ import { prisma } from "@/lib/prisma"
 import { NextRequest } from "next/server"
 import { createMocks } from "node-mocks-http"
 
+const mockPointManager = {
+  handleRyukyoku: jest.fn(),
+  getGameState: jest.fn(),
+  getGameInfo: jest.fn(),
+}
+
+const mockSoloPointManager = {
+  handleRyukyoku: jest.fn(),
+  getGameState: jest.fn(),
+}
+
 // Prismaのモック
 jest.mock("@/lib/prisma", () => ({
   prisma: {
@@ -17,19 +28,12 @@ jest.mock("@/lib/prisma", () => ({
 
 // PointManagerのモック
 jest.mock("@/lib/point-manager", () => ({
-  PointManager: jest.fn().mockImplementation(() => ({
-    handleRyukyoku: jest.fn(),
-    getGameState: jest.fn(),
-    getGameInfo: jest.fn(),
-  })),
+  PointManager: jest.fn(() => mockPointManager),
 }))
 
 // SoloPointManagerのモック
 jest.mock("@/lib/solo/solo-point-manager", () => ({
-  SoloPointManager: jest.fn().mockImplementation(() => ({
-    handleRyukyoku: jest.fn(),
-    getGameState: jest.fn(),
-  })),
+  SoloPointManager: jest.fn(() => mockSoloPointManager),
 }))
 
 // WebSocketの処理をモック化
@@ -40,6 +44,7 @@ const mockSocketIO = {
 }
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace NodeJS {
     interface Process {
       __socketio?: typeof mockSocketIO
@@ -56,6 +61,12 @@ describe("POST /api/game/[gameId]/ryukyoku", () => {
     jest.clearAllMocks()
     // WebSocketのモック設定
     process.__socketio = mockSocketIO
+    Object.values(mockPointManager).forEach((fn) =>
+      (fn as jest.Mock).mockReset()
+    )
+    Object.values(mockSoloPointManager).forEach((fn) =>
+      (fn as jest.Mock).mockReset()
+    )
   })
 
   afterEach(() => {
@@ -82,12 +93,9 @@ describe("POST /api/game/[gameId]/ryukyoku", () => {
     }
 
     beforeEach(() => {
-      const PointManager = require("@/lib/point-manager").PointManager
-
       mockPrisma.game.findUnique.mockResolvedValue(mockGameData)
       mockPrisma.soloGame.findUnique.mockResolvedValue(null)
 
-      const mockPointManager = new PointManager()
       mockPointManager.handleRyukyoku.mockResolvedValue({
         gameEnded: false,
         reason: "",
@@ -119,8 +127,6 @@ describe("POST /api/game/[gameId]/ryukyoku", () => {
       expect(responseData.data.message).toContain("2人テンパイ流局")
 
       // PointManagerのメソッドが正しく呼ばれることを確認
-      const PointManager = require("@/lib/point-manager").PointManager
-      const mockPointManager = new PointManager()
       expect(mockPointManager.handleRyukyoku).toHaveBeenCalledWith(
         "2人テンパイ流局",
         ["player1", "player2"]
@@ -149,8 +155,6 @@ describe("POST /api/game/[gameId]/ryukyoku", () => {
       expect(response.status).toBe(200)
       expect(responseData.data.message).toContain("九種九牌")
 
-      const PointManager = require("@/lib/point-manager").PointManager
-      const mockPointManager = new PointManager()
       expect(mockPointManager.handleRyukyoku).toHaveBeenCalledWith(
         "九種九牌",
         []
@@ -200,8 +204,6 @@ describe("POST /api/game/[gameId]/ryukyoku", () => {
     })
 
     it("ゲーム終了時のWebSocket通知テスト", async () => {
-      const PointManager = require("@/lib/point-manager").PointManager
-      const mockPointManager = new PointManager()
       mockPointManager.handleRyukyoku.mockResolvedValue({
         gameEnded: true,
         reason: "オーラス流局終了",
@@ -319,12 +321,9 @@ describe("POST /api/game/[gameId]/ryukyoku", () => {
     }
 
     beforeEach(() => {
-      const SoloPointManager = require("@/lib/solo/solo-point-manager").SoloPointManager
-
       mockPrisma.game.findUnique.mockResolvedValue(null)
       mockPrisma.soloGame.findUnique.mockResolvedValue(mockSoloGameData)
 
-      const mockSoloPointManager = new SoloPointManager()
       mockSoloPointManager.handleRyukyoku.mockResolvedValue({
         gameEnded: false,
         reason: "",
@@ -357,8 +356,6 @@ describe("POST /api/game/[gameId]/ryukyoku", () => {
       expect(responseData.data.message).toContain("2人テンパイ流局")
 
       // SoloPointManagerのメソッドが正しく呼ばれることを確認
-      const SoloPointManager = require("@/lib/solo/solo-point-manager").SoloPointManager
-      const mockSoloPointManager = new SoloPointManager()
       expect(mockSoloPointManager.handleRyukyoku).toHaveBeenCalledWith(
         "2人テンパイ流局",
         [0, 1]
@@ -408,8 +405,6 @@ describe("POST /api/game/[gameId]/ryukyoku", () => {
       expect(response.status).toBe(200)
       expect(responseData.data.message).toBe("四風連打")
 
-      const SoloPointManager = require("@/lib/solo/solo-point-manager").SoloPointManager
-      const mockSoloPointManager = new SoloPointManager()
       expect(mockSoloPointManager.handleRyukyoku).toHaveBeenCalledWith(
         "四風連打",
         []
@@ -583,8 +578,6 @@ describe("POST /api/game/[gameId]/ryukyoku", () => {
 
   describe("流局理由の自動生成テスト", () => {
     beforeEach(() => {
-      const PointManager = require("@/lib/point-manager").PointManager
-
       mockPrisma.game.findUnique.mockResolvedValue({
         id: mockGameId,
         roomCode: "TEST123",
@@ -592,7 +585,6 @@ describe("POST /api/game/[gameId]/ryukyoku", () => {
       })
       mockPrisma.soloGame.findUnique.mockResolvedValue(null)
 
-      const mockPointManager = new PointManager()
       mockPointManager.handleRyukyoku.mockResolvedValue({
         gameEnded: false,
         reason: "",

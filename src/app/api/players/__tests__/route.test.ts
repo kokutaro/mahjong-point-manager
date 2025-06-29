@@ -50,7 +50,9 @@ describe("/api/players", () => {
 
       expect(response.status).toBe(200)
       expect(responseData.success).toBe(true)
-      expect(responseData.data).toEqual(mockPlayers)
+      expect(responseData.data).toEqual(
+        mockPlayers.map((p) => ({ ...p, createdAt: p.createdAt.toISOString() }))
+      )
 
       // 作成日時の降順でソートされることを確認
       expect(mockPrisma.player.findMany).toHaveBeenCalledWith({
@@ -70,7 +72,9 @@ describe("/api/players", () => {
     })
 
     it("データベースエラーの処理", async () => {
-      mockPrisma.player.findMany.mockRejectedValue(new Error("DB connection failed"))
+      mockPrisma.player.findMany.mockRejectedValue(
+        new Error("DB connection failed")
+      )
 
       const response = await GET()
       const responseData = await response.json()
@@ -110,7 +114,11 @@ describe("/api/players", () => {
 
       expect(response.status).toBe(201)
       expect(responseData.success).toBe(true)
-      expect(responseData.data).toEqual(mockCreatedPlayer)
+      expect(responseData.data).toEqual({
+        ...mockCreatedPlayer,
+        createdAt: mockCreatedPlayer.createdAt.toISOString(),
+        updatedAt: mockCreatedPlayer.updatedAt.toISOString(),
+      })
 
       expect(mockPrisma.player.create).toHaveBeenCalledWith({
         data: {
@@ -259,7 +267,9 @@ describe("/api/players", () => {
 
     describe("サーバーエラー", () => {
       it("データベース作成エラー", async () => {
-        mockPrisma.player.create.mockRejectedValue(new Error("DB constraint violation"))
+        mockPrisma.player.create.mockRejectedValue(
+          new Error("DB constraint violation")
+        )
 
         const requestBody = {
           name: "Valid Player",
