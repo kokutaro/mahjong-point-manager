@@ -203,7 +203,7 @@ describe("/api/players", () => {
 
       it("名前が長すぎる", async () => {
         const requestBody = {
-          name: "A".repeat(21), // 20文字を超過
+          name: "A".repeat(31), // 30文字を超過
         }
 
         const { req } = createMocks({

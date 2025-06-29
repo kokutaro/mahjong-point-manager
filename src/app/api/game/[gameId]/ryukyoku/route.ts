@@ -2,7 +2,6 @@ import { NextRequest } from "next/server"
 import { z } from "zod"
 import { PointManager } from "@/lib/point-manager"
 import { SoloPointManager } from "@/lib/solo/solo-point-manager"
-import { PlayerIdentifierSchema } from "@/schemas/common"
 import { prisma } from "@/lib/prisma"
 import {
   withErrorHandler,
@@ -60,7 +59,7 @@ const unifiedRyukyokuSchema = z.object({
   type: z.enum(["DRAW", "ABORTIVE_DRAW"]).default("DRAW"),
   reason: z.string().optional(),
   tenpaiPlayers: z
-    .array(PlayerIdentifierSchema)
+    .array(z.union([z.string(), z.number().int()]))
     .default([])
     .refine((players) => players.length <= 4, {
       message: "テンパイ者は4人以下である必要があります",
@@ -210,16 +209,18 @@ async function processSoloRyukyoku(
     .filter((p) => p.isReach)
     .map((p) => p.position)
 
-  const missingReachPlayers = currentReachPlayers.filter(
-    (pos) => !tenpaiPlayers.includes(pos)
-  )
-  if (missingReachPlayers.length > 0) {
-    throw new AppError(
-      "REACH_PLAYER_NOT_TENPAI",
-      "リーチしているプレイヤーはテンパイしている必要があります",
-      { missingReachPlayers },
-      400
+  if (validatedData.type !== "ABORTIVE_DRAW") {
+    const missingReachPlayers = currentReachPlayers.filter(
+      (pos) => !tenpaiPlayers.includes(pos)
     )
+    if (missingReachPlayers.length > 0) {
+      throw new AppError(
+        "REACH_PLAYER_NOT_TENPAI",
+        "リーチしているプレイヤーはテンパイしている必要があります",
+        { missingReachPlayers },
+        400
+      )
+    }
   }
 
   // 流局処理

@@ -548,6 +548,25 @@ describe("POST /api/game/[gameId]/ryukyoku", () => {
         json: () => requestBody,
       })
 
+      mockPrisma.game.findUnique.mockResolvedValue({
+        id: mockGameId,
+        roomCode: "TEST123",
+        status: "playing",
+      })
+      mockPrisma.soloGame.findUnique.mockResolvedValue(null)
+      mockPointManager.handleRyukyoku.mockResolvedValue({
+        gameEnded: false,
+        reason: "",
+      })
+      mockPointManager.getGameState.mockResolvedValue({
+        gamePhase: "playing",
+        players: [],
+      })
+      mockPointManager.getGameInfo.mockResolvedValue({
+        id: mockGameId,
+        roomCode: "TEST123",
+      })
+
       const mockParams = { gameId: mockGameId }
       const response = await POST(req as unknown as NextRequest, {
         params: Promise.resolve(mockParams),

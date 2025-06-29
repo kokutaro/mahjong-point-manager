@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 
 const createPlayerSchema = z.object({
-  name: z.string().min(1).max(20),
+  name: z.string().min(1).max(30),
   avatar: z.string().url().optional(),
 })
 
