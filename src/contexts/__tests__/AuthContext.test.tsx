@@ -56,4 +56,15 @@ describe("AuthContext", () => {
     expect(result.current.user).toBeNull()
     expect(result.current.isAuthenticated).toBe(false)
   })
+
+  it("handles refresh failure gracefully", async () => {
+    ;(fetchWithAuth as jest.Mock).mockRejectedValueOnce(new Error("bad"))
+    const { result } = renderHook(() => useAuth(), { wrapper })
+
+    await act(async () => {
+      await result.current.refreshAuth()
+    })
+
+    expect(result.current.isLoading).toBe(false)
+  })
 })

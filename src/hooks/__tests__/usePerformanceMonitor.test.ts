@@ -16,4 +16,16 @@ describe("usePerformanceMonitor", () => {
     expect(metrics[0].componentName).toBe("Comp")
     expect(metrics[0].renderTime).toBeGreaterThanOrEqual(0)
   })
+
+  it("does not record when disabled", () => {
+    const { result, unmount } = renderHook(() =>
+      usePerformanceMonitor("Comp", false)
+    )
+
+    act(() => {
+      unmount()
+    })
+
+    expect(result.current.getMetrics().length).toBe(0)
+  })
 })

@@ -27,3 +27,11 @@ With coverage now around 39%, we continue pushing toward the 50% threshold. This
 - **Week 18**: Initial Playwright flows and wrap-up.
 
 Coverage results will be reviewed after each milestone to ensure continued progress toward 50% and beyond.
+
+## Implementation Notes
+
+- Added tests covering solo reach and result API routes
+- Verified GameEndScreen countdown and button interactions
+- Extended AuthContext refresh error handling test
+- Expanded usePerformanceMonitor with disabled case assertion
+- Created a basic Playwright scenario for room creation to game start
