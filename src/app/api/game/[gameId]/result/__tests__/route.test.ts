@@ -317,10 +317,6 @@ describe("GET /api/game/[gameId]/result", () => {
         gameType: "HANCHAN",
         endReason: "ソロゲーム終了",
         basePoints: 25000,
-        sessionId: undefined,
-        sessionCode: undefined,
-        sessionName: undefined,
-        hostPlayerId: undefined,
         nextGame: null,
       })
       expect(responseData.data.results).toHaveLength(4)

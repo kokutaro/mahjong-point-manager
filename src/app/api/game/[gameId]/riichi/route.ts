@@ -2,7 +2,6 @@ import {
   AppError,
   createSuccessResponse,
   validateNotAlreadyReach,
-  validatePlayerExists,
   validatePlayerPosition,
   validateSchema,
   validateSufficientPoints,
@@ -191,7 +190,14 @@ async function processSoloRiichi(
   }
 
   const player = soloGame.players.find((p) => p.position === position)
-  validatePlayerExists(player, position.toString())
+  if (!player) {
+    throw new AppError(
+      "INVALID_PLAYER_POSITION",
+      `無効なプレイヤー位置です: ${position}`,
+      { position },
+      400
+    )
+  }
 
   // リーチ関連のチェック
   validateNotAlreadyReach(player.isReach, position.toString())
