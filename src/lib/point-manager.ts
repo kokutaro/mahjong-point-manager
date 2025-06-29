@@ -871,6 +871,16 @@ export class PointManager {
   async updateSessionStatistics(): Promise<void> {
     console.log('📊 Updating session statistics for gameId:', this.gameId)
     
+    // 既にこのゲームの統計が更新されているかチェック
+    const existingGameResult = await prisma.gameResult.findUnique({
+      where: { gameId: this.gameId }
+    })
+
+    if (!existingGameResult) {
+      console.log('📊 No game result found for gameId:', this.gameId, 'skipping session statistics update')
+      return
+    }
+
     // ゲームのセッション情報を取得
     const game = await prisma.game.findUnique({
       where: { id: this.gameId },
@@ -885,6 +895,30 @@ export class PointManager {
       return
     }
 
+    // 既にこのゲームが統計に含まれているかを確認するために、セッション全体のゲーム数をチェック
+    const completedGamesInSession = await prisma.game.count({
+      where: {
+        sessionId: game.sessionId,
+        status: 'FINISHED'
+      }
+    })
+
+    // 各参加者の現在の統計を確認して、このゲームが既に含まれているかをチェック
+    const sessionParticipants = await prisma.sessionParticipant.findMany({
+      where: {
+        sessionId: game.sessionId
+      }
+    })
+
+    // 統計の一貫性チェック：各参加者のtotalGamesが実際のゲーム数と一致するかチェック
+    const shouldUpdateStatistics = sessionParticipants.length === 0 || 
+      sessionParticipants.some(sp => sp.totalGames < completedGamesInSession)
+
+    if (!shouldUpdateStatistics) {
+      console.log('📊 Session statistics already up to date for gameId:', this.gameId)
+      return
+    }
+
     console.log('📊 Found session:', game.sessionId, 'updating statistics for', game.participants.length, 'participants')
 
     // 各参加者のセッション統計を更新
@@ -896,6 +930,16 @@ export class PointManager {
       
       if (finalRank === null || finalRank === undefined) {
         console.log('📊 Warning: finalRank is null for participant:', participant.playerId, 'skipping statistics update')
+        continue
+      }
+
+      // 現在の統計を取得
+      const existingStats = sessionParticipants.find(sp => sp.playerId === participant.playerId)
+      const currentGamesCount = existingStats?.totalGames || 0
+
+      // このゲームが既に統計に含まれているかチェック
+      if (currentGamesCount >= completedGamesInSession) {
+        console.log('📊 Statistics already updated for participant:', participant.playerId)
         continue
       }
 

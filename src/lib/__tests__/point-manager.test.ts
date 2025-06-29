@@ -219,4 +219,175 @@ describe('PointManager', () => {
       })
     })
   })
+
+  describe('セッション統計更新', () => {
+    beforeEach(() => {
+      // Mock additional Prisma methods for session statistics
+      mockPrisma.gameResult = {
+        findUnique: jest.fn(),
+        upsert: jest.fn(),
+      }
+      mockPrisma.sessionParticipant = {
+        findMany: jest.fn(),
+        upsert: jest.fn(),
+      }
+      mockPrisma.game.count = jest.fn()
+    })
+
+    test('既にゲーム結果がない場合は統計更新をスキップする', async () => {
+      mockPrisma.gameResult.findUnique.mockResolvedValue(null)
+
+      await pointManager.updateSessionStatistics()
+
+      expect(mockPrisma.gameResult.findUnique).toHaveBeenCalledWith({
+        where: { gameId: 'test-game-id' }
+      })
+      expect(mockPrisma.game.findUnique).not.toHaveBeenCalled()
+    })
+
+    test('セッションIDがない場合は統計更新をスキップする', async () => {
+      mockPrisma.gameResult.findUnique.mockResolvedValue({ 
+        id: 'result-id',
+        gameId: 'test-game-id',
+        results: []
+      })
+      mockPrisma.game.findUnique.mockResolvedValue({
+        id: 'test-game-id',
+        sessionId: null,
+        participants: [],
+        session: null
+      })
+
+      await pointManager.updateSessionStatistics()
+
+      expect(mockPrisma.sessionParticipant.findMany).not.toHaveBeenCalled()
+    })
+
+    test('統計が既に最新の場合は更新をスキップする', async () => {
+      const mockGameResult = {
+        id: 'result-id',
+        gameId: 'test-game-id',
+        results: []
+      }
+      const mockGame = {
+        id: 'test-game-id',
+        sessionId: 'session-id',
+        participants: [
+          { playerId: 'player1', finalRank: 1, settlement: 20 },
+          { playerId: 'player2', finalRank: 2, settlement: -20 }
+        ]
+      }
+      const mockSessionParticipants = [
+        { playerId: 'player1', totalGames: 1 },
+        { playerId: 'player2', totalGames: 1 }
+      ]
+
+      mockPrisma.gameResult.findUnique.mockResolvedValue(mockGameResult)
+      mockPrisma.game.findUnique.mockResolvedValue(mockGame)
+      mockPrisma.game.count.mockResolvedValue(1) // 完了したゲーム数は1
+      mockPrisma.sessionParticipant.findMany.mockResolvedValue(mockSessionParticipants)
+
+      await pointManager.updateSessionStatistics()
+
+      expect(mockPrisma.sessionParticipant.upsert).not.toHaveBeenCalled()
+    })
+
+    test('統計が古い場合は更新を実行する', async () => {
+      const mockGameResult = {
+        id: 'result-id',
+        gameId: 'test-game-id',
+        results: []
+      }
+      const mockGame = {
+        id: 'test-game-id',
+        sessionId: 'session-id',
+        participants: [
+          { playerId: 'player1', finalRank: 1, settlement: 20, position: 0 },
+          { playerId: 'player2', finalRank: 2, settlement: -20, position: 1 }
+        ]
+      }
+      const mockSessionParticipants = [
+        { playerId: 'player1', totalGames: 0 }, // まだ統計が更新されていない
+        { playerId: 'player2', totalGames: 0 }
+      ]
+
+      mockPrisma.gameResult.findUnique.mockResolvedValue(mockGameResult)
+      mockPrisma.game.findUnique.mockResolvedValue(mockGame)
+      mockPrisma.game.count.mockResolvedValue(1) // 完了したゲーム数は1
+      mockPrisma.sessionParticipant.findMany.mockResolvedValue(mockSessionParticipants)
+      mockPrisma.sessionParticipant.upsert.mockResolvedValue({})
+
+      await pointManager.updateSessionStatistics()
+
+      expect(mockPrisma.sessionParticipant.upsert).toHaveBeenCalledTimes(2)
+      expect(mockPrisma.sessionParticipant.upsert).toHaveBeenCalledWith({
+        where: {
+          sessionId_playerId: {
+            sessionId: 'session-id',
+            playerId: 'player1'
+          }
+        },
+        create: {
+          sessionId: 'session-id',
+          playerId: 'player1',
+          position: 0,
+          totalGames: 1,
+          totalSettlement: 20,
+          firstPlace: 1,
+          secondPlace: 0,
+          thirdPlace: 0,
+          fourthPlace: 0
+        },
+        update: {
+          totalGames: { increment: 1 },
+          totalSettlement: { increment: 20 },
+          firstPlace: { increment: 1 },
+          secondPlace: undefined,
+          thirdPlace: undefined,
+          fourthPlace: undefined
+        }
+      })
+    })
+
+    test('参加者ごとに個別に統計更新をチェックする', async () => {
+      const mockGameResult = {
+        id: 'result-id',
+        gameId: 'test-game-id',
+        results: []
+      }
+      const mockGame = {
+        id: 'test-game-id',
+        sessionId: 'session-id',
+        participants: [
+          { playerId: 'player1', finalRank: 1, settlement: 20, position: 0 },
+          { playerId: 'player2', finalRank: 2, settlement: -20, position: 1 }
+        ]
+      }
+      const mockSessionParticipants = [
+        { playerId: 'player1', totalGames: 1 }, // 既に更新済み
+        { playerId: 'player2', totalGames: 0 }  // まだ未更新
+      ]
+
+      mockPrisma.gameResult.findUnique.mockResolvedValue(mockGameResult)
+      mockPrisma.game.findUnique.mockResolvedValue(mockGame)
+      mockPrisma.game.count.mockResolvedValue(1)
+      mockPrisma.sessionParticipant.findMany.mockResolvedValue(mockSessionParticipants)
+      mockPrisma.sessionParticipant.upsert.mockResolvedValue({})
+
+      await pointManager.updateSessionStatistics()
+
+      // player2のみ更新される
+      expect(mockPrisma.sessionParticipant.upsert).toHaveBeenCalledTimes(1)
+      expect(mockPrisma.sessionParticipant.upsert).toHaveBeenCalledWith({
+        where: {
+          sessionId_playerId: {
+            sessionId: 'session-id',
+            playerId: 'player2'
+          }
+        },
+        create: expect.any(Object),
+        update: expect.any(Object)
+      })
+    })
+  })
 })
