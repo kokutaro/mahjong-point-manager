@@ -40,3 +40,6 @@ Each phase should include updating existing tests, writing new ones, and refacto
 4. Monitor coverage reports on every PR until the 80% goal is met.
 5. Begin Phase 5 with full system tests using Playwright to accelerate toward 90% coverage.
 6. Plan Phase 6 to push coverage past 45% with remaining solo routes and component tests.
+7. Launch **Phase 7** with an aggressive target of **60%** coverage by expanding Playwright flows and testing complex WebSocket logic.
+8. Drive **Phase 8** to reach **70%** through exhaustive UI coverage and game flow edge cases.
+9. Complete **Phase 9** focusing on cross-browser E2E tests and stress scenarios to surpass **80%**.
