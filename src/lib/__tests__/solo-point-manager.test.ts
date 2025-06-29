@@ -1,23 +1,33 @@
-import { prisma } from "@/lib/prisma"
-import { SoloPointManager } from "../solo/solo-point-manager"
-
-// Mock Prisma
-jest.mock("@/lib/prisma", () => ({
-  prisma: {
+// Prepare Prisma mock before importing modules
+jest.mock("@/lib/prisma", () => {
+  const prisma = {
     soloGame: {
       findUnique: jest.fn(),
       update: jest.fn(),
     },
     soloPlayer: {
       findMany: jest.fn(),
-      update: jest.fn(), // Added this line
+      findFirst: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
     },
     soloGameResult: {
       createMany: jest.fn(),
       upsert: jest.fn(),
     },
-    $transaction: jest.fn(async (callback) => await callback(prisma)),
-  },
+    soloGameEvent: {
+      create: jest.fn(),
+    },
+  }
+  prisma.$transaction = jest.fn(async (callback) => await callback(prisma))
+  return { __esModule: true, prisma, default: prisma }
+})
+
+import { SoloPointManager } from "../solo/solo-point-manager"
+
+// Mock score calculation module
+jest.mock("../score", () => ({
+  calculateScore: jest.fn(),
 }))
 
 describe("SoloPointManager", () => {
@@ -28,6 +38,51 @@ describe("SoloPointManager", () => {
   beforeEach(() => {
     pointManager = new SoloPointManager(gameId)
     jest.clearAllMocks()
+  })
+
+  // Test data factory functions
+  const createMockPlayer = (overrides = {}) => ({
+    id: "1",
+    name: "プレイヤー1",
+    position: 0,
+    currentPoints: 25000,
+    isReach: false,
+    finalRank: null,
+    settlement: null,
+    ...overrides,
+  })
+
+  const createMockGame = (overrides = {}) => ({
+    id: gameId,
+    currentRound: 1,
+    currentOya: 0,
+    honba: 0,
+    kyotaku: 0,
+    status: "PLAYING",
+    gameType: "HANCHAN",
+    initialPoints: 25000,
+    basePoints: 30000,
+    uma: [15000, 5000, -5000, -15000],
+    players: [
+      createMockPlayer({ position: 0 }),
+      createMockPlayer({ position: 1, name: "プレイヤー2" }),
+      createMockPlayer({ position: 2, name: "プレイヤー3" }),
+      createMockPlayer({ position: 3, name: "プレイヤー4" }),
+    ],
+    ...overrides,
+  })
+
+  const createMockScoreResult = (overrides = {}) => ({
+    baseScore: 7700,
+    totalScore: 7700,
+    payments: {
+      fromOya: 4000,
+      fromKo: 2000,
+      fromLoser: 7700,
+    },
+    honbaPayment: 0,
+    kyotakuPayment: 0,
+    ...overrides,
   })
 
   describe("calculateSettlement", () => {
@@ -128,6 +183,574 @@ describe("SoloPointManager", () => {
         uma: mockGame.uma,
       })
       expect(mockPrisma.soloGameResult.upsert).toHaveBeenCalled()
+    })
+  })
+
+  describe("点数分配処理", () => {
+    describe("distributeWinPoints", () => {
+      test("ツモ和了時の点数分配（親ツモ）", async () => {
+        const players = [
+          createMockPlayer({ position: 0, currentPoints: 25000 }), // 親
+          createMockPlayer({ position: 1, currentPoints: 24000 }),
+          createMockPlayer({ position: 2, currentPoints: 23000 }),
+          createMockPlayer({ position: 3, currentPoints: 22000 }),
+        ]
+        const scoreResult = createMockScoreResult({
+          totalScore: 12000,
+          payments: { fromKo: 4000 },
+        })
+
+        mockPrisma.soloPlayer.findMany.mockResolvedValue(players)
+        mockPrisma.soloGame.findUnique.mockResolvedValue(
+          createMockGame({ currentOya: 0 })
+        )
+        mockPrisma.soloPlayer.findFirst.mockImplementation(({ where }) =>
+          Promise.resolve(players.find((p) => p.position === where.position))
+        )
+        mockPrisma.soloPlayer.update.mockResolvedValue({})
+        mockPrisma.soloPlayer.updateMany.mockResolvedValue({})
+
+        // Mock rotateDealer method
+        jest
+          .spyOn(pointManager as any, "rotateDealer")
+          .mockResolvedValue({ gameEnded: false })
+
+        const result = await pointManager.distributeWinPoints(
+          0, // winnerPosition
+          scoreResult,
+          true // isTsumo
+        )
+
+        expect(result.gameEnded).toBe(false)
+        expect(mockPrisma.soloPlayer.updateMany).toHaveBeenCalledWith({
+          where: { soloGameId: gameId, isReach: true },
+          data: { isReach: false, reachRound: null },
+        })
+      })
+
+      test("ロン和了時の点数分配", async () => {
+        const players = [
+          createMockPlayer({ position: 0 }),
+          createMockPlayer({ position: 1, currentPoints: 24000 }),
+        ]
+        const scoreResult = createMockScoreResult({
+          totalScore: 7700,
+          payments: { fromLoser: 7700 },
+        })
+
+        mockPrisma.soloPlayer.findMany.mockResolvedValue(players)
+        mockPrisma.soloGame.findUnique.mockResolvedValue(createMockGame())
+        mockPrisma.soloPlayer.findFirst.mockImplementation(({ where }) =>
+          Promise.resolve(players.find((p) => p.position === where.position))
+        )
+        mockPrisma.soloPlayer.update.mockResolvedValue({})
+        mockPrisma.soloPlayer.updateMany.mockResolvedValue({})
+
+        jest
+          .spyOn(pointManager as any, "rotateDealer")
+          .mockResolvedValue({ gameEnded: false })
+
+        const result = await pointManager.distributeWinPoints(
+          0, // winnerPosition
+          scoreResult,
+          false, // isRon
+          1 // loserPosition
+        )
+
+        expect(result.gameEnded).toBe(false)
+        expect(mockPrisma.soloPlayer.findFirst).toHaveBeenCalledTimes(4)
+        expect(mockPrisma.soloPlayer.update).toHaveBeenCalledTimes(2)
+      })
+
+      test("存在しないプレイヤーでエラー", async () => {
+        mockPrisma.soloPlayer.findMany.mockResolvedValue([])
+
+        await expect(
+          pointManager.distributeWinPoints(0, createMockScoreResult(), true)
+        ).rejects.toThrow("Winner not found")
+      })
+
+      test("供託がある場合の処理", async () => {
+        const players = [createMockPlayer()]
+        const scoreResult = createMockScoreResult({
+          totalScore: 8700, // 7700 + 1000 (供託)
+          kyotakuPayment: 1000,
+        })
+
+        mockPrisma.soloPlayer.findMany.mockResolvedValue(players)
+        mockPrisma.soloGame.findUnique.mockResolvedValue(
+          createMockGame({ kyotaku: 1 })
+        )
+        mockPrisma.soloPlayer.update.mockResolvedValue({})
+        mockPrisma.soloPlayer.updateMany.mockResolvedValue({})
+
+        jest
+          .spyOn(pointManager as any, "rotateDealer")
+          .mockResolvedValue({ gameEnded: false })
+
+        await pointManager.distributeWinPoints(0, scoreResult, false, 1)
+
+        expect(mockPrisma.soloGame.update).toHaveBeenCalledWith({
+          where: { id: gameId },
+          data: { kyotaku: 0 },
+        })
+      })
+    })
+  })
+
+  describe("リーチ処理", () => {
+    describe("declareReach", () => {
+      test("リーチ宣言が正しく処理される", async () => {
+        const player = createMockPlayer({
+          id: "player-1",
+          position: 0,
+          currentPoints: 25000,
+          isReach: false,
+        })
+
+        mockPrisma.soloPlayer.findFirst.mockResolvedValue(player)
+        mockPrisma.soloGameEvent.create.mockResolvedValue({})
+
+        await pointManager.declareReach(0)
+
+        expect(mockPrisma.soloPlayer.update).toHaveBeenCalledWith({
+          where: { id: "player-1" },
+          data: {
+            isReach: true,
+            currentPoints: 24000, // 1000点減額
+          },
+        })
+
+        expect(mockPrisma.soloGame.update).toHaveBeenCalledWith({
+          where: { id: gameId },
+          data: { kyotaku: { increment: 1 } },
+        })
+      })
+
+      test("点数不足時のリーチエラー", async () => {
+        const player = createMockPlayer({
+          currentPoints: 500, // 不足
+          isReach: false,
+        })
+
+        mockPrisma.soloPlayer.findFirst.mockResolvedValue(player)
+
+        await expect(pointManager.declareReach(0)).rejects.toThrow(
+          "リーチするには1000点以上必要です"
+        )
+      })
+
+      test("既にリーチ済みの場合のエラー", async () => {
+        const player = createMockPlayer({
+          currentPoints: 25000,
+          isReach: true, // 既にリーチ済み
+        })
+
+        mockPrisma.soloPlayer.findFirst.mockResolvedValue(player)
+
+        await expect(pointManager.declareReach(0)).rejects.toThrow(
+          "既にリーチ宣言済みです"
+        )
+      })
+
+      test("プレイヤーが見つからない場合", async () => {
+        mockPrisma.soloPlayer.findFirst.mockResolvedValue(null)
+
+        await expect(pointManager.declareReach(0)).rejects.toThrow(
+          "Player not found"
+        )
+      })
+    })
+  })
+
+  describe("流局処理", () => {
+    describe("handleRyukyoku", () => {
+      test("親テンパイ流局（親続投）", async () => {
+        const game = createMockGame({
+          currentOya: 0,
+          honba: 1,
+          currentRound: 5,
+        })
+
+        mockPrisma.soloGame.findUnique.mockResolvedValue(game)
+        mockPrisma.soloGameEvent.create.mockResolvedValue({})
+
+        jest
+          .spyOn(pointManager as any, "checkGameEnd")
+          .mockResolvedValue({ shouldEnd: false })
+
+        const result = await pointManager.handleRyukyoku(
+          "手牌荒れ",
+          [0] // 親のみテンパイ
+        )
+
+        expect(result.gameEnded).toBe(false)
+        expect(mockPrisma.soloGame.update).toHaveBeenCalledWith({
+          where: { id: gameId },
+          data: {
+            honba: 2, // インクリメント
+            currentOya: 0, // 親続投
+            currentRound: 5, // 変わらず
+            updatedAt: expect.any(Date),
+          },
+        })
+      })
+
+      test("親ノーテン流局（親交代）", async () => {
+        const game = createMockGame({
+          currentOya: 0,
+          honba: 1,
+          currentRound: 5,
+        })
+
+        mockPrisma.soloGame.findUnique.mockResolvedValue(game)
+        mockPrisma.soloGameEvent.create.mockResolvedValue({})
+
+        jest
+          .spyOn(pointManager as any, "checkGameEnd")
+          .mockResolvedValue({ shouldEnd: false })
+
+        const result = await pointManager.handleRyukyoku(
+          "手牌荒れ",
+          [1, 2] // 親以外がテンパイ
+        )
+
+        expect(result.gameEnded).toBe(false)
+        expect(mockPrisma.soloGame.update).toHaveBeenCalledWith({
+          where: { id: gameId },
+          data: {
+            honba: 2,
+            currentOya: 1, // 親交代
+            currentRound: 6, // ラウンド進行
+            updatedAt: expect.any(Date),
+          },
+        })
+      })
+
+      test("テンパイ料の計算（2名テンパイ）", async () => {
+        const game = createMockGame()
+
+        mockPrisma.soloGame.findUnique.mockResolvedValue(game)
+        mockPrisma.soloGameEvent.create.mockResolvedValue({})
+
+        jest
+          .spyOn(pointManager as any, "checkGameEnd")
+          .mockResolvedValue({ shouldEnd: false })
+
+        await pointManager.handleRyukyoku(
+          "手牌荒れ",
+          [0, 1] // 2名テンパイ
+        )
+
+        // テンパイ者は1500点ずつ受け取り、ノーテン者は1500点ずつ支払い
+        expect(mockPrisma.soloPlayer.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: { currentPoints: expect.any(Number) },
+          })
+        )
+      })
+
+      test("流局でゲーム終了", async () => {
+        const game = createMockGame()
+
+        mockPrisma.soloGame.findUnique.mockResolvedValue(game)
+        mockPrisma.soloGameEvent.create.mockResolvedValue({})
+
+        jest.spyOn(pointManager as any, "checkGameEnd").mockResolvedValue({
+          shouldEnd: true,
+          reason: "規定局数終了",
+        })
+        jest.spyOn(pointManager as any, "finishGame").mockResolvedValue()
+
+        const result = await pointManager.handleRyukyoku("手牌荒れ", [])
+
+        expect(result.gameEnded).toBe(true)
+        expect(result.reason).toBe("規定局数終了")
+      })
+    })
+  })
+
+  describe("親ローテーション処理", () => {
+    describe("rotateDealer", () => {
+      test("親和了時の連荘", async () => {
+        const game = createMockGame({
+          currentOya: 0,
+          honba: 1,
+          currentRound: 5,
+        })
+
+        mockPrisma.soloGame.findUnique.mockResolvedValue(game)
+
+        jest
+          .spyOn(pointManager as any, "checkGameEnd")
+          .mockResolvedValue({ shouldEnd: false })
+
+        const result = await pointManager.rotateDealer(0) // 親が和了
+
+        expect(mockPrisma.soloGame.update).toHaveBeenCalledWith({
+          where: { id: gameId },
+          data: {
+            currentOya: 0, // 親続投
+            honba: 2, // 本場増加
+            currentRound: 5, // 局は進まない
+          },
+        })
+        expect(result.gameEnded).toBe(false)
+      })
+
+      test("子和了時の親交代", async () => {
+        const game = createMockGame({
+          currentOya: 0,
+          honba: 1,
+          currentRound: 5,
+        })
+
+        mockPrisma.soloGame.findUnique.mockResolvedValue(game)
+
+        jest
+          .spyOn(pointManager as any, "checkGameEnd")
+          .mockResolvedValue({ shouldEnd: false })
+
+        const result = await pointManager.rotateDealer(1) // 子が和了
+
+        expect(mockPrisma.soloGame.update).toHaveBeenCalledWith({
+          where: { id: gameId },
+          data: {
+            currentOya: 1, // 親交代
+            honba: 0, // 本場リセット
+            currentRound: 6, // 局進行
+          },
+        })
+        expect(result.gameEnded).toBe(false)
+      })
+    })
+  })
+
+  describe("ゲーム終了判定", () => {
+    describe("checkGameEnd", () => {
+      test("トビ終了の判定", async () => {
+        const players = [
+          createMockPlayer({ position: 0, currentPoints: 35000 }),
+          createMockPlayer({ position: 1, currentPoints: 25000 }),
+          createMockPlayer({ position: 2, currentPoints: 20000 }),
+          createMockPlayer({
+            position: 3,
+            currentPoints: -5000,
+            name: "マイナスプレイヤー",
+          }),
+        ]
+        const game = createMockGame()
+
+        mockPrisma.soloPlayer.findMany.mockResolvedValue(players)
+        mockPrisma.soloGame.findUnique.mockResolvedValue(game)
+
+        const result = await pointManager.checkGameEnd()
+
+        expect(result.shouldEnd).toBe(true)
+        expect(result.reason).toContain("トビ終了")
+        expect(result.reason).toContain("マイナスプレイヤー")
+      })
+
+      test("東風戦の終了判定", async () => {
+        const players = [createMockPlayer()]
+        const game = createMockGame({
+          currentRound: 5, // 東4局終了後
+          gameType: "TONPUU",
+        })
+
+        mockPrisma.soloPlayer.findMany.mockResolvedValue(players)
+        mockPrisma.soloGame.findUnique.mockResolvedValue(game)
+
+        jest.spyOn(pointManager as any, "checkRoundEnd").mockReturnValue({
+          shouldEnd: true,
+          reason: "東風戦終了: 東4局完了",
+        })
+
+        const result = await pointManager.checkGameEnd()
+
+        expect(result.shouldEnd).toBe(true)
+        expect(result.reason).toContain("東風戦終了")
+      })
+
+      test("ゲーム続行", async () => {
+        const players = [
+          createMockPlayer({ currentPoints: 35000 }),
+          createMockPlayer({ currentPoints: 25000 }),
+          createMockPlayer({ currentPoints: 20000 }),
+          createMockPlayer({ currentPoints: 15000 }),
+        ]
+        const game = createMockGame({ currentRound: 4 })
+
+        mockPrisma.soloPlayer.findMany.mockResolvedValue(players)
+        mockPrisma.soloGame.findUnique.mockResolvedValue(game)
+
+        const result = await pointManager.checkGameEnd()
+
+        expect(result.shouldEnd).toBe(false)
+      })
+    })
+  })
+
+  describe("強制終了処理", () => {
+    test("forceEndGame", async () => {
+      mockPrisma.soloGameEvent.create.mockResolvedValue({})
+
+      jest
+        .spyOn(pointManager as any, "calculateFinalResults")
+        .mockResolvedValue()
+
+      await pointManager.forceEndGame("テスト強制終了")
+
+      expect(mockPrisma.soloGame.update).toHaveBeenCalledWith({
+        where: { id: gameId },
+        data: {
+          status: "FINISHED",
+          endedAt: expect.any(Date),
+        },
+      })
+
+      expect(mockPrisma.soloGameEvent.create).toHaveBeenCalledWith({
+        data: {
+          soloGameId: gameId,
+          eventType: "GAME_END",
+          eventData: {
+            reason: "テスト強制終了",
+            forcedEnd: true,
+          },
+          round: 0,
+          honba: 0,
+        },
+      })
+    })
+  })
+
+  describe("ゲーム情報取得", () => {
+    test("getGameInfo", async () => {
+      const gameInfo = {
+        id: gameId,
+        gameType: "HANCHAN",
+        status: "PLAYING",
+        currentRound: 5,
+        currentOya: 2,
+        honba: 1,
+        kyotaku: 2,
+        initialPoints: 25000,
+      }
+
+      mockPrisma.soloGame.findUnique.mockResolvedValue(gameInfo)
+
+      const result = await pointManager.getGameInfo()
+
+      expect(result).toEqual(gameInfo)
+      expect(mockPrisma.soloGame.findUnique).toHaveBeenCalledWith({
+        where: { id: gameId },
+        select: {
+          id: true,
+          gameType: true,
+          status: true,
+          currentRound: true,
+          currentOya: true,
+          honba: true,
+          kyotaku: true,
+          initialPoints: true,
+        },
+      })
+    })
+
+    test("getGameState", async () => {
+      const game = createMockGame()
+
+      mockPrisma.soloGame.findUnique.mockResolvedValue(game)
+
+      const result = await pointManager.getGameState()
+
+      expect(result.gameId).toBe(gameId)
+      expect(result.players).toHaveLength(4)
+      expect(result.players[0].id).toBe("0") // position as string ID
+      expect(result.currentRound).toBe(1)
+      expect(result.status).toBe("PLAYING")
+    })
+
+    test("getGameState - ゲームが見つからない場合", async () => {
+      mockPrisma.soloGame.findUnique.mockResolvedValue(null)
+
+      await expect(pointManager.getGameState()).rejects.toThrow(
+        "Solo Game not found"
+      )
+    })
+  })
+
+  describe("境界値テスト", () => {
+    test("最大点数での精算", () => {
+      const players = [
+        createMockPlayer({ currentPoints: 100000, position: 0 }),
+        createMockPlayer({ currentPoints: 0, position: 1 }),
+        createMockPlayer({ currentPoints: 0, position: 2 }),
+        createMockPlayer({ currentPoints: 0, position: 3 }),
+      ]
+      const settings = {
+        initialPoints: 25000,
+        basePoints: 30000,
+        uma: [15000, 5000, -5000, -15000],
+      }
+
+      const result = pointManager["calculateSettlement"](players, settings)
+
+      expect(result[0].settlement).toBeDefined()
+      expect(result[0].rank).toBe(1)
+      // ゼロサムの確認
+      const total = result.reduce((sum, r) => sum + r.settlement, 0)
+      expect(total).toBe(0)
+    })
+
+    test("最小点数（マイナス）での精算", () => {
+      const players = [
+        createMockPlayer({ currentPoints: 50000, position: 0 }),
+        createMockPlayer({ currentPoints: 25000, position: 1 }),
+        createMockPlayer({ currentPoints: 25000, position: 2 }),
+        createMockPlayer({ currentPoints: -10000, position: 3 }),
+      ]
+      const settings = {
+        initialPoints: 25000,
+        basePoints: 30000,
+        uma: [15000, 5000, -5000, -15000],
+      }
+
+      const result = pointManager["calculateSettlement"](players, settings)
+
+      expect(result[3].finalPoints).toBe(-10000)
+      expect(result[3].rank).toBe(4)
+    })
+  })
+
+  describe("エラーハンドリング", () => {
+    test("ゲームが見つからない場合（流局処理）", async () => {
+      mockPrisma.soloGame.findUnique.mockResolvedValue(null)
+
+      await expect(pointManager.handleRyukyoku("test", [])).rejects.toThrow(
+        "Game not found"
+      )
+    })
+
+    test("親プレイヤーが見つからない場合（流局処理）", async () => {
+      const game = createMockGame({
+        players: [], // 空の配列
+        currentOya: 0,
+      })
+
+      mockPrisma.soloGame.findUnique.mockResolvedValue(game)
+
+      await expect(pointManager.handleRyukyoku("test", [])).rejects.toThrow(
+        "親プレイヤーが見つかりません"
+      )
+    })
+
+    test("ゲームが見つからない場合（親ローテーション）", async () => {
+      mockPrisma.soloGame.findUnique.mockResolvedValue(null)
+
+      await expect(pointManager.rotateDealer(0)).rejects.toThrow(
+        "Game not found"
+      )
     })
   })
 })

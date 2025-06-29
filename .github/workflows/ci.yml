@@ -4,10 +4,17 @@ on:
   pull_request:
     branches: [main]
     paths-ignore:
-      - "**.md"
-      - "docs/**"
-      - ".github/**"
-      - "!.github/workflows/**"
+      - '**.md'
+      - 'docs/**'
+      - '.github/**'
+      - '!.github/workflows/**'
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/**'
+      - '!.github/workflows/**'
 
 jobs:
   ci:
