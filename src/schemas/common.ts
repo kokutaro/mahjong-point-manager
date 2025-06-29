@@ -22,7 +22,7 @@ export type PlayerPosition = z.infer<typeof PlayerPositionSchema>
 
 // プレイヤー識別子（統一型）
 export const PlayerIdentifierSchema = z.union([
-  z.string().uuid().describe('マルチプレイ用プレイヤーID'),
+  z.string().min(1).describe('マルチプレイ用プレイヤーID（CUID形式）'),
   z.number().int().min(0).max(3).describe('ソロプレイ用ポジション')
 ])
 export type PlayerIdentifier = z.infer<typeof PlayerIdentifierSchema>

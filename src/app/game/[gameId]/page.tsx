@@ -484,12 +484,22 @@ export default function GamePage() {
     loserId?: string
   }) => {
     try {
+      // プレイヤーIDの形式を判別
+      const isNumericString = (id: string) => /^[0-3]$/.test(id)
+      
+      // ソロゲーム（0-3の数値文字列）の場合は数値に変換、それ以外（CUID等）はそのまま送信
+      const requestData = isNumericString(scoreData.winnerId) ? {
+        ...scoreData,
+        winnerId: parseInt(scoreData.winnerId),
+        loserId: scoreData.loserId ? parseInt(scoreData.loserId) : undefined
+      } : scoreData
+      
       const response = await fetch(`/api/game/${gameId}/score`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(scoreData),
+        body: JSON.stringify(requestData),
         credentials: 'include'
       })
 
@@ -498,16 +508,28 @@ export default function GamePage() {
       if (!response.ok) {
         let errorType: ErrorInfo['type'] = 'server'
         let errorMessage = data.error?.message || '点数計算に失敗しました'
+        let errorDetails: string | undefined
         
         if (response.status === 400) {
           errorType = 'validation'
           errorMessage = '入力内容に誤りがあります'
+          
+          // Zodエラーの詳細を文字列化
+          if (data.error?.details && Array.isArray(data.error.details)) {
+            const validationErrors = data.error.details.map((err: { path?: string[]; message?: string }) => {
+              if (err.path && err.message) {
+                return `${err.path.join('.')}: ${err.message}`
+              }
+              return err.message || 'バリデーションエラー'
+            })
+            errorDetails = validationErrors.join(', ')
+          }
         } else if (response.status >= 500) {
           errorType = 'server'
           errorMessage = 'サーバーエラーが発生しました'
         }
         
-        throw new Error(JSON.stringify({ type: errorType, message: errorMessage, details: data.error?.details }))
+        throw new Error(JSON.stringify({ type: errorType, message: errorMessage, details: errorDetails }))
       }
 
       // 点数計算成功後、念のため最新状態を再取得
@@ -690,15 +712,48 @@ export default function GamePage() {
           <ErrorDisplay
             error={(() => {
               try {
-                return JSON.parse(error) as ErrorInfo
+                const parsedError = JSON.parse(error)
+                
+                // ErrorInfo型かどうかをチェック
+                if (parsedError && typeof parsedError === 'object') {
+                  // 既にErrorInfo型の場合
+                  if ('type' in parsedError && 'message' in parsedError) {
+                    return parsedError as ErrorInfo
+                  }
+                  
+                  // バリデーションエラーの形式 {validation, code, message, path} の場合
+                  if ('validation' in parsedError || 'code' in parsedError) {
+                    return {
+                      type: 'validation' as const,
+                      message: parsedError.message || 'バリデーションエラーが発生しました',
+                      details: parsedError.path ? `フィールド: ${parsedError.path}` : undefined,
+                      autoHide: false
+                    }
+                  }
+                  
+                  // その他のオブジェクト型エラー
+                  return {
+                    type: 'server' as const,
+                    message: parsedError.message || 'サーバーエラーが発生しました',
+                    autoHide: false
+                  }
+                }
+                
+                // プリミティブ値の場合
+                return {
+                  type: 'general' as const,
+                  message: String(parsedError),
+                  autoHide: false
+                }
               } catch {
-                return { type: 'general', message: error, autoHide: false }
+                // JSON解析失敗時は文字列として扱う
+                return { type: 'general' as const, message: error, autoHide: false }
               }
             })()}
             onRetry={() => {
               try {
-                const errorData = JSON.parse(error) as ErrorInfo
-                if (errorData.isRetryable) {
+                const parsedError = JSON.parse(error)
+                if (parsedError && typeof parsedError === 'object' && 'isRetryable' in parsedError && parsedError.isRetryable) {
                   fetchGameState()
                 }
               } catch {
