@@ -8,6 +8,13 @@ on:
       - 'docs/**'
       - '.github/**'
       - '!.github/workflows/**'
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/**'
+      - '!.github/workflows/**'
 
 jobs:
   ci:
