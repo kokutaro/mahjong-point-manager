@@ -1,3 +1,13 @@
+// Prepare Prisma mock before importing the module under test
+jest.mock("@/lib/prisma", () => {
+  const prisma = {
+    scorePattern: {
+      findFirst: jest.fn(),
+    },
+  }
+  return { __esModule: true, prisma, default: prisma }
+})
+
 import {
   calculateScore,
   validateHanFu,
@@ -7,15 +17,6 @@ import {
   ScoreCalculationInput,
   ScorePattern,
 } from "../score"
-
-// Mock Prisma
-jest.mock("@/lib/prisma", () => ({
-  prisma: {
-    scorePattern: {
-      findFirst: jest.fn(),
-    },
-  },
-}))
 
 const mockPrisma = jest.requireMock("@/lib/prisma").prisma
 

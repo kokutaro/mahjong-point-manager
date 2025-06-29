@@ -567,7 +567,7 @@ export class PointManager {
       } else if (typeof game.settings.uma === "string") {
         try {
           umaArray = JSON.parse(game.settings.uma as string)
-        } catch (_e) { // eslint-disable-line @typescript-eslint/no-unused-vars
+        } catch {
           console.log("🏁 Failed to parse uma JSON, using default")
         }
       } else if (typeof game.settings.uma === "object") {
