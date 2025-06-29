@@ -138,14 +138,40 @@ export async function POST(
 
         try {
           const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"
+          console.log(
+            `🔄 Calling rematch API: ${baseUrl}/api/game/${gameId}/rematch`
+          )
+
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 10000) // 10秒タイムアウト
+
           const res = await fetch(`${baseUrl}/api/game/${gameId}/rematch`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ continueSession: true }),
+            signal: controller.signal,
           })
-          const data = await res.json()
 
-          if (res.ok && data.success) {
+          clearTimeout(timeoutId)
+
+          console.log(`🔄 Rematch API response status: ${res.status}`)
+
+          if (!res.ok) {
+            const errorText = await res.text()
+            console.error(
+              `🔄 Rematch API failed with status ${res.status}: ${errorText}`
+            )
+            io.to(gameInfo.roomCode).emit("session_continue_failed", {
+              message: `新しいルーム作成に失敗しました (HTTP ${res.status})`,
+              details: errorText,
+            })
+            return
+          }
+
+          const data = await res.json()
+          console.log(`🔄 Rematch API response data:`, data)
+
+          if (data.success) {
             io.to(gameInfo.roomCode).emit("new-room-ready", {
               roomCode: data.data.roomCode,
               gameId: data.data.gameId,
@@ -155,15 +181,33 @@ export async function POST(
               `🔄 Successfully created new room ${data.data.roomCode} for continuation`
             )
           } else {
-            console.error("Failed to create new room:", data.error?.message)
-            io.to(gameInfo.roomCode).emit("error", {
+            console.error(
+              "🔄 Rematch API returned success:false:",
+              data.error?.message
+            )
+            io.to(gameInfo.roomCode).emit("session_continue_failed", {
               message: "新しいルーム作成に失敗しました",
+              details: data.error?.message || "不明なエラー",
             })
           }
         } catch (err) {
-          console.error("Error creating new room:", err)
-          io.to(gameInfo.roomCode).emit("error", {
-            message: "新しいルーム作成に失敗しました",
+          console.error("🔄 Error creating new room:", err)
+
+          let errorMessage = "新しいルーム作成に失敗しました"
+          let errorDetails = "不明なエラー"
+
+          if (err instanceof Error) {
+            if (err.name === "AbortError") {
+              errorMessage = "新しいルーム作成がタイムアウトしました"
+              errorDetails = "10秒以内に処理が完了しませんでした"
+            } else {
+              errorDetails = err.message
+            }
+          }
+
+          io.to(gameInfo.roomCode).emit("session_continue_failed", {
+            message: errorMessage,
+            details: errorDetails,
           })
         }
 

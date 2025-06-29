@@ -24,6 +24,8 @@ export async function POST(
     const body = await request.json()
     const validatedData = rematchSchema.parse(body)
 
+    console.log(`🔄 Rematch API called for gameId: ${gameId}`, validatedData)
+
     const game = await prisma.game.findUnique({
       where: { id: gameId },
       include: {
@@ -35,11 +37,16 @@ export async function POST(
     })
 
     if (!game) {
+      console.error(`🔄 Game not found: ${gameId}`)
       return NextResponse.json(
         { success: false, error: { message: "ゲームが見つかりません" } },
         { status: 404 }
       )
     }
+
+    console.log(
+      `🔄 Found game: ${game.id}, session: ${game.session?.id}, participants: ${game.participants.length}`
+    )
 
     let roomCode: string
     let session = game.session
@@ -47,22 +54,26 @@ export async function POST(
 
     if (validatedData.continueSession && session) {
       // 既存セッション継続 - 新しいルームコードを生成（ユニーク制約回避）
+      console.log(`🔄 Continuing existing session: ${session.id}`)
+
       let existing
+      let attempts = 0
       do {
         roomCode = generateRoomCode()
         existing = await prisma.game.findFirst({ where: { roomCode } })
+        attempts++
+        if (attempts > 10) {
+          throw new Error("ルームコード生成に失敗しました（10回試行）")
+        }
       } while (existing)
 
-      nextSessionOrder =
-        (await prisma.game.count({
-          where: { sessionId: session.id },
-        })) + 1
+      const sessionGameCount = await prisma.game.count({
+        where: { sessionId: session.id },
+      })
+      nextSessionOrder = sessionGameCount + 1
 
       console.log(
-        "🔄 Continuing session with NEW roomCode:",
-        roomCode,
-        "sessionOrder:",
-        nextSessionOrder
+        `🔄 Continuing session with NEW roomCode: ${roomCode}, sessionOrder: ${nextSessionOrder}, existing games in session: ${sessionGameCount}`
       )
     } else {
       // 新規セッション作成 - 新しいルームコードを生成
@@ -114,19 +125,18 @@ export async function POST(
 
     // セッション継続・新規セッション共に新しいゲームを作成
     console.log(
-      "🔄 Creating new game with roomCode:",
-      roomCode,
-      "sessionId:",
-      session.id,
-      "sessionOrder:",
-      nextSessionOrder
+      `🔄 Creating new game with roomCode: ${roomCode}, sessionId: ${session.id}, sessionOrder: ${nextSessionOrder}`
     )
+
+    if (!game.settingsId) {
+      throw new Error("ゲーム設定が見つかりません")
+    }
 
     const newGame = await prisma.game.create({
       data: {
         roomCode,
         hostPlayerId: game.hostPlayerId,
-        settingsId: game.settingsId!,
+        settingsId: game.settingsId,
         sessionId: session.id,
         sessionOrder: nextSessionOrder,
         status: "WAITING",
@@ -137,10 +147,10 @@ export async function POST(
       },
     })
 
-    console.log("🔄 Successfully created new game with ID:", newGame.id)
+    console.log(`🔄 Successfully created new game with ID: ${newGame.id}`)
 
     // 新しいGameParticipantを作成
-    await Promise.all(
+    const participantResults = await Promise.all(
       game.participants.map((p) =>
         prisma.gameParticipant.create({
           data: {
@@ -154,6 +164,10 @@ export async function POST(
       )
     )
 
+    console.log(
+      `🔄 Successfully created ${participantResults.length} participants for new game`
+    )
+
     return NextResponse.json({
       success: true,
       data: {
@@ -164,10 +178,35 @@ export async function POST(
       },
     })
   } catch (err) {
-    console.error("Rematch creation failed:", err)
+    console.error("🔄 Rematch creation failed:", err)
+
+    let errorMessage = "再戦作成に失敗しました"
+    let statusCode = 500
+
+    if (err instanceof Error) {
+      console.error(`🔄 Error details: ${err.message}`)
+      console.error(`🔄 Error stack: ${err.stack}`)
+
+      if (err.message.includes("ゲーム設定が見つかりません")) {
+        errorMessage = "ゲーム設定が見つかりません"
+        statusCode = 400
+      } else if (err.message.includes("ルームコード生成に失敗")) {
+        errorMessage = "ルームコード生成に失敗しました"
+        statusCode = 500
+      } else {
+        errorMessage = `再戦作成に失敗しました: ${err.message}`
+      }
+    }
+
     return NextResponse.json(
-      { success: false, error: { message: "再戦作成に失敗しました" } },
-      { status: 500 }
+      {
+        success: false,
+        error: {
+          message: errorMessage,
+          details: err instanceof Error ? err.message : String(err),
+        },
+      },
+      { status: statusCode }
     )
   }
 }

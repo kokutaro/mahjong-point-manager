@@ -294,6 +294,20 @@ export default function GameResult({
       resetSessionVote()
     })
 
+    // セッション継続失敗通知
+    socketInstance.on(
+      "session_continue_failed",
+      ({ message, details }: { message: string; details: string }) => {
+        console.error("セッション継続に失敗しました:", { message, details })
+        setNotification({
+          message: `${message}\n詳細: ${details}\n\n投票をやり直してください。`,
+          action: () => setNotification(null),
+        })
+        setIsWaitingForVotes(false)
+        resetSessionVote()
+      }
+    )
+
     return () => {
       // Phase 3: 新しいイベントリスナーのクリーンアップ
       socketInstance.off("session_vote_update")
@@ -301,6 +315,7 @@ export default function GameResult({
       socketInstance.off("session_continue_agreed")
       socketInstance.off("new-room-ready")
       socketInstance.off("vote_timeout")
+      socketInstance.off("session_continue_failed")
 
       socketInstance.disconnect()
     }
