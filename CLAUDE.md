@@ -7,34 +7,43 @@
 - **型チェックが省略されるようなコードは書かない**
   - **DON'T** `as any`, `as unknown`, `{foo: any}`など、型チェックが省略されることは行わない。
 
-## 修正機能追加の際の作業開始時・終了時に必ず実施すること。必ず毎回全てtodoに含めてください
+## 修正機能追加の際の作業開始時・終了時に必ず実施すること。必ず毎回全てTODOに含めてください
 
-- 以下の操作は作業開始時に必ず行ってください
+- **以下の操作は作業開始時に必ず行ってください**
   - **作業開始時**: 必ず専用ブランチを作成する（feat-<機能名>、fix-<修正内容>等）
   - **mainブランチでの直接作業は絶対禁止**: いかなる変更もmainブランチに直接コミットしない
-- 以下を必ず作業終了時に実行してください。
-  1. 作業内容をコミット
-  2. リモートブランチにpush (`git push -u origin <ブランチ名>`)
-  3. PR作成 (gh CLIでPR作成)
-  - @ai-rules/pr-guide.mdにガイドラインを記述しています。上記の作業時には必ず確認して必ず内容に従って作業を行ってください。
+
+- **以下を必ず作業終了前に実行してください。**
+  1. 型チェック(`npm run type-check`)
+  2. lint(`npm run lint`)
+  3. テスト(`npm test`)
+  4. 作業内容をコミット
+  5. リモートブランチにpush (`git push -u origin <ブランチ名>`)
+  6. PR作成 (gh CLIでPR作成)
+     - @ai-rules/pr-guide.mdにガイドラインを記述しています。上記の作業時には必ず確認して必ず内容に従って作業を行ってください。
+  7. ジャーナル記録の実施(## Journaling workflowを参照)
 
 ## 動作確認・テスト時の必須確認事項（コミット前に必ず実施されるべきです）
 
-- コード作成後は必ず型チェック、lint、テストを実施して下さい。
+- **コードを変更、追加、削除した場合、ユーザーに完了報告を行う直前に、必ず以下を実行してください。**
+  - 型チェック(`npm run type-check`)
+  - lint(`npm run lint`)
+  - テスト(`npm test`)
 - 新規コンポーネントや機能、関数を作成した場合は、必ずテストを作成し、正常系、異常系をテストして下さい。
 - テスト・動作確認は修正を行った際は必ず行ってください。
 - E2Eテストとしてユーザ目線での動作が問題ないかしっかりと確認してください。playwright-mcp を利用して下さい。
+- 必ず上記テストが通った場合のみコミットを作成して下さい。
 
 ## Journaling workflow
 
 You (the AI agent) have to report what you did in this project at each end of the task in my Notion note.
 
-Create one in the page with the title "Log: <Job title>".
+Create one in the page with the title "Log: `<Job title>`".
 Update the same note throughout the same session.
 
 Update this note at each end of the task with the following format:
 
-## Log: <task title>
+## Log: `<task title>`
 
 - **Prompt**: <受け取った指示>
 - **Issue**: <課題の内容>
@@ -77,14 +86,14 @@ Update this note at each end of the task with the following format:
 
 ## 基本原則
 
-### 1. コード品質の原則
+### コード品質の原則
 
 - **DRY原則**: Don't Repeat Yourself - 同じコードを繰り返さない
 - **KISS原則**: Keep It Simple, Stupid - シンプルに保つ
 - **YAGNI原則**: You Aren't Gonna Need It - 必要になるまで実装しない
 - **単一責任の原則**: 各関数・コンポーネントは1つの責任のみを持つ
 
-### 2. 開発プロセスの原則
+### 開発プロセスの原則
 
 1. **タスクの分解**: 改修や機能追加は最小限の単位に分解する
 2. **事前調査**: 実装前に必ず既存コードと関連ドキュメントを確認する
@@ -92,13 +101,6 @@ Update this note at each end of the task with the following format:
 4. **品質保証**: format、lint、type-checkを必ず実行する
 5. **テスト駆動**: 単体テストを作成・実行する
 6. **動作確認**: Web系機能はMCP経由でPlaywrightを使用して確認する
-
-### 3. Git運用ルール
-
-- **ブランチ戦略**: main/masterブランチへの直接編集は禁止
-- **ブランチ命名規則**: `feat/改修名(日本語)`
-- **コミット規則**: 意味のある単位でコミットを作成
-- **PR作成**: ghコマンドを使用してプルリクエストを作成
 
 ## 参照ドキュメント
 
@@ -112,52 +114,3 @@ Update this note at each end of the task with the following format:
   - @ai-rules/testing-qa-guide.md
 - コーディング規約
   - @ai-rules/coding-standards.md
-
-## 実装時の確認事項
-
-### 実装前チェックリスト
-
-- [ ] 既存コードの調査を完了した
-- [ ] 関連ドキュメントを確認した
-- [ ] 実装プランを作成した
-- [ ] 影響範囲を特定した
-- [ ] 必要な依存関係を確認した
-
-### 実装中チェックリスト
-
-- [ ] コンポーネントの再利用性を考慮している
-- [ ] 適切なエラーハンドリングを実装している
-- [ ] TypeScriptの型定義を適切に行っている
-- [ ] アクセシビリティを考慮している
-- [ ] パフォーマンスを考慮している
-
-### 実装後チェックリスト
-
-- [ ] フォーマッターを実行した（prettier）
-- [ ] リンターを実行した（eslint）
-- [ ] 型チェックを実行した（tsc）
-- [ ] 単体テストを作成・実行した
-- [ ] E2Eテストを実行した（必要な場合）
-- [ ] ドキュメントを更新した
-
-## コミュニケーション原則
-
-### 進捗報告
-
-- 作業開始時に実装プランを共有
-- 重要な決定事項は記録を残す
-- 問題発生時は速やかに報告
-
-### コードレビュー準備
-
-- PRには変更内容の概要を記載
-- 破壊的変更がある場合は明記
-- テスト方法を記載
-
-## 継続的改善
-
-このドキュメントは生きたドキュメントです。プロジェクトの成長に合わせて更新してください。
-
-- 新しいベストプラクティスの発見時は追記
-- 不要になったルールは削除
-- チーム全体で定期的にレビュー
