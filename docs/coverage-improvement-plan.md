@@ -1,6 +1,6 @@
 # Test Coverage Improvement Plan
 
-The current project-wide coverage is approximately **41%**. Our goal is to reach **80%** or more. Below is the prioritized plan to achieve this.
+The current project-wide coverage is approximately **42.6%**. Our goal is to reach **80%** or more. Below is the prioritized plan to achieve this.
 
 ## 1. Establish Baseline
 
@@ -50,3 +50,14 @@ Libraries contain business logic that is easy to test without complex setup.
 - Monitor coverage reports after each test addition.
 - Update documentation when new areas are covered.
 - Revisit untested modules until overall coverage consistently exceeds 80%.
+
+## 10. Target Zero-Coverage Modules
+
+The latest coverage run highlighted several files with **0%** coverage. Prioritize adding tests for these areas to quickly raise overall coverage:
+
+- **API routes**: `admin/migrate-to-sessions`, `auth/logout`, `auth/player`, `game/[gameId]/cancel-vote-session`, `room/[roomCode]/*`, `score/calculate`, `socket`, `solo/[gameId]`, `solo/[gameId]/ryukyoku`, `stats/[playerId]`, and `websocket-status`.
+- **Pages**: top-level pages such as `app/page.tsx`, `app/game/[gameId]/page.tsx`, `app/room/[roomCode]/page.tsx`, `app/sessions/page.tsx`, `app/solo/game/[gameId]/page.tsx`, and `app/stats/page.tsx`.
+- **Components**: utility components including `LazyComponents.tsx`, `OptimizedImage.tsx`, `PointAnimation.tsx`, `QRCodeModal.tsx`, `WebSocketDebug.tsx`, as well as base form components under `components/common` and `components/solo`.
+- **Utilities and helpers**: files like `auth-fallback.ts`, `socket-client.ts`, `socket.ts`, `socketjs.js`, `lib/solo/auth.ts`, and schema files under `schemas/`.
+
+Create small unit tests or integration tests for each of these modules. Even minimal coverage will help raise the overall percentage while ensuring important pathways are validated.
