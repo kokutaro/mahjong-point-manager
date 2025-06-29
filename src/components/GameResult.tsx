@@ -252,7 +252,7 @@ export default function GameResult({
       "session_ended_by_consensus",
       ({
         reason,
-        voteDetails,
+        voteDetails: _voteDetails, // eslint-disable-line @typescript-eslint/no-unused-vars
       }: {
         reason: string
         voteDetails: Record<string, boolean>
