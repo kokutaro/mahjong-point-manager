@@ -77,4 +77,30 @@ describe("useSocket", () => {
     unmount()
     expect(mockSocket.disconnect).toHaveBeenCalled()
   })
+
+  test("reconnects on unexpected disconnect", () => {
+    jest.useFakeTimers()
+    renderHook(() => useSocket())
+
+    act(() => {
+      eventBus.emit("disconnect", "transport close")
+    })
+
+    act(() => {
+      jest.advanceTimersByTime(2000)
+    })
+
+    expect(socketClientMock.connect.mock.calls.length).toBeGreaterThanOrEqual(2)
+    jest.useRealTimers()
+  })
+
+  test("manual reconnect triggers new connection", () => {
+    const { result } = renderHook(() => useSocket())
+
+    act(() => {
+      result.current.manualReconnect()
+    })
+
+    expect(socketClientMock.connect.mock.calls.length).toBeGreaterThanOrEqual(2)
+  })
 })
