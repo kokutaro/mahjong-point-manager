@@ -1,8 +1,6 @@
-import { PointManager } from "../point-manager"
-
-// Mock Prisma
-jest.mock("@/lib/prisma", () => ({
-  prisma: {
+// Prepare Prisma mock before importing the module under test
+jest.mock("@/lib/prisma", () => {
+  const prisma = {
     game: {
       findUnique: jest.fn(),
       update: jest.fn(),
@@ -23,9 +21,12 @@ jest.mock("@/lib/prisma", () => ({
     gameSettings: {
       findFirst: jest.fn(),
     },
-    $transaction: jest.fn((callback) => callback({})),
-  },
-}))
+  }
+  prisma.$transaction = jest.fn(async (callback) => await callback(prisma))
+  return { __esModule: true, prisma, default: prisma }
+})
+
+import { PointManager } from "../point-manager"
 
 // Mock score calculation module
 jest.mock("../score", () => ({

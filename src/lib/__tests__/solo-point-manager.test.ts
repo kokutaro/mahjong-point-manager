@@ -1,9 +1,6 @@
-import { prisma } from "@/lib/prisma"
-import { SoloPointManager } from "../solo/solo-point-manager"
-
-// Mock Prisma
-jest.mock("@/lib/prisma", () => ({
-  prisma: {
+// Prepare Prisma mock before importing modules
+jest.mock("@/lib/prisma", () => {
+  const prisma = {
     soloGame: {
       findUnique: jest.fn(),
       update: jest.fn(),
@@ -21,9 +18,12 @@ jest.mock("@/lib/prisma", () => ({
     soloGameEvent: {
       create: jest.fn(),
     },
-    $transaction: jest.fn(async (callback) => await callback(prisma)),
-  },
-}))
+  }
+  prisma.$transaction = jest.fn(async (callback) => await callback(prisma))
+  return { __esModule: true, prisma, default: prisma }
+})
+
+import { SoloPointManager } from "../solo/solo-point-manager"
 
 // Mock score calculation module
 jest.mock("../score", () => ({
