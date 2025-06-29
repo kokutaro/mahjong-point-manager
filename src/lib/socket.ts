@@ -1,7 +1,7 @@
-import { prisma } from '@/lib/prisma'
-import { calculateScore, type ScoreCalculationResult } from '@/lib/score'
-import { Server as HTTPServer } from 'http'
-import { Server as SocketIOServer } from 'socket.io'
+import { prisma } from "@/lib/prisma"
+import { calculateScore, type ScoreCalculationResult } from "@/lib/score"
+import { Server as HTTPServer } from "http"
+import { Server as SocketIOServer } from "socket.io"
 
 // WebSocket 型定義は直接SocketIOServerを使用
 
@@ -23,8 +23,8 @@ export interface GameState {
   currentDealer: number
   honba: number
   kyotaku: number
-  gamePhase: 'waiting' | 'playing' | 'finished'
-  winds: ('east' | 'south' | 'west' | 'north')[]
+  gamePhase: "waiting" | "playing" | "finished"
+  winds: ("east" | "south" | "west" | "north")[]
   sessionId?: string
   sessionCode?: string
   sessionName?: string
@@ -40,7 +40,7 @@ export interface GamePlayer {
 }
 
 export interface GameEvent {
-  type: 'join' | 'ready' | 'score' | 'dealer_change' | 'game_end'
+  type: "join" | "ready" | "score" | "dealer_change" | "game_end"
   data: Record<string, unknown>
   timestamp: Date
 }
@@ -52,259 +52,304 @@ export function initSocket(server: HTTPServer) {
   // 既存のインスタンスがあれば再利用
   if (process.__socketio) {
     io = process.__socketio
-    console.log('🔌 Reusing existing WebSocket instance')
+    console.log("🔌 Reusing existing WebSocket instance")
     return io
   }
 
-  console.log('🔌 Creating new WebSocket instance')
+  console.log("🔌 Creating new WebSocket instance")
   io = new SocketIOServer(server, {
     cors: {
-      origin: process.env.NODE_ENV === 'production' 
-        ? process.env.NEXTAUTH_URL 
-        : ['http://localhost:3000', 'http://localhost:3001'],
-      methods: ['GET', 'POST'],
-      credentials: true
+      origin:
+        process.env.NODE_ENV === "production"
+          ? process.env.NEXTAUTH_URL
+          : ["http://localhost:3000", "http://localhost:3001"],
+      methods: ["GET", "POST"],
+      credentials: true,
     },
-    transports: ['websocket', 'polling']
+    transports: ["websocket", "polling"],
   })
 
-  io.on('connection', (socket) => {
-    console.log('Client connected:', socket.id)
+  io.on("connection", (socket) => {
+    console.log("Client connected:", socket.id)
 
     // ルーム参加
-    socket.on('join_room', async (data: { roomCode: string, playerId: string }) => {
-      try {
-        const { roomCode, playerId } = data
-        
-        // ゲーム存在確認
-        const game = await prisma.game.findFirst({
-          where: { roomCode: roomCode.toUpperCase() },
-          include: {
-            participants: {
-              include: { player: true }
+    socket.on(
+      "join_room",
+      async (data: { roomCode: string; playerId: string }) => {
+        try {
+          const { roomCode, playerId } = data
+
+          // ゲーム存在確認
+          const game = await prisma.game.findFirst({
+            where: { roomCode: roomCode.toUpperCase() },
+            include: {
+              participants: {
+                include: { player: true },
+              },
+              session: true,
             },
-            session: true
+          })
+
+          if (!game) {
+            socket.emit("error", { message: "ルームが見つかりません" })
+            return
           }
-        })
 
-        if (!game) {
-          socket.emit('error', { message: 'ルームが見つかりません' })
-          return
+          // プレイヤーが既に参加しているかチェック
+          const existingParticipant = game.participants.find(
+            (p) => p.playerId === playerId
+          )
+
+          if (!existingParticipant) {
+            socket.emit("error", { message: "プレイヤーが登録されていません" })
+            return
+          }
+
+          // ソケットをルームに追加
+          socket.join(roomCode.toUpperCase())
+          console.log(`Player ${playerId} joined room ${roomCode}`)
+
+          // 現在のゲーム状態を送信
+          const gameState = await getGameState(game.id)
+          socket.emit("game_state", gameState)
+
+          // 他のプレイヤーに接続通知
+          socket.to(roomCode.toUpperCase()).emit("player_connected", {
+            playerId,
+            gameState,
+          })
+        } catch (error) {
+          console.error("Room join error:", error)
+          socket.emit("error", { message: "ルーム参加に失敗しました" })
         }
-
-        // プレイヤーが既に参加しているかチェック
-        const existingParticipant = game.participants.find(p => p.playerId === playerId)
-        
-        if (!existingParticipant) {
-          socket.emit('error', { message: 'プレイヤーが登録されていません' })
-          return
-        }
-
-        // ソケットをルームに追加
-        socket.join(roomCode.toUpperCase())
-        console.log(`Player ${playerId} joined room ${roomCode}`)
-        
-        // 現在のゲーム状態を送信
-        const gameState = await getGameState(game.id)
-        socket.emit('game_state', gameState)
-        
-        // 他のプレイヤーに接続通知
-        socket.to(roomCode.toUpperCase()).emit('player_connected', {
-          playerId,
-          gameState
-        })
-        
-      } catch (error) {
-        console.error('Room join error:', error)
-        socket.emit('error', { message: 'ルーム参加に失敗しました' })
       }
-    })
+    )
 
     // プレイヤー準備完了
-    socket.on('player_ready', async (data: { gameId: string, playerId: string }) => {
-      try {
-        const { gameId, playerId } = data
-        
-        // TODO: プレイヤー準備状態をセッションまたは別テーブルで管理
-        console.log(`Player ${playerId} is ready for game ${gameId}`)
+    socket.on(
+      "player_ready",
+      async (data: { gameId: string; playerId: string }) => {
+        try {
+          const { gameId, playerId } = data
 
-        const gameState = await getGameState(gameId)
-        const game = await prisma.game.findUnique({ where: { id: gameId } })
-        
-        if (game) {
-          io?.to(game.roomCode).emit('game_state', gameState)
-          
-          // 全員準備完了でゲーム開始
-          if (gameState.players.every(p => p.isReady) && gameState.players.length === 4) {
-            await prisma.game.update({
-              where: { id: gameId },
-              data: { status: 'PLAYING' }
-            })
-            
-            io?.to(game.roomCode).emit('game_start', gameState)
+          // TODO: プレイヤー準備状態をセッションまたは別テーブルで管理
+          console.log(`Player ${playerId} is ready for game ${gameId}`)
+
+          const gameState = await getGameState(gameId)
+          const game = await prisma.game.findUnique({ where: { id: gameId } })
+
+          if (game) {
+            io?.to(game.roomCode).emit("game_state", gameState)
+
+            // 全員準備完了でゲーム開始
+            if (
+              gameState.players.every((p) => p.isReady) &&
+              gameState.players.length === 4
+            ) {
+              await prisma.game.update({
+                where: { id: gameId },
+                data: { status: "PLAYING" },
+              })
+
+              io?.to(game.roomCode).emit("game_start", gameState)
+            }
           }
+        } catch (error: unknown) {
+          console.error("プレイヤー準備エラー:", error)
+          socket.emit("error", { message: "プレイヤー準備に失敗しました" })
         }
-      } catch (error: unknown) {
-        console.error('プレイヤー準備エラー:', error)
-        socket.emit('error', { message: 'プレイヤー準備に失敗しました' })
       }
-    })
+    )
 
     // 点数計算イベント
-    socket.on('calculate_score', async (data: {
-      gameId: string
-      winnerId: string
-      han: number
-      fu: number
-      isTsumo: boolean
-      loserId?: string
-    }) => {
-      try {
-        const { gameId, winnerId, han, fu, isTsumo, loserId } = data
-        
-        const game = await prisma.game.findUnique({
-          where: { id: gameId },
-          include: {
-            participants: true,
-            settings: true
+    socket.on(
+      "calculate_score",
+      async (data: {
+        gameId: string
+        winnerId: string
+        han: number
+        fu: number
+        isTsumo: boolean
+        loserId?: string
+      }) => {
+        try {
+          const { gameId, winnerId, han, fu, isTsumo, loserId } = data
+
+          const game = await prisma.game.findUnique({
+            where: { id: gameId },
+            include: {
+              participants: true,
+              settings: true,
+            },
+          })
+
+          if (!game) {
+            socket.emit("error", { message: "ゲームが見つかりません" })
+            return
           }
-        })
 
-        if (!game) {
-          socket.emit('error', { message: 'ゲームが見つかりません' })
-          return
+          // 点数計算
+          const winner = game.participants.find((p) => p.playerId === winnerId)
+          const isOya = winner?.position === game.currentOya
+
+          const scoreResult = await calculateScore({
+            han,
+            fu,
+            isOya: isOya || false,
+            isTsumo,
+            honba: game.honba,
+            kyotaku: game.kyotaku,
+          })
+
+          // 点数分配処理
+          await distributePoints(
+            gameId,
+            winnerId,
+            loserId,
+            scoreResult,
+            isTsumo
+          )
+
+          // 親の更新・本場の処理
+          await updateGameState(gameId, winnerId, isOya || false)
+
+          // 更新されたゲーム状態を通知
+          const updatedGameState = await getGameState(gameId)
+          io?.to(game.roomCode).emit("score_updated", {
+            gameState: updatedGameState,
+            scoreResult,
+          })
+        } catch (error: unknown) {
+          console.error("点数計算エラー:", error)
+          socket.emit("error", { message: "点数計算に失敗しました" })
         }
-
-        // 点数計算
-        const winner = game.participants.find(p => p.playerId === winnerId)
-        const isOya = winner?.position === game.currentOya
-        
-        const scoreResult = await calculateScore({
-          han,
-          fu,
-          isOya: isOya || false,
-          isTsumo,
-          honba: game.honba,
-          kyotaku: game.kyotaku
-        })
-
-        // 点数分配処理
-        await distributePoints(gameId, winnerId, loserId, scoreResult, isTsumo)
-        
-        // 親の更新・本場の処理
-        await updateGameState(gameId, winnerId, isOya || false)
-        
-        // 更新されたゲーム状態を通知
-        const updatedGameState = await getGameState(gameId)
-        io?.to(game.roomCode).emit('score_updated', {
-          gameState: updatedGameState,
-          scoreResult
-        })
-        
-      } catch (error: unknown) {
-        console.error('点数計算エラー:', error)
-        socket.emit('error', { message: '点数計算に失敗しました' })
       }
-    })
+    )
 
     // セッション継続投票
-    socket.on('continue-vote', async (data: { gameId: string, playerId: string, vote: boolean }) => {
-      try {
-        const { gameId, playerId, vote } = data
-        
-        const game = await prisma.game.findUnique({
-          where: { id: gameId },
-          include: {
-            participants: {
-              include: { player: true }
-            }
-          }
-        })
+    socket.on(
+      "continue-vote",
+      async (data: { gameId: string; playerId: string; vote: boolean }) => {
+        try {
+          const { gameId, playerId, vote } = data
 
-        if (!game) {
-          socket.emit('error', { message: 'ゲームが見つかりません' })
-          return
-        }
-
-        // 投票を他のプレイヤーに通知
-        socket.to(game.roomCode).emit('continue-vote', { playerId, vote })
-        
-        // 投票状況をプロセス内メモリで管理
-        const voteKey = `votes_${gameId}`
-        if (!process[voteKey]) {
-          process[voteKey] = {}
-        }
-        
-        const voteStorage = process[voteKey] as Record<string, boolean>
-        voteStorage[playerId] = vote
-        console.log(`Vote received: ${playerId} voted ${vote} for game ${gameId}`)
-        
-        // 全員の投票をチェック
-        const votes = voteStorage
-        const allPlayers = game.participants.map(p => p.playerId)
-        const allVoted = allPlayers.every(pid => votes[pid] !== undefined)
-        const allAgreed = allPlayers.every(pid => votes[pid] === true)
-        
-        console.log(`Vote status for game ${gameId}:`, { votes, allVoted, allAgreed })
-        
-        if (allVoted && allAgreed) {
-          // 全員が合意した場合、新しいルームを作成
-          console.log(`All players agreed for game ${gameId}, creating new room...`)
-          
-          try {
-            const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/game/${gameId}/rematch`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
+          const game = await prisma.game.findUnique({
+            where: { id: gameId },
+            include: {
+              participants: {
+                include: { player: true },
               },
-              body: JSON.stringify({
-                continueSession: true
-              })
-            })
-            
-            const result = await response.json()
-            
-            if (response.ok && result.success) {
-              // 新しいルームができたことを全員に通知
-              io?.to(game.roomCode).emit('new-room-ready', { 
-                roomCode: result.data.roomCode,
-                gameId: result.data.gameId,
-                sessionId: result.data.sessionId
-              })
-              
-              // 投票データをクリア
-              delete process[voteKey]
-              console.log(`Successfully created new room ${result.data.roomCode} for session continuation`)
-            } else {
-              console.error('Failed to create new room:', result.error?.message)
-              io?.to(game.roomCode).emit('error', { message: '新しいルーム作成に失敗しました' })
-            }
-          } catch (error) {
-            console.error('Error creating new room:', error)
-            io?.to(game.roomCode).emit('error', { message: '新しいルーム作成に失敗しました' })
+            },
+          })
+
+          if (!game) {
+            socket.emit("error", { message: "ゲームが見つかりません" })
+            return
           }
-        } else if (allVoted && !allAgreed) {
-          // 誰かが反対した場合
-          console.log(`Not all players agreed for game ${gameId}, clearing votes`)
-          delete process[voteKey]
-          io?.to(game.roomCode).emit('vote-cancelled', { message: '全員の合意が得られませんでした' })
+
+          // 投票を他のプレイヤーに通知
+          socket.to(game.roomCode).emit("continue-vote", { playerId, vote })
+
+          // 投票状況をプロセス内メモリで管理
+          const voteKey = `votes_${gameId}`
+          if (!process[voteKey]) {
+            process[voteKey] = {}
+          }
+
+          const voteStorage = process[voteKey] as Record<string, boolean>
+          voteStorage[playerId] = vote
+          console.log(
+            `Vote received: ${playerId} voted ${vote} for game ${gameId}`
+          )
+
+          // 全員の投票をチェック
+          const votes = voteStorage
+          const allPlayers = game.participants.map((p) => p.playerId)
+          const allVoted = allPlayers.every((pid) => votes[pid] !== undefined)
+          const allAgreed = allPlayers.every((pid) => votes[pid] === true)
+
+          console.log(`Vote status for game ${gameId}:`, {
+            votes,
+            allVoted,
+            allAgreed,
+          })
+
+          if (allVoted && allAgreed) {
+            // 全員が合意した場合、新しいルームを作成
+            console.log(
+              `All players agreed for game ${gameId}, creating new room...`
+            )
+
+            try {
+              const response = await fetch(
+                `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/game/${gameId}/rematch`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    continueSession: true,
+                  }),
+                }
+              )
+
+              const result = await response.json()
+
+              if (response.ok && result.success) {
+                // 新しいルームができたことを全員に通知
+                io?.to(game.roomCode).emit("new-room-ready", {
+                  roomCode: result.data.roomCode,
+                  gameId: result.data.gameId,
+                  sessionId: result.data.sessionId,
+                })
+
+                // 投票データをクリア
+                delete process[voteKey]
+                console.log(
+                  `Successfully created new room ${result.data.roomCode} for session continuation`
+                )
+              } else {
+                console.error(
+                  "Failed to create new room:",
+                  result.error?.message
+                )
+                io?.to(game.roomCode).emit("error", {
+                  message: "新しいルーム作成に失敗しました",
+                })
+              }
+            } catch (error) {
+              console.error("Error creating new room:", error)
+              io?.to(game.roomCode).emit("error", {
+                message: "新しいルーム作成に失敗しました",
+              })
+            }
+          } else if (allVoted && !allAgreed) {
+            // 誰かが反対した場合
+            console.log(
+              `Not all players agreed for game ${gameId}, clearing votes`
+            )
+            delete process[voteKey]
+            io?.to(game.roomCode).emit("vote-cancelled", {
+              message: "全員の合意が得られませんでした",
+            })
+          }
+        } catch (error) {
+          console.error("Continue vote error:", error)
+          socket.emit("error", { message: "投票処理に失敗しました" })
         }
-        
-      } catch (error) {
-        console.error('Continue vote error:', error)
-        socket.emit('error', { message: '投票処理に失敗しました' })
       }
-    })
+    )
 
     // 切断処理
-    socket.on('disconnect', () => {
-      console.log('Client disconnected:', socket.id)
+    socket.on("disconnect", () => {
+      console.log("Client disconnected:", socket.id)
     })
-  });
+  })
 
   // processオブジェクトに保存
   process.__socketio = io
-  console.log('🔌 WebSocket instance saved to process object')
+  console.log("🔌 WebSocket instance saved to process object")
 
   return io
 }
@@ -315,35 +360,35 @@ async function getGameState(gameId: string): Promise<GameState> {
     include: {
       participants: {
         include: { player: true },
-        orderBy: { position: 'asc' }
+        orderBy: { position: "asc" },
       },
-      session: true
-    }
+      session: true,
+    },
   })
 
   if (!game) {
-    throw new Error('Game not found')
+    throw new Error("Game not found")
   }
 
   return {
     gameId: game.id,
-    players: game.participants.map(p => ({
+    players: game.participants.map((p) => ({
       playerId: p.playerId,
       name: p.player.name,
       position: p.position,
       points: p.currentPoints,
       isReady: false, // TODO: セッション管理で実装
-      isConnected: true // TODO: 実際の接続状態を管理
+      isConnected: true, // TODO: 実際の接続状態を管理
     })),
     currentRound: game.currentRound,
     currentDealer: game.currentOya,
     honba: game.honba,
     kyotaku: game.kyotaku,
-    gamePhase: game.status as 'waiting' | 'playing' | 'finished',
-    winds: ['east', 'south', 'west', 'north'],
+    gamePhase: game.status as "waiting" | "playing" | "finished",
+    winds: ["east", "south", "west", "north"],
     sessionId: game.sessionId || undefined,
     sessionCode: game.session?.sessionCode,
-    sessionName: game.session?.name || undefined
+    sessionName: game.session?.name || undefined,
   }
 }
 
@@ -355,10 +400,10 @@ async function distributePoints(
   isTsumo: boolean
 ) {
   const participants = await prisma.gameParticipant.findMany({
-    where: { gameId }
+    where: { gameId },
   })
 
-  const winner = participants.find(p => p.playerId === winnerId)
+  const winner = participants.find((p) => p.playerId === winnerId)
   if (!winner) return
 
   const game = await prisma.game.findUnique({ where: { id: gameId } })
@@ -371,39 +416,48 @@ async function distributePoints(
         // 勝者
         await prisma.gameParticipant.update({
           where: { id: participant.id },
-          data: { currentPoints: participant.currentPoints + scoreResult.totalScore }
+          data: {
+            currentPoints: participant.currentPoints + scoreResult.totalScore,
+          },
         })
       } else {
         // 敗者
-        const payment = isOya ? scoreResult.payments.fromKo : 
-                       (participant.position === 0 ? scoreResult.payments.fromOya : scoreResult.payments.fromKo)
-        
+        const payment = isOya
+          ? scoreResult.payments.fromKo
+          : participant.position === 0
+            ? scoreResult.payments.fromOya
+            : scoreResult.payments.fromKo
+
         await prisma.gameParticipant.update({
           where: { id: participant.id },
-          data: { currentPoints: participant.currentPoints - (payment || 0) }
+          data: { currentPoints: participant.currentPoints - (payment || 0) },
         })
       }
     }
   } else {
     // ロンの場合
     if (loserId) {
-      const loser = participants.find(p => p.playerId === loserId)
+      const loser = participants.find((p) => p.playerId === loserId)
       if (loser) {
         await prisma.gameParticipant.update({
           where: { id: loser.id },
-          data: { currentPoints: loser.currentPoints - scoreResult.totalScore }
+          data: { currentPoints: loser.currentPoints - scoreResult.totalScore },
         })
       }
     }
-    
+
     await prisma.gameParticipant.update({
       where: { id: winner.id },
-      data: { currentPoints: winner.currentPoints + scoreResult.totalScore }
+      data: { currentPoints: winner.currentPoints + scoreResult.totalScore },
     })
   }
 }
 
-async function updateGameState(gameId: string, winnerId: string, isOya: boolean) {
+async function updateGameState(
+  gameId: string,
+  winnerId: string,
+  isOya: boolean
+) {
   const game = await prisma.game.findUnique({ where: { id: gameId } })
   if (!game) return
 
@@ -424,25 +478,27 @@ async function updateGameState(gameId: string, winnerId: string, isOya: boolean)
     data: {
       currentOya: newOya,
       honba: newHonba,
-      kyotaku: 0 // 和了時に供託はクリア
-    }
+      kyotaku: 0, // 和了時に供託はクリア
+    },
   })
 }
 
 export function getIO() {
   // まずローカル変数をチェック
   if (io) {
-    console.log('🔌 getIO: Using local io instance')
+    console.log("🔌 getIO: Using local io instance")
     return io
   }
-  
+
   // processオブジェクトをチェック
   if (process.__socketio) {
     io = process.__socketio
-    console.log('🔌 getIO: Using process.__socketio instance')
+    console.log("🔌 getIO: Using process.__socketio instance")
     return io
   }
-  
-  console.log('🔌 Warning: WebSocket IO instance not found in both local and process')
+
+  console.log(
+    "🔌 Warning: WebSocket IO instance not found in both local and process"
+  )
   return null
 }

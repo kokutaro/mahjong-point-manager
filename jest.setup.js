@@ -1,7 +1,7 @@
-import '@testing-library/jest-dom'
+import "@testing-library/jest-dom"
 
 // Mock Next.js router
-jest.mock('next/navigation', () => ({
+jest.mock("next/navigation", () => ({
   useRouter() {
     return {
       push: jest.fn(),
@@ -16,12 +16,12 @@ jest.mock('next/navigation', () => ({
     return new URLSearchParams()
   },
   usePathname() {
-    return '/'
+    return "/"
   },
 }))
 
 // Mock Socket.IO client
-jest.mock('socket.io-client', () => ({
+jest.mock("socket.io-client", () => ({
   io: jest.fn(() => ({
     on: jest.fn(),
     off: jest.fn(),
@@ -29,7 +29,7 @@ jest.mock('socket.io-client', () => ({
     connect: jest.fn(),
     disconnect: jest.fn(),
     connected: false,
-  }))
+  })),
 }))
 
 // Mock fetch globally
@@ -38,13 +38,13 @@ global.fetch = jest.fn()
 // Simple Request/Response mocks for Next.js API routes
 global.Request = class Request {
   constructor(input, init) {
-    this.method = init?.method || 'GET'
+    this.method = init?.method || "GET"
     this.headers = new Map(Object.entries(init?.headers || {}))
     this.body = init?.body
   }
 
   async json() {
-    return JSON.parse(this.body || '{}')
+    return JSON.parse(this.body || "{}")
   }
 }
 
@@ -59,7 +59,7 @@ global.Response = class Response {
     return new Response(JSON.stringify(data), {
       ...init,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...init?.headers,
       },
     })
@@ -71,9 +71,9 @@ global.Response = class Response {
 }
 
 // Mock window.matchMedia
-Object.defineProperty(window, 'matchMedia', {
+Object.defineProperty(window, "matchMedia", {
   writable: true,
-  value: jest.fn().mockImplementation(query => ({
+  value: jest.fn().mockImplementation((query) => ({
     matches: false,
     media: query,
     onchange: null,

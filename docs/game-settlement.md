@@ -32,21 +32,21 @@
 
 ```typescript
 interface SettlementResult {
-  playerId: string;
-  finalPoints: number;
-  rank: number;              // 最終順位 (1-4)
-  pointDiff: number;         // 返し点との差分
-  roundedDiff: number;       // 千点単位での差分
-  uma: number;               // ウマ
-  settlement: number;        // 最終精算額
+  playerId: string
+  finalPoints: number
+  rank: number // 最終順位 (1-4)
+  pointDiff: number // 返し点との差分
+  roundedDiff: number // 千点単位での差分
+  uma: number // ウマ
+  settlement: number // 最終精算額
 }
 
 interface GameSettings {
-  initialPoints: number;     // 配給原点 (25000)
-  basePoints: number;        // 返し点 (設定可能)
-  gameType: 'TONPUU' | 'HANCHAN';
-  uma: number[];             // [1位, 2位, 3位, 4位]
-  hasTobi: boolean;          // トビ終了有効/無効
+  initialPoints: number // 配給原点 (25000)
+  basePoints: number // 返し点 (設定可能)
+  gameType: "TONPUU" | "HANCHAN"
+  uma: number[] // [1位, 2位, 3位, 4位]
+  hasTobi: boolean // トビ終了有効/無効
 }
 ```
 
@@ -77,20 +77,19 @@ class PointManager {
     participants: GameParticipant[],
     settings: { uma: number[]; basePoints: number }
   ): SettlementResult[] {
-    
     // 1. 順位計算（点数順、同点時は起家順）
     const sortedParticipants = participants
-      .map(p => ({
+      .map((p) => ({
         ...p,
         pointDiff: p.currentPoints - settings.basePoints,
-        roundedDiff: Math.round((p.currentPoints - settings.basePoints) / 1000)
+        roundedDiff: Math.round((p.currentPoints - settings.basePoints) / 1000),
       }))
       .sort((a, b) => {
         if (a.currentPoints !== b.currentPoints) {
-          return b.currentPoints - a.currentPoints; // 高得点順
+          return b.currentPoints - a.currentPoints // 高得点順
         }
-        return a.position - b.position; // 同点時は起家順
-      });
+        return a.position - b.position // 同点時は起家順
+      })
 
     // 2. ウマ適用
     const resultsWithUma = sortedParticipants.map((participant, index) => ({
@@ -100,40 +99,41 @@ class PointManager {
       pointDiff: participant.pointDiff,
       roundedDiff: participant.roundedDiff,
       uma: settings.uma[index],
-      settlement: 0 // 後で計算
-    }));
+      settlement: 0, // 後で計算
+    }))
 
     // 3. 最終精算額計算
     const othersTotal = resultsWithUma
       .slice(1) // 1位以外
-      .reduce((sum, result) => sum + result.roundedDiff, 0);
-    
+      .reduce((sum, result) => sum + result.roundedDiff, 0)
+
     // 1位の精算額は他の3人の合計の逆数 + ウマ
-    resultsWithUma[0].settlement = -othersTotal + resultsWithUma[0].uma;
-    
+    resultsWithUma[0].settlement = -othersTotal + resultsWithUma[0].uma
+
     // 2-4位の精算額は素点差 + ウマ
     for (let i = 1; i < resultsWithUma.length; i++) {
-      resultsWithUma[i].settlement = resultsWithUma[i].roundedDiff + resultsWithUma[i].uma;
+      resultsWithUma[i].settlement =
+        resultsWithUma[i].roundedDiff + resultsWithUma[i].uma
     }
 
-    return resultsWithUma;
+    return resultsWithUma
   }
-  
+
   // ゲーム終了時の最終結果保存
   async calculateFinalResults(): Promise<void> {
-    const participants = await this.getParticipants();
-    const settings = await this.getGameSettings();
-    
-    const results = this.calculateSettlement(participants, settings);
-    
+    const participants = await this.getParticipants()
+    const settings = await this.getGameSettings()
+
+    const results = this.calculateSettlement(participants, settings)
+
     // データベースに結果保存
-    await this.saveFinalResults(results, participants);
-    
+    await this.saveFinalResults(results, participants)
+
     // ゲーム状態を終了に更新
     await prisma.game.update({
       where: { id: this.gameId },
-      data: { status: 'FINISHED', endedAt: new Date() }
-    });
+      data: { status: "FINISHED", endedAt: new Date() },
+    })
   }
 }
 ```
@@ -141,7 +141,7 @@ class PointManager {
 ### ゲーム終了判定 (実装済み)
 
 ```typescript
-// src/lib/point-manager.ts  
+// src/lib/point-manager.ts
 async checkGameEnd(): Promise<{ shouldEnd: boolean; reason?: string }> {
   const participants = await this.getParticipants();
   const game = await prisma.game.findUnique({
@@ -152,9 +152,9 @@ async checkGameEnd(): Promise<{ shouldEnd: boolean; reason?: string }> {
   // 1. トビ判定
   const tobiPlayer = participants.find(p => p.currentPoints <= 0);
   if (tobiPlayer && game.settings?.hasTobi) {
-    return { 
-      shouldEnd: true, 
-      reason: `トビ終了: ${tobiPlayer.playerId}がマイナス点数` 
+    return {
+      shouldEnd: true,
+      reason: `トビ終了: ${tobiPlayer.playerId}がマイナス点数`
     };
   }
 
@@ -181,10 +181,10 @@ private checkRoundEnd(game: any, gameType?: string): { shouldEnd: boolean; reaso
 ```typescript
 // src/app/room/create/page.tsx で実装済み
 const UMA_PRESETS = {
-  gottou: [10, 5, -5, -10],    // ゴットー
-  onetwo: [20, 10, -10, -20],  // ワンツー  
-  onethree: [30, 10, -10, -30] // ワンスリー
-};
+  gottou: [10, 5, -5, -10], // ゴットー
+  onetwo: [20, 10, -10, -20], // ワンツー
+  onethree: [30, 10, -10, -30], // ワンスリー
+}
 ```
 
 ### ルーム作成時の設定 ✅
@@ -209,7 +209,7 @@ const SettlementResult = ({ settlement }: { settlement: GameSettlement }) => {
   return (
     <div className="settlement-result">
       <h2>対局結果</h2>
-      
+
       {/* 最終順位表 */}
       <div className="ranking-table">
         {settlement.finalResults.map((result, index) => (
@@ -223,7 +223,7 @@ const SettlementResult = ({ settlement }: { settlement: GameSettlement }) => {
           </div>
         ))}
       </div>
-      
+
       {/* 精算詳細 */}
       <SettlementBreakdown settlement={settlement} />
     </div>
@@ -252,22 +252,23 @@ const SettlementResult = ({ settlement }: { settlement: GameSettlement }) => {
 
 ```typescript
 const validateSettlement = (results: PlayerResult[]): ValidationResult => {
-  const errors: string[] = [];
-  
+  const errors: string[] = []
+
   // 収支バランス
-  const totalSettlement = results.reduce((sum, r) => sum + r.settlement, 0);
-  if (Math.abs(totalSettlement) > 100) { // 100円の誤差まで許容
-    errors.push(`収支が合いません: ${totalSettlement}円`);
+  const totalSettlement = results.reduce((sum, r) => sum + r.settlement, 0)
+  if (Math.abs(totalSettlement) > 100) {
+    // 100円の誤差まで許容
+    errors.push(`収支が合いません: ${totalSettlement}円`)
   }
-  
+
   // 順位重複チェック
-  const ranks = results.map(r => r.rank);
+  const ranks = results.map((r) => r.rank)
   if (new Set(ranks).size !== ranks.length) {
-    errors.push('順位に重複があります');
+    errors.push("順位に重複があります")
   }
-  
-  return { isValid: errors.length === 0, errors };
-};
+
+  return { isValid: errors.length === 0, errors }
+}
 ```
 
 ## エラーハンドリング
@@ -289,22 +290,23 @@ const validateSettlement = (results: PlayerResult[]): ValidationResult => {
 ### 精算計算テスト
 
 ```typescript
-describe('SettlementService', () => {
-  it('標準ウマで正しく精算される', async () => {
+describe("SettlementService", () => {
+  it("標準ウマで正しく精算される", async () => {
     const participants = [
-      { playerId: '1', currentPoints: 35000 },
-      { playerId: '2', currentPoints: 25000 },
-      { playerId: '3', currentPoints: 20000 },
-      { playerId: '4', currentPoints: 20000 }
-    ];
-    
+      { playerId: "1", currentPoints: 35000 },
+      { playerId: "2", currentPoints: 25000 },
+      { playerId: "3", currentPoints: 20000 },
+      { playerId: "4", currentPoints: 20000 },
+    ]
+
     const result = await settlementService.calculateSettlement(
-      participants, standardSettings
-    );
-    
-    expect(result.finalResults[0].settlement).toBe(21000); // +10000 + 20000 - 9000
-    expect(result.finalResults[1].settlement).toBe(10000); // 0 + 10000
-    expect(result.calculations.verification.isBalanced).toBe(true);
-  });
-});
+      participants,
+      standardSettings
+    )
+
+    expect(result.finalResults[0].settlement).toBe(21000) // +10000 + 20000 - 9000
+    expect(result.finalResults[1].settlement).toBe(10000) // 0 + 10000
+    expect(result.calculations.verification.isBalanced).toBe(true)
+  })
+})
 ```

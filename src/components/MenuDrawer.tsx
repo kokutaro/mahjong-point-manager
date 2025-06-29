@@ -1,4 +1,4 @@
-'use client'
+"use client"
 
 interface MenuDrawerProps {
   isOpen: boolean
@@ -6,8 +6,11 @@ interface MenuDrawerProps {
   onShowHistory: () => void
 }
 
-export default function MenuDrawer({ isOpen, onClose, onShowHistory }: MenuDrawerProps) {
-  
+export default function MenuDrawer({
+  isOpen,
+  onClose,
+  onShowHistory,
+}: MenuDrawerProps) {
   if (!isOpen) return null
 
   const handleHistory = () => {
@@ -21,11 +24,19 @@ export default function MenuDrawer({ isOpen, onClose, onShowHistory }: MenuDrawe
       <div className="w-64 bg-white shadow-lg p-4">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold">メニュー</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">✕</button>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            ✕
+          </button>
         </div>
         <ul className="space-y-2">
           <li>
-            <button onClick={handleHistory} className="w-full text-left px-2 py-2 rounded hover:bg-gray-100">
+            <button
+              onClick={handleHistory}
+              className="w-full text-left px-2 py-2 rounded hover:bg-gray-100"
+            >
               📋 セッション履歴
             </button>
           </li>

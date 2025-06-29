@@ -1,5 +1,5 @@
-import { prisma } from '@/lib/prisma'
-import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from "@/lib/prisma"
+import { NextRequest, NextResponse } from "next/server"
 
 export async function GET(
   request: NextRequest,
@@ -12,23 +12,26 @@ export async function GET(
     const game = await prisma.game.findFirst({
       where: {
         roomCode: roomCode.toUpperCase(),
-        status: { in: ['WAITING', 'PLAYING'] }
+        status: { in: ["WAITING", "PLAYING"] },
       },
       include: {
         participants: {
           include: { player: true },
-          orderBy: { position: 'asc' }
+          orderBy: { position: "asc" },
         },
         settings: true,
-        hostPlayer: true
-      }
+        hostPlayer: true,
+      },
     })
 
     if (!game) {
-      return NextResponse.json({
-        success: false,
-        error: { message: 'ルームが見つかりません' }
-      }, { status: 404 })
+      return NextResponse.json(
+        {
+          success: false,
+          error: { message: "ルームが見つかりません" },
+        },
+        { status: 404 }
+      )
     }
 
     return NextResponse.json({
@@ -39,38 +42,43 @@ export async function GET(
         status: game.status,
         hostPlayer: {
           id: game.hostPlayer.id,
-          name: game.hostPlayer.name
+          name: game.hostPlayer.name,
         },
-        players: game.participants.map(p => ({
+        players: game.participants.map((p) => ({
           playerId: p.playerId,
           name: p.player.name,
           position: p.position,
           points: p.currentPoints,
           isReach: p.isReach,
-          isConnected: true // TODO: 実際のセッション管理
+          isConnected: true, // TODO: 実際のセッション管理
         })),
         currentRound: game.currentRound,
         currentOya: game.currentOya,
         honba: game.honba,
         kyotaku: game.kyotaku,
-        gamePhase: game.status.toLowerCase() as 'waiting' | 'playing' | 'finished',
+        gamePhase: game.status.toLowerCase() as
+          | "waiting"
+          | "playing"
+          | "finished",
         settings: {
           gameType: game.settings?.gameType,
           initialPoints: game.settings?.initialPoints,
           hasTobi: game.settings?.hasTobi,
-          uma: game.settings?.uma
-        }
-      }
+          uma: game.settings?.uma,
+        },
+      },
     })
-
   } catch (error) {
-    console.error('Room info retrieval failed:', error)
-    return NextResponse.json({
-      success: false,
-      error: { 
-        message: 'ルーム情報の取得に失敗しました',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      }
-    }, { status: 500 })
+    console.error("Room info retrieval failed:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          message: "ルーム情報の取得に失敗しました",
+          details: error instanceof Error ? error.message : "Unknown error",
+        },
+      },
+      { status: 500 }
+    )
   }
 }

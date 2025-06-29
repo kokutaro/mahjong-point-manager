@@ -1,6 +1,6 @@
-import { useEffect, useCallback, useState } from 'react'
-import { socketClient } from '@/lib/socket-client'
-import { Socket } from 'socket.io-client'
+import { useEffect, useCallback, useState } from "react"
+import { socketClient } from "@/lib/socket-client"
+import { Socket } from "socket.io-client"
 import type {
   SocketError,
   SocketIOError,
@@ -10,7 +10,7 @@ import type {
   RiichiDeclaredData,
   RyukyokuData,
   SeatOrderUpdatedData,
-} from '@/types/socket'
+} from "@/types/socket"
 
 export interface GameState {
   gameId: string
@@ -19,7 +19,7 @@ export interface GameState {
   currentOya: number
   honba: number
   kyotaku: number
-  gamePhase: 'waiting' | 'playing' | 'finished'
+  gamePhase: "waiting" | "playing" | "finished"
 }
 
 export interface GamePlayer {
@@ -44,9 +44,9 @@ export function useSocket() {
   const reconnect = useCallback(() => {
     const maxAttempts = 5
     const baseDelay = 2000 // 2秒
-    
+
     if (connectionAttempts >= maxAttempts) {
-      setError('接続に失敗しました。ページを再読み込みしてください。')
+      setError("接続に失敗しました。ページを再読み込みしてください。")
       setIsReconnecting(false)
       return
     }
@@ -57,7 +57,7 @@ export function useSocket() {
 
     // カウントダウンタイマー
     const countdownTimer = setInterval(() => {
-      setReconnectTimeLeft(prev => {
+      setReconnectTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(countdownTimer)
           return 0
@@ -68,8 +68,8 @@ export function useSocket() {
 
     setTimeout(() => {
       clearInterval(countdownTimer)
-      setConnectionAttempts(prev => prev + 1)
-      
+      setConnectionAttempts((prev) => prev + 1)
+
       // 新しいソケット接続を試行
       const newSocket = socketClient.connect()
       setSocket(newSocket)
@@ -78,112 +78,118 @@ export function useSocket() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connectionAttempts])
 
-  const setupSocketHandlers = useCallback((socketInstance: Socket) => {
-    const handleConnect = () => {
-      console.log('WebSocket connected:', socketInstance.id)
-      setIsConnected(true)
-      setError(null)
-      setConnectionAttempts(0)
-      setIsReconnecting(false)
-      setReconnectTimeLeft(0)
-    }
+  const setupSocketHandlers = useCallback(
+    (socketInstance: Socket) => {
+      const handleConnect = () => {
+        console.log("WebSocket connected:", socketInstance.id)
+        setIsConnected(true)
+        setError(null)
+        setConnectionAttempts(0)
+        setIsReconnecting(false)
+        setReconnectTimeLeft(0)
+      }
 
-    const handleDisconnect = (reason: string) => {
-      console.log('WebSocket disconnected:', reason)
-      setIsConnected(false)
-      
-      // 意図的な切断でない場合は再接続を試行
-      if (reason !== 'io client disconnect' && reason !== 'io server disconnect') {
-        setError('接続が切断されました。再接続を試行中...')
+      const handleDisconnect = (reason: string) => {
+        console.log("WebSocket disconnected:", reason)
+        setIsConnected(false)
+
+        // 意図的な切断でない場合は再接続を試行
+        if (
+          reason !== "io client disconnect" &&
+          reason !== "io server disconnect"
+        ) {
+          setError("接続が切断されました。再接続を試行中...")
+          reconnect()
+        }
+      }
+
+      const handleConnectError = (error: SocketIOError) => {
+        console.error("WebSocket connection error:", error)
+        setIsConnected(false)
+        setError("接続エラーが発生しました。再接続を試行中...")
         reconnect()
       }
-    }
 
-    const handleConnectError = (error: SocketIOError) => {
-      console.error('WebSocket connection error:', error)
-      setIsConnected(false)
-      setError('接続エラーが発生しました。再接続を試行中...')
-      reconnect()
-    }
-
-    const handleError = (error: SocketError) => {
-      console.error('WebSocket error:', error)
-      setError(error.message || '通信エラーが発生しました')
-    }
-
-    const handleGameState = (state: GameState) => {
-      console.log('Received game state in useSocket:', state)
-      setGameState(state)
-    }
-
-    const handlePlayerConnected = (data: PlayerConnectedData) => {
-      console.log('Player connected:', data)
-      if (data.gameState) {
-        setGameState(data.gameState)
+      const handleError = (error: SocketError) => {
+        console.error("WebSocket error:", error)
+        setError(error.message || "通信エラーが発生しました")
       }
-    }
 
-    const handleScoreUpdated = (data: ScoreUpdatedData) => {
-      console.log('Score updated in useSocket:', data)
-      if (data.gameState) {
-        setGameState(data.gameState)
+      const handleGameState = (state: GameState) => {
+        console.log("Received game state in useSocket:", state)
+        setGameState(state)
       }
-    }
 
-    const handleRiichiDeclared = (data: RiichiDeclaredData) => {
-      console.log('Riichi declared in useSocket:', data)
-      if (data.gameState) {
-        setGameState(data.gameState)
+      const handlePlayerConnected = (data: PlayerConnectedData) => {
+        console.log("Player connected:", data)
+        if (data.gameState) {
+          setGameState(data.gameState)
+        }
       }
-    }
 
-    const handleRyukyoku = (data: RyukyokuData) => {
-      console.log('Ryukyoku in useSocket:', data)
-      if (data.gameState) {
-        setGameState(data.gameState)
+      const handleScoreUpdated = (data: ScoreUpdatedData) => {
+        console.log("Score updated in useSocket:", data)
+        if (data.gameState) {
+          setGameState(data.gameState)
+        }
       }
-    }
 
-    const handleSeatOrderUpdated = (data: SeatOrderUpdatedData) => {
-      console.log('Seat order updated in useSocket:', data)
-      if (data.gameState) {
-        setGameState(data.gameState)
+      const handleRiichiDeclared = (data: RiichiDeclaredData) => {
+        console.log("Riichi declared in useSocket:", data)
+        if (data.gameState) {
+          setGameState(data.gameState)
+        }
       }
-    }
 
-    socketInstance.on('connect', handleConnect)
-    socketInstance.on('disconnect', handleDisconnect)
-    socketInstance.on('connect_error', handleConnectError)
-    socketInstance.on('error', handleError)
-    socketClient.onGameState(handleGameState)
-    socketClient.onPlayerConnected(handlePlayerConnected)
-    socketClient.onPlayerJoined((data: PlayerJoinedData) => {
-      console.log('Player joined event in useSocket:', data)
-      if (data.gameState) {
-        setGameState(data.gameState)
+      const handleRyukyoku = (data: RyukyokuData) => {
+        console.log("Ryukyoku in useSocket:", data)
+        if (data.gameState) {
+          setGameState(data.gameState)
+        }
       }
-    })
-    socketClient.onScoreUpdated(handleScoreUpdated)
-    socketClient.onRiichiDeclared(handleRiichiDeclared)
-    socketClient.onRyukyoku(handleRyukyoku)
-    socketClient.onSeatOrderUpdated(handleSeatOrderUpdated)
-    socketClient.onError(handleError)
 
-    return () => {
-      socketInstance.off('connect', handleConnect)
-      socketInstance.off('disconnect', handleDisconnect)
-      socketInstance.off('connect_error', handleConnectError)
-      socketInstance.off('error', handleError)
-      socketClient.offGameState(handleGameState)
-      socketClient.offPlayerConnected(handlePlayerConnected)
-      socketClient.offPlayerJoined()
-      socketClient.offScoreUpdated(handleScoreUpdated)
-      socketClient.offRiichiDeclared(handleRiichiDeclared)
-      socketClient.offRyukyoku(handleRyukyoku)
-      socketClient.offSeatOrderUpdated(handleSeatOrderUpdated)
-      socketClient.offError(handleError)
-    }
-  }, [reconnect])
+      const handleSeatOrderUpdated = (data: SeatOrderUpdatedData) => {
+        console.log("Seat order updated in useSocket:", data)
+        if (data.gameState) {
+          setGameState(data.gameState)
+        }
+      }
+
+      socketInstance.on("connect", handleConnect)
+      socketInstance.on("disconnect", handleDisconnect)
+      socketInstance.on("connect_error", handleConnectError)
+      socketInstance.on("error", handleError)
+      socketClient.onGameState(handleGameState)
+      socketClient.onPlayerConnected(handlePlayerConnected)
+      socketClient.onPlayerJoined((data: PlayerJoinedData) => {
+        console.log("Player joined event in useSocket:", data)
+        if (data.gameState) {
+          setGameState(data.gameState)
+        }
+      })
+      socketClient.onScoreUpdated(handleScoreUpdated)
+      socketClient.onRiichiDeclared(handleRiichiDeclared)
+      socketClient.onRyukyoku(handleRyukyoku)
+      socketClient.onSeatOrderUpdated(handleSeatOrderUpdated)
+      socketClient.onError(handleError)
+
+      return () => {
+        socketInstance.off("connect", handleConnect)
+        socketInstance.off("disconnect", handleDisconnect)
+        socketInstance.off("connect_error", handleConnectError)
+        socketInstance.off("error", handleError)
+        socketClient.offGameState(handleGameState)
+        socketClient.offPlayerConnected(handlePlayerConnected)
+        socketClient.offPlayerJoined()
+        socketClient.offScoreUpdated(handleScoreUpdated)
+        socketClient.offRiichiDeclared(handleRiichiDeclared)
+        socketClient.offRyukyoku(handleRyukyoku)
+        socketClient.offSeatOrderUpdated(handleSeatOrderUpdated)
+        socketClient.offError(handleError)
+      }
+    },
+    [reconnect]
+  )
 
   useEffect(() => {
     const socketInstance = socketClient.connect()
@@ -195,57 +201,79 @@ export function useSocket() {
     }
   }, [setupSocketHandlers])
 
-  const joinRoom = useCallback((roomCode: string, playerId: string) => {
-    console.log('🏠 joinRoom called:', { roomCode, playerId, isConnected, socketConnected: socket?.connected })
-    if (!isConnected || !socket?.connected) {
-      console.warn('🏠 Socket not connected, delaying join room')
-      setTimeout(() => {
-        if (socket?.connected) {
-          console.log('🏠 Delayed joining room via WebSocket:', roomCode, playerId)
-          socketClient.joinRoom(roomCode, playerId)
-        } else {
-          console.error('🏠 Socket still not connected after delay')
-        }
-      }, 1000)
-    } else {
-      console.log('🏠 Immediately joining room via WebSocket:', roomCode, playerId)
-      socketClient.joinRoom(roomCode, playerId)
-    }
-  }, [isConnected, socket])
+  const joinRoom = useCallback(
+    (roomCode: string, playerId: string) => {
+      console.log("🏠 joinRoom called:", {
+        roomCode,
+        playerId,
+        isConnected,
+        socketConnected: socket?.connected,
+      })
+      if (!isConnected || !socket?.connected) {
+        console.warn("🏠 Socket not connected, delaying join room")
+        setTimeout(() => {
+          if (socket?.connected) {
+            console.log(
+              "🏠 Delayed joining room via WebSocket:",
+              roomCode,
+              playerId
+            )
+            socketClient.joinRoom(roomCode, playerId)
+          } else {
+            console.error("🏠 Socket still not connected after delay")
+          }
+        }, 1000)
+      } else {
+        console.log(
+          "🏠 Immediately joining room via WebSocket:",
+          roomCode,
+          playerId
+        )
+        socketClient.joinRoom(roomCode, playerId)
+      }
+    },
+    [isConnected, socket]
+  )
 
   const setReady = useCallback((gameId: string, playerId: string) => {
     socketClient.setReady(gameId, playerId)
   }, [])
 
-  const calculateScore = useCallback((data: {
-    gameId: string
-    winnerId: string
-    han: number
-    fu: number
-    isTsumo: boolean
-    loserId?: string
-  }) => {
-    socketClient.calculateScore(data)
-  }, [])
+  const calculateScore = useCallback(
+    (data: {
+      gameId: string
+      winnerId: string
+      han: number
+      fu: number
+      isTsumo: boolean
+      loserId?: string
+    }) => {
+      socketClient.calculateScore(data)
+    },
+    []
+  )
 
   const declareReach = useCallback((gameId: string, playerId: string) => {
     socketClient.declareReach(gameId, playerId)
   }, [])
 
-  const declareRyukyoku = useCallback((gameId: string, reason: string, tenpaiPlayers: string[] = []) => {
-    socketClient.declareRyukyoku(gameId, reason, tenpaiPlayers)
-  }, [])
+  const declareRyukyoku = useCallback(
+    (gameId: string, reason: string, tenpaiPlayers: string[] = []) => {
+      socketClient.declareRyukyoku(gameId, reason, tenpaiPlayers)
+    },
+    []
+  )
 
   // 手動再接続機能
   const manualReconnect = useCallback(() => {
     setConnectionAttempts(0)
     setError(null)
     setIsReconnecting(false)
-    
+
     if (socket) {
       socket.disconnect()
     }
-    
+
     const newSocket = socketClient.connect()
     setSocket(newSocket)
     setupSocketHandlers(newSocket)
@@ -264,7 +292,7 @@ export function useSocket() {
     calculateScore,
     declareReach,
     declareRyukyoku,
-    manualReconnect
+    manualReconnect,
   }
 }
 
@@ -292,6 +320,6 @@ export function useGameEvents() {
 
   return {
     scoreUpdate,
-    gameStarted
+    gameStarted,
   }
 }

@@ -10,15 +10,15 @@ services:
       - "0.0.0.0:443:443"
     environment:
       # Nginxにホスト名設定を追加
-      - NGINX_HOST=_  # すべてのホストを受け入れ
-      
+      - NGINX_HOST=_ # すべてのホストを受け入れ
+
   app:
     environment:
       # ネットワークアクセス用の追加環境変数
       - HOSTNAME=0.0.0.0
       - HOST=0.0.0.0
       # NEXTAUTH_URLは.env.prodファイルで設定
-      
+
 networks:
   mahjong-network:
     driver: bridge

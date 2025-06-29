@@ -28,14 +28,14 @@ export type SoloGamePlayer = BasePlayerState
 export interface MultiGameState extends BaseGameState {
   gameId: string
   players: MultiGamePlayer[]
-  gamePhase: 'waiting' | 'playing' | 'finished'
+  gamePhase: "waiting" | "playing" | "finished"
 }
 
 // ソロプレイ用ゲーム状態
 export interface SoloGameState extends BaseGameState {
   gameId: string
   players: SoloGamePlayer[]
-  status: 'WAITING' | 'PLAYING' | 'FINISHED'
+  status: "WAITING" | "PLAYING" | "FINISHED"
 }
 
 // 点数入力データの型
@@ -53,16 +53,16 @@ export interface RyukyokuSubmissionData {
 }
 
 // ゲームモード
-export type GameMode = 'multi' | 'solo'
+export type GameMode = "multi" | "solo"
 
 // 汎用化されたコンポーネントのProps型
 export interface BaseScoreInputFormProps<
   TGameState extends BaseGameState,
-  TPlayer extends BasePlayerState
+  TPlayer extends BasePlayerState,
 > {
   gameState: TGameState & { players: TPlayer[] }
   currentPlayer?: TPlayer
-  actionType: 'tsumo' | 'ron'
+  actionType: "tsumo" | "ron"
   preselectedWinnerId?: string
   mode: GameMode
   onSubmit: (scoreData: ScoreSubmissionData) => Promise<void>

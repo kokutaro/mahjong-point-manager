@@ -1,6 +1,6 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
+import { useState } from "react"
 
 interface ForceEndConfirmModalProps {
   isOpen: boolean
@@ -10,26 +10,26 @@ interface ForceEndConfirmModalProps {
   isLoading?: boolean
 }
 
-export default function ForceEndConfirmModal({ 
-  isOpen, 
-  onClose, 
-  onConfirm, 
+export default function ForceEndConfirmModal({
+  isOpen,
+  onClose,
+  onConfirm,
   sessionName,
-  isLoading = false
+  isLoading = false,
 }: ForceEndConfirmModalProps) {
-  const [reason, setReason] = useState('')
-  const [customReason, setCustomReason] = useState('')
-  
+  const [reason, setReason] = useState("")
+  const [customReason, setCustomReason] = useState("")
+
   const predefinedReasons = [
-    'ホストによる終了',
-    '時間切れ',
-    '技術的問題',
-    'プレイヤー都合',
-    'その他'
+    "ホストによる終了",
+    "時間切れ",
+    "技術的問題",
+    "プレイヤー都合",
+    "その他",
   ]
 
   const handleConfirm = () => {
-    const finalReason = reason === 'その他' ? customReason.trim() : reason
+    const finalReason = reason === "その他" ? customReason.trim() : reason
     if (finalReason) {
       onConfirm(finalReason)
       // モーダルを閉じるのは親コンポーネントで処理
@@ -38,13 +38,14 @@ export default function ForceEndConfirmModal({
 
   const handleClose = () => {
     if (!isLoading) {
-      setReason('')
-      setCustomReason('')
+      setReason("")
+      setCustomReason("")
       onClose()
     }
   }
 
-  const isConfirmDisabled = !reason || (reason === 'その他' && !customReason.trim()) || isLoading
+  const isConfirmDisabled =
+    !reason || (reason === "その他" && !customReason.trim()) || isLoading
 
   if (!isOpen) return null
 
@@ -55,13 +56,16 @@ export default function ForceEndConfirmModal({
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             セッション強制終了の確認
           </h3>
-          
+
           <div className="mb-6">
             <p className="text-gray-600 mb-3">
               {sessionName ? (
-                <>セッション「<span className="font-medium">{sessionName}</span>」を強制終了しますか？</>
+                <>
+                  セッション「<span className="font-medium">{sessionName}</span>
+                  」を強制終了しますか？
+                </>
               ) : (
-                'このセッションを強制終了しますか？'
+                "このセッションを強制終了しますか？"
               )}
             </p>
             <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
@@ -84,11 +88,13 @@ export default function ForceEndConfirmModal({
             >
               <option value="">理由を選択してください...</option>
               {predefinedReasons.map((r) => (
-                <option key={r} value={r}>{r}</option>
+                <option key={r} value={r}>
+                  {r}
+                </option>
               ))}
             </select>
-            
-            {reason === 'その他' && (
+
+            {reason === "その他" && (
               <input
                 type="text"
                 value={customReason}
@@ -116,14 +122,30 @@ export default function ForceEndConfirmModal({
             >
               {isLoading ? (
                 <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <svg
+                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
                   </svg>
                   処理中...
                 </>
               ) : (
-                '強制終了'
+                "強制終了"
               )}
             </button>
           </div>

@@ -1,6 +1,6 @@
-'use client'
+"use client"
 
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef } from "react"
 
 interface PerformanceMetrics {
   componentName: string
@@ -13,7 +13,7 @@ export function usePerformanceMonitor(componentName: string, enabled = false) {
   const metricsRef = useRef<PerformanceMetrics[]>([])
 
   useEffect(() => {
-    if (!enabled || typeof window === 'undefined') return
+    if (!enabled || typeof window === "undefined") return
 
     startTimeRef.current = performance.now()
 
@@ -23,7 +23,7 @@ export function usePerformanceMonitor(componentName: string, enabled = false) {
         const metric: PerformanceMetrics = {
           componentName,
           renderTime,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         }
 
         metricsRef.current.push(metric)
@@ -34,7 +34,7 @@ export function usePerformanceMonitor(componentName: string, enabled = false) {
         }
 
         // Log slow renders in development
-        if (process.env.NODE_ENV === 'development' && renderTime > 16) {
+        if (process.env.NODE_ENV === "development" && renderTime > 16) {
           console.warn(
             `🐌 Slow render detected: ${componentName} took ${renderTime.toFixed(2)}ms`
           )
@@ -52,7 +52,7 @@ export function usePerformanceMonitor(componentName: string, enabled = false) {
 
   return {
     getMetrics,
-    getAverageRenderTime
+    getAverageRenderTime,
   }
 }
 
@@ -63,7 +63,8 @@ export function withPerformanceMonitor<T extends object>(
   enabled = false
 ) {
   return function PerformanceMonitoredComponent(props: T) {
-    const displayName = componentName || Component.displayName || Component.name || 'Component'
+    const displayName =
+      componentName || Component.displayName || Component.name || "Component"
     usePerformanceMonitor(displayName, enabled)
     return React.createElement(Component, props)
   }

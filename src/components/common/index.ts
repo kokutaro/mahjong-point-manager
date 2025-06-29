@@ -1,7 +1,7 @@
 // 共通コンポーネントのエクスポート
 
-export { default as BaseScoreInputForm } from './BaseScoreInputForm'
-export { default as BaseRyukyokuForm } from './BaseRyukyokuForm'
+export { default as BaseScoreInputForm } from "./BaseScoreInputForm"
+export { default as BaseRyukyokuForm } from "./BaseRyukyokuForm"
 
 export type {
   BasePlayerState,
@@ -16,5 +16,5 @@ export type {
   BaseScoreInputFormProps,
   BaseRyukyokuFormProps,
   HanOption,
-  FuOption
-} from './types'
+  FuOption,
+} from "./types"

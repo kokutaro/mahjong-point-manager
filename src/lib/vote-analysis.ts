@@ -1,8 +1,8 @@
-import { VoteOption, VoteState } from '@/components/VotingProgress'
+import { VoteOption, VoteState } from "@/components/VotingProgress"
 
 // 投票結果分析の結果型
 export interface VoteResult {
-  action: 'continue' | 'end' | 'wait'
+  action: "continue" | "end" | "wait"
   message: string
   details: {
     continueVotes: number
@@ -27,50 +27,53 @@ export interface VoteData {
  * @param totalPlayers 総プレイヤー数
  * @returns 投票結果と推奨アクション
  */
-export function analyzeVotes(votes: VoteState, totalPlayers: number): VoteResult {
+export function analyzeVotes(
+  votes: VoteState,
+  totalPlayers: number
+): VoteResult {
   const voteCount = Object.values(votes)
-  const continueVotes = voteCount.filter(v => v === 'continue').length
-  const endVotes = voteCount.filter(v => v === 'end').length
-  const pauseVotes = voteCount.filter(v => v === 'pause').length
+  const continueVotes = voteCount.filter((v) => v === "continue").length
+  const endVotes = voteCount.filter((v) => v === "end").length
+  const pauseVotes = voteCount.filter((v) => v === "pause").length
   const votedPlayers = voteCount.length
-  
-  const details = { 
-    continueVotes, 
-    endVotes, 
-    pauseVotes, 
-    totalPlayers, 
-    votedPlayers 
+
+  const details = {
+    continueVotes,
+    endVotes,
+    pauseVotes,
+    totalPlayers,
+    votedPlayers,
   }
-  
+
   // 全員投票済みの場合
   if (votedPlayers === totalPlayers) {
     if (endVotes === totalPlayers) {
       return {
-        action: 'end',
-        message: '全員がセッション終了に合意しました。セッションを終了します。',
-        details
+        action: "end",
+        message: "全員がセッション終了に合意しました。セッションを終了します。",
+        details,
       }
     } else if (continueVotes > 0) {
       return {
-        action: 'continue',
+        action: "continue",
         message: `${continueVotes}名がセッション継続を希望しています。継続プロセスを開始します。`,
-        details
+        details,
       }
     } else {
       // 全員が保留の場合
       return {
-        action: 'wait',
-        message: '全員が保留を選択しました。再度投票を行ってください。',
-        details
+        action: "wait",
+        message: "全員が保留を選択しました。再度投票を行ってください。",
+        details,
       }
     }
   }
-  
+
   // まだ投票中
   return {
-    action: 'wait',
+    action: "wait",
     message: `投票待機中 (${votedPlayers}/${totalPlayers})`,
-    details
+    details,
   }
 }
 
@@ -80,7 +83,7 @@ export function analyzeVotes(votes: VoteState, totalPlayers: number): VoteResult
  * @returns 有効かどうか
  */
 export function isValidVote(vote: unknown): vote is VoteOption {
-  return ['continue', 'end', 'pause'].includes(vote as string)
+  return ["continue", "end", "pause"].includes(vote as string)
 }
 
 /**
@@ -91,22 +94,22 @@ export function isValidVote(vote: unknown): vote is VoteOption {
 export function summarizeVoteResult(voteResult: VoteResult): string {
   const { details } = voteResult
   const summary = []
-  
+
   if (details.continueVotes > 0) {
     summary.push(`継続: ${details.continueVotes}票`)
   }
-  
+
   if (details.endVotes > 0) {
     summary.push(`終了: ${details.endVotes}票`)
   }
-  
+
   if (details.pauseVotes > 0) {
     summary.push(`保留: ${details.pauseVotes}票`)
   }
-  
+
   const votedCount = `(${details.votedPlayers}/${details.totalPlayers}人投票済み)`
-  
-  return `${summary.join(', ')} ${votedCount}`
+
+  return `${summary.join(", ")} ${votedCount}`
 }
 
 /**
@@ -116,10 +119,14 @@ export function summarizeVoteResult(voteResult: VoteResult): string {
  */
 export function getVoteDisplayName(vote: VoteOption): string {
   switch (vote) {
-    case 'continue': return 'セッション継続'
-    case 'end': return 'セッション終了'
-    case 'pause': return '保留・様子見'
-    default: return '不明'
+    case "continue":
+      return "セッション継続"
+    case "end":
+      return "セッション終了"
+    case "pause":
+      return "保留・様子見"
+    default:
+      return "不明"
   }
 }
 
@@ -130,10 +137,14 @@ export function getVoteDisplayName(vote: VoteOption): string {
  */
 export function getVoteIcon(vote: VoteOption): string {
   switch (vote) {
-    case 'continue': return '🔄'
-    case 'end': return '✋'
-    case 'pause': return '⏸️'
-    default: return '❓'
+    case "continue":
+      return "🔄"
+    case "end":
+      return "✋"
+    case "pause":
+      return "⏸️"
+    default:
+      return "❓"
   }
 }
 
@@ -144,10 +155,14 @@ export function getVoteIcon(vote: VoteOption): string {
  */
 export function getVotePriority(vote: VoteOption): number {
   switch (vote) {
-    case 'continue': return 3
-    case 'end': return 2
-    case 'pause': return 1
-    default: return 0
+    case "continue":
+      return 3
+    case "end":
+      return 2
+    case "pause":
+      return 1
+    default:
+      return 0
   }
 }
 
@@ -171,7 +186,10 @@ export function getElapsedTime(startTime: string): number {
  * @param timeoutDuration タイムアウト時間（ミリ秒）
  * @returns 残り時間（ミリ秒）、0以下の場合はタイムアウト
  */
-export function getRemainingTime(startTime: string, timeoutDuration: number = VOTE_TIMEOUT_DURATION): number {
+export function getRemainingTime(
+  startTime: string,
+  timeoutDuration: number = VOTE_TIMEOUT_DURATION
+): number {
   const elapsed = getElapsedTime(startTime)
   return Math.max(0, timeoutDuration - elapsed)
 }
@@ -185,5 +203,5 @@ export function formatTime(milliseconds: number): string {
   const totalSeconds = Math.floor(milliseconds / 1000)
   const minutes = Math.floor(totalSeconds / 60)
   const seconds = totalSeconds % 60
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`
 }

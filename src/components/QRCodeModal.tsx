@@ -1,6 +1,6 @@
-'use client'
+"use client"
 
-import React from 'react'
+import React from "react"
 
 interface QRCodeModalProps {
   isOpen: boolean
@@ -8,7 +8,11 @@ interface QRCodeModalProps {
   qrCodeData?: string
 }
 
-const QRCodeModal: React.FC<QRCodeModalProps> = ({ isOpen, onClose, qrCodeData }) => {
+const QRCodeModal: React.FC<QRCodeModalProps> = ({
+  isOpen,
+  onClose,
+  qrCodeData,
+}) => {
   if (!isOpen) return null
 
   return (

@@ -32,25 +32,25 @@
 
 ```typescript
 interface RoundState {
-  currentRound: number;      // 現在の局 (1=東1, 5=南1, etc.)
-  currentOya: number;        // 現在の親位置 (0-3)
-  startingOya: number;       // 起家位置 (0-3)
-  honba: number;             // 本場数
-  kyotaku: number;           // 供託数（リーチ棒）
-  
+  currentRound: number // 現在の局 (1=東1, 5=南1, etc.)
+  currentOya: number // 現在の親位置 (0-3)
+  startingOya: number // 起家位置 (0-3)
+  honba: number // 本場数
+  kyotaku: number // 供託数（リーチ棒）
+
   // 進行情報
-  gameType: 'TONPUU' | 'HANCHAN';
-  maxRounds: number;         // 最大局数
-  isLastRound: boolean;      // 最終局フラグ
-  isOvertime: boolean;       // 延長戦フラグ
+  gameType: "TONPUU" | "HANCHAN"
+  maxRounds: number // 最大局数
+  isLastRound: boolean // 最終局フラグ
+  isOvertime: boolean // 延長戦フラグ
 }
 
 interface RoundEvent {
-  eventType: 'AGARI' | 'RYUKYOKU' | 'ROUND_START' | 'GAME_END';
-  winnerId?: string;         // アガリ者
-  isOya: boolean;           // 親かどうか
-  roundBefore: RoundState;   // イベント前状態
-  roundAfter: RoundState;    // イベント後状態
+  eventType: "AGARI" | "RYUKYOKU" | "ROUND_START" | "GAME_END"
+  winnerId?: string // アガリ者
+  isOya: boolean // 親かどうか
+  roundBefore: RoundState // イベント前状態
+  roundAfter: RoundState // イベント後状態
 }
 ```
 
@@ -61,74 +61,74 @@ interface RoundEvent {
 ```typescript
 export class RoundManager {
   constructor(private prisma: PrismaClient) {}
-  
+
   async processRoundEvent(
-    gameId: string, 
+    gameId: string,
     event: RoundEventInput
   ): Promise<RoundState> {
-    const currentState = await this.getCurrentRoundState(gameId);
-    
+    const currentState = await this.getCurrentRoundState(gameId)
+
     switch (event.type) {
-      case 'AGARI':
-        return await this.processAgari(gameId, currentState, event);
-      case 'RYUKYOKU':
-        return await this.processRyukyoku(gameId, currentState, event);
+      case "AGARI":
+        return await this.processAgari(gameId, currentState, event)
+      case "RYUKYOKU":
+        return await this.processRyukyoku(gameId, currentState, event)
       default:
-        throw new Error(`Unknown event type: ${event.type}`);
+        throw new Error(`Unknown event type: ${event.type}`)
     }
   }
-  
+
   private async processAgari(
     gameId: string,
     state: RoundState,
     event: AgariEvent
   ): Promise<RoundState> {
-    const newState = { ...state };
-    
+    const newState = { ...state }
+
     if (event.isOya) {
       // 親のアガリ → 連荘
-      newState.honba += 1;
+      newState.honba += 1
       // 親・局は変更なし
     } else {
       // 子のアガリ → 親移動
-      newState.currentOya = this.getNextOya(state.currentOya);
-      newState.currentRound += 1;
-      newState.honba = 0;
-      newState.kyotaku = 0; // 供託クリア
+      newState.currentOya = this.getNextOya(state.currentOya)
+      newState.currentRound += 1
+      newState.honba = 0
+      newState.kyotaku = 0 // 供託クリア
     }
-    
+
     // 終局判定
-    newState.isLastRound = this.checkLastRound(newState);
-    
-    return await this.updateRoundState(gameId, newState);
+    newState.isLastRound = this.checkLastRound(newState)
+
+    return await this.updateRoundState(gameId, newState)
   }
-  
+
   private async processRyukyoku(
     gameId: string,
     state: RoundState,
     event: RyukyokuEvent
   ): Promise<RoundState> {
-    const newState = { ...state };
-    
-    if (event.reason === 'DRAW' || event.reason === 'NAGASHI_MANGAN') {
+    const newState = { ...state }
+
+    if (event.reason === "DRAW" || event.reason === "NAGASHI_MANGAN") {
       // 通常流局 → 親継続、本場増加
-      newState.honba += 1;
+      newState.honba += 1
     } else {
       // 途中流局 → 親移動、本場リセット
-      newState.currentOya = this.getNextOya(state.currentOya);
-      newState.currentRound += 1;
-      newState.honba = 0;
+      newState.currentOya = this.getNextOya(state.currentOya)
+      newState.currentRound += 1
+      newState.honba = 0
     }
-    
-    return await this.updateRoundState(gameId, newState);
+
+    return await this.updateRoundState(gameId, newState)
   }
-  
+
   private getNextOya(currentOya: number): number {
-    return (currentOya + 1) % 4;
+    return (currentOya + 1) % 4
   }
-  
+
   private checkLastRound(state: RoundState): boolean {
-    return state.currentRound >= state.maxRounds;
+    return state.currentRound >= state.maxRounds
   }
 }
 ```
@@ -143,22 +143,22 @@ export class GameEndChecker {
   ): GameEndResult {
     // 規定局数終了
     if (roundState.currentRound > roundState.maxRounds) {
-      return { shouldEnd: true, reason: 'ROUND_LIMIT' };
+      return { shouldEnd: true, reason: "ROUND_LIMIT" }
     }
-    
+
     // トビ終了
-    const bankruptPlayer = participants.find(p => p.currentPoints < 0);
+    const bankruptPlayer = participants.find((p) => p.currentPoints < 0)
     if (bankruptPlayer) {
-      return { shouldEnd: true, reason: 'BANKRUPTCY' };
+      return { shouldEnd: true, reason: "BANKRUPTCY" }
     }
-    
+
     // 30000点リーチ
-    const reachPlayer = participants.find(p => p.currentPoints >= 30000);
+    const reachPlayer = participants.find((p) => p.currentPoints >= 30000)
     if (reachPlayer && roundState.isLastRound) {
-      return { shouldEnd: true, reason: 'POINT_LIMIT' };
+      return { shouldEnd: true, reason: "POINT_LIMIT" }
     }
-    
-    return { shouldEnd: false };
+
+    return { shouldEnd: false }
   }
 }
 ```
@@ -208,7 +208,7 @@ const RoundDisplay: React.FC<{ roundState: RoundState }> = ({ roundState }) => {
     const roundNumber = ((round - 1) % 4) + 1;
     return `${winds[windIndex]}${roundNumber}局`;
   };
-  
+
   return (
     <div className="flex items-center gap-4">
       <span className="text-lg font-bold">
@@ -231,9 +231,9 @@ const RoundDisplay: React.FC<{ roundState: RoundState }> = ({ roundState }) => {
 
 ```typescript
 interface RenchanLimitRule {
-  enabled: boolean;
-  maxRenchan: number;     // 最大連荘数
-  forceRotation: boolean; // 強制親移動
+  enabled: boolean
+  maxRenchan: number // 最大連荘数
+  forceRotation: boolean // 強制親移動
 }
 ```
 
@@ -241,10 +241,10 @@ interface RenchanLimitRule {
 
 ```typescript
 interface RyukyokuRule {
-  tengaiRyukyoku: boolean;  // 天和・地和・人和流局
-  suufonRenda: boolean;     // 四風連打
-  kyushukyuhai: boolean;    // 九種九牌
-  forcedRotation: boolean;  // 強制親移動
+  tengaiRyukyoku: boolean // 天和・地和・人和流局
+  suufonRenda: boolean // 四風連打
+  kyushukyuhai: boolean // 九種九牌
+  forcedRotation: boolean // 強制親移動
 }
 ```
 
@@ -279,25 +279,25 @@ interface RyukyokuRule {
 ### 局進行テスト
 
 ```typescript
-describe('RoundManager', () => {
-  it('親のアガリで連荘する', async () => {
+describe("RoundManager", () => {
+  it("親のアガリで連荘する", async () => {
     const result = await roundManager.processAgari(gameId, {
       isOya: true,
-      winnerId: 'player1'
-    });
-    
-    expect(result.honba).toBe(initialState.honba + 1);
-    expect(result.currentOya).toBe(initialState.currentOya);
-  });
-  
-  it('子のアガリで親移動する', async () => {
+      winnerId: "player1",
+    })
+
+    expect(result.honba).toBe(initialState.honba + 1)
+    expect(result.currentOya).toBe(initialState.currentOya)
+  })
+
+  it("子のアガリで親移動する", async () => {
     const result = await roundManager.processAgari(gameId, {
       isOya: false,
-      winnerId: 'player2'
-    });
-    
-    expect(result.currentOya).toBe((initialState.currentOya + 1) % 4);
-    expect(result.honba).toBe(0);
-  });
-});
+      winnerId: "player2",
+    })
+
+    expect(result.currentOya).toBe((initialState.currentOya + 1) % 4)
+    expect(result.honba).toBe(0)
+  })
+})
 ```

@@ -12,16 +12,17 @@
 
 ```typescript
 // プロダクション環境では正しいURLを生成
-const socketUrl = process.env.NODE_ENV === 'production' 
-  ? `${window.location.protocol}//${window.location.hostname}`  // ポート番号なし（Nginxプロキシ）
-  : `${window.location.protocol}//${window.location.hostname}:${port}`
+const socketUrl =
+  process.env.NODE_ENV === "production"
+    ? `${window.location.protocol}//${window.location.hostname}` // ポート番号なし（Nginxプロキシ）
+    : `${window.location.protocol}//${window.location.hostname}:${port}`
 ```
 
 ### 2. サーバー側設定 (server.js)
 
 ```javascript
 // プロダクション環境では0.0.0.0でバインド
-const hostname = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost'
+const hostname = process.env.NODE_ENV === "production" ? "0.0.0.0" : "localhost"
 ```
 
 ### 3. Socket.IO設定 (socketjs.js)
@@ -65,14 +66,14 @@ app:
   environment:
     - NODE_ENV=production
     - WEBSOCKET_HOST=0.0.0.0
-    - NEXTAUTH_URL=http://localhost  # プロキシ経由のURL
+    - NEXTAUTH_URL=http://localhost # プロキシ経由のURL
   expose:
-    - "3000"  # 内部ネットワークのみ
+    - "3000" # 内部ネットワークのみ
 
 # Nginxコンテナ
 nginx:
   ports:
-    - "80:80"  # 外部に公開
+    - "80:80" # 外部に公開
 ```
 
 ## デバッグ方法
@@ -138,7 +139,7 @@ docker-compose -f docker-compose.prod.yml logs -f app
 ### 3. 動作確認
 
 1. <http://localhost> でアプリケーションアクセス
-2. WebSocketステータス確認: <http://localhost/api/websocket-status>  
+2. WebSocketステータス確認: <http://localhost/api/websocket-status>
 3. ゲーム作成・参加でリアルタイム機能をテスト
 
 ## よくある問題と解決策
@@ -148,7 +149,7 @@ docker-compose -f docker-compose.prod.yml logs -f app
 **原因**: CORS設定またはプロキシ設定の問題
 **解決**: NEXTAUTH_URLとNginxのproxy_set_headerを確認
 
-### 問題2: 「Socket.IO not found」  
+### 問題2: 「Socket.IO not found」
 
 **原因**: server.jsまたはsocketjs.jsがコンテナにコピーされていない
 **解決**: Dockerfileのコピー処理を確認、再ビルド
@@ -169,7 +170,7 @@ docker-compose -f docker-compose.prod.yml logs -f app
 
 ```javascript
 pingTimeout: 60000,      // 60秒
-pingInterval: 25000,     // 25秒  
+pingInterval: 25000,     // 25秒
 upgradeTimeout: 30000,   // 30秒
 maxHttpBufferSize: 1e6   // 1MB
 ```

@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
-import { prisma } from '@/lib/prisma'
-import { cookies } from 'next/headers'
+import { NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
+import { prisma } from "@/lib/prisma"
+import { cookies } from "next/headers"
 
 const createRoomSchema = z.object({
   hostPlayerName: z.string().min(1).max(20),
-  gameType: z.enum(['TONPUU', 'HANCHAN']).default('HANCHAN'),
+  gameType: z.enum(["TONPUU", "HANCHAN"]).default("HANCHAN"),
   initialPoints: z.number().int().min(20000).max(50000).default(25000),
   basePoints: z.number().int().min(20000).max(50000).default(30000),
   hasTobi: z.boolean().default(true),
@@ -13,7 +13,7 @@ const createRoomSchema = z.object({
   // セッション関連の新しいフィールド
   sessionMode: z.boolean().default(false),
   existingSessionId: z.string().optional(),
-  sessionName: z.string().optional()
+  sessionName: z.string().optional(),
 })
 
 // 6桁のランダムルームコード生成
@@ -37,13 +37,13 @@ export async function POST(request: NextRequest) {
     do {
       roomCode = generateRoomCode()
       existingGame = await prisma.game.findFirst({
-        where: { roomCode, status: { in: ['WAITING', 'PLAYING'] } }
+        where: { roomCode, status: { in: ["WAITING", "PLAYING"] } },
       })
     } while (existingGame)
 
     // 既存プレイヤーがいれば再利用
     const cookieStore = await cookies()
-    const currentPlayerId = cookieStore.get('player_id')?.value
+    const currentPlayerId = cookieStore.get("player_id")?.value
 
     let hostPlayer = currentPlayerId
       ? await prisma.player.findUnique({ where: { id: currentPlayerId } })
@@ -53,15 +53,15 @@ export async function POST(request: NextRequest) {
       if (hostPlayer.name !== validatedData.hostPlayerName) {
         hostPlayer = await prisma.player.update({
           where: { id: hostPlayer.id },
-          data: { name: validatedData.hostPlayerName }
+          data: { name: validatedData.hostPlayerName },
         })
       }
     } else {
       hostPlayer = await prisma.player.create({
         data: {
           name: validatedData.hostPlayerName,
-          createdAt: new Date()
-        }
+          createdAt: new Date(),
+        },
       })
     }
 
@@ -72,8 +72,8 @@ export async function POST(request: NextRequest) {
         initialPoints: validatedData.initialPoints,
         basePoints: validatedData.basePoints,
         hasTobi: validatedData.hasTobi,
-        uma: validatedData.uma
-      }
+        uma: validatedData.uma,
+      },
     })
 
     // セッション処理: 既存セッションまたは新規作成
@@ -82,14 +82,17 @@ export async function POST(request: NextRequest) {
       // 既存セッション継続
       session = await prisma.gameSession.findUnique({
         where: { id: validatedData.existingSessionId },
-        include: { participants: true }
+        include: { participants: true },
       })
-      
+
       if (!session) {
-        return NextResponse.json({
-          success: false,
-          error: { message: '指定されたセッションが見つかりません' }
-        }, { status: 404 })
+        return NextResponse.json(
+          {
+            success: false,
+            error: { message: "指定されたセッションが見つかりません" },
+          },
+          { status: 404 }
+        )
       }
     } else {
       // 新規セッション作成
@@ -98,7 +101,7 @@ export async function POST(request: NextRequest) {
       do {
         sessionCode = generateSessionCode()
         existingSession = await prisma.gameSession.findFirst({
-          where: { sessionCode }
+          where: { sessionCode },
         })
       } while (existingSession)
 
@@ -107,11 +110,11 @@ export async function POST(request: NextRequest) {
           sessionCode,
           hostPlayerId: hostPlayer.id,
           name: validatedData.sessionName || null,
-          status: 'ACTIVE',
+          status: "ACTIVE",
           settingsId: gameSettings.id,
-          createdAt: new Date()
+          createdAt: new Date(),
         },
-        include: { participants: true }
+        include: { participants: true },
       })
 
       // セッション参加者を作成（ホストのみ）
@@ -125,15 +128,16 @@ export async function POST(request: NextRequest) {
           firstPlace: 0,
           secondPlace: 0,
           thirdPlace: 0,
-          fourthPlace: 0
-        }
+          fourthPlace: 0,
+        },
       })
     }
 
     // 次のセッションオーダーを計算
-    const nextSessionOrder = await prisma.game.count({
-      where: { sessionId: session.id }
-    }) + 1
+    const nextSessionOrder =
+      (await prisma.game.count({
+        where: { sessionId: session.id },
+      })) + 1
 
     // ゲーム作成（セッション付き）
     const game = await prisma.game.create({
@@ -143,13 +147,13 @@ export async function POST(request: NextRequest) {
         settingsId: gameSettings.id,
         sessionId: session.id,
         sessionOrder: nextSessionOrder,
-        status: 'WAITING',
+        status: "WAITING",
         currentRound: 1,
         currentOya: 0,
         honba: 0,
         kyotaku: 0,
-        createdAt: new Date()
-      }
+        createdAt: new Date(),
+      },
     })
 
     // ホストを最初の参加者として追加
@@ -159,8 +163,8 @@ export async function POST(request: NextRequest) {
         playerId: hostPlayer.id,
         position: 0,
         currentPoints: validatedData.initialPoints,
-        isReach: false
-      }
+        isReach: false,
+      },
     })
 
     const response = NextResponse.json({
@@ -171,38 +175,43 @@ export async function POST(request: NextRequest) {
         sessionId: session.id,
         sessionCode: session.sessionCode,
         hostPlayerId: hostPlayer.id,
-        settings: validatedData
-      }
+        settings: validatedData,
+      },
     })
 
     // ホストプレイヤーの認証情報をCookieに設定
-    response.cookies.set('player_id', hostPlayer.id, {
+    response.cookies.set("player_id", hostPlayer.id, {
       httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60 // 30日
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 30 * 24 * 60 * 60, // 30日
     })
 
     return response
-
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'バリデーションエラー',
-          details: error.errors
-        }
-      }, { status: 400 })
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            message: "バリデーションエラー",
+            details: error.errors,
+          },
+        },
+        { status: 400 }
+      )
     }
 
-    console.error('Room creation failed:', error)
-    return NextResponse.json({
-      success: false,
-      error: { 
-        message: 'ルーム作成に失敗しました',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      }
-    }, { status: 500 })
+    console.error("Room creation failed:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          message: "ルーム作成に失敗しました",
+          details: error instanceof Error ? error.message : "Unknown error",
+        },
+      },
+      { status: 500 }
+    )
   }
 }

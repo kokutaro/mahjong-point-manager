@@ -78,7 +78,7 @@ export interface RoomPlayer {
 export interface RoomInfo {
   gameId: string
   roomCode: string
-  status: 'WAITING' | 'STARTING' | 'PLAYING' | 'FINISHED'
+  status: "WAITING" | "STARTING" | "PLAYING" | "FINISHED"
   hostPlayer?: {
     id: string
     name: string
@@ -88,9 +88,9 @@ export interface RoomInfo {
   currentOya: number
   honba: number
   kyotaku: number
-  gamePhase: 'waiting' | 'playing' | 'finished'
+  gamePhase: "waiting" | "playing" | "finished"
   settings?: {
-    gameType: 'TONPUU' | 'HANCHAN'
+    gameType: "TONPUU" | "HANCHAN"
     initialPoints: number
     uma: number[]
     hasTobi: boolean
@@ -114,7 +114,7 @@ export interface GameStateData {
   currentOya: number
   honba: number
   kyotaku: number
-  gamePhase: 'waiting' | 'playing' | 'finished'
+  gamePhase: "waiting" | "playing" | "finished"
 }
 
 export interface GameInfo {
@@ -122,7 +122,7 @@ export interface GameInfo {
   roomCode: string
   sessionId?: string
   settings?: {
-    gameType: 'TONPUU' | 'HANCHAN'
+    gameType: "TONPUU" | "HANCHAN"
     startingPoints: number
     umaSettings?: {
       first: number

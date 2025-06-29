@@ -1,7 +1,7 @@
-'use client'
+"use client"
 
-import { BaseRyukyokuForm } from '@/components/common'
-import type { SoloGamePlayer } from '@/components/common'
+import { BaseRyukyokuForm } from "@/components/common"
+import type { SoloGamePlayer } from "@/components/common"
 
 interface SoloRyukyokuFormProps {
   players: SoloGamePlayer[]
@@ -12,7 +12,7 @@ interface SoloRyukyokuFormProps {
 export default function SoloRyukyokuForm({
   players,
   onSubmit,
-  onCancel
+  onCancel,
 }: SoloRyukyokuFormProps) {
   return (
     <BaseRyukyokuForm<SoloGamePlayer>

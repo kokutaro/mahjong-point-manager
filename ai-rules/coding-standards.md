@@ -65,7 +65,10 @@ type UserId = string
 type UserStatus = "active" | "inactive" | "suspended"
 
 // ジェネリック型パラメータ: T, K, V など単一文字、または説明的な名前
-function map<TInput, TOutput>(items: TInput[], fn: (item: TInput) => TOutput): TOutput[] {}
+function map<TInput, TOutput>(
+  items: TInput[],
+  fn: (item: TInput) => TOutput
+): TOutput[] {}
 ```
 
 ### React コンポーネント
@@ -255,7 +258,10 @@ class AppError extends Error {
 }
 
 class ValidationError extends AppError {
-  constructor(message: string, public errors: Record<string, string[]>) {
+  constructor(
+    message: string,
+    public errors: Record<string, string[]>
+  ) {
     super(message, "VALIDATION_ERROR", 400)
     this.name = "ValidationError"
   }
@@ -317,23 +323,23 @@ interface UserCardProps {
 export function UserCard({ user, onEdit, className }: UserCardProps) {
   // 4. State
   const [isLoading, setIsLoading] = useState(false)
-  
+
   // 5. Effects
   useEffect(() => {
     // 副作用
   }, [])
-  
+
   // 6. イベントハンドラ
   const handleEditClick = () => {
     onEdit?.(user.id)
   }
-  
+
   // 7. レンダリング補助関数
   const renderStatus = () => {
     if (user.status === "active") return "アクティブ"
     return "非アクティブ"
   }
-  
+
   // 8. メインレンダリング
   return (
     <div className={cn("rounded-lg border p-4", className)}>
@@ -406,14 +412,14 @@ function processPayment(amount: number, currency: string) {
   if (amount <= 0) {
     throw new Error("金額は0より大きい必要があります")
   }
-  
+
   // TODO: 通貨の検証を追加する
   // FIXME: 小数点以下の処理が正しくない場合がある
-  
+
   // 決済処理
   // 注意: この処理は冪等性を保証する必要がある
   const result = await paymentGateway.charge(amount, currency)
-  
+
   return result
 }
 ```
@@ -438,22 +444,19 @@ function processPayment(amount: number, currency: string) {
 
 ```javascript
 module.exports = {
-  extends: [
-    "next/core-web-vitals",
-    "plugin:@typescript-eslint/recommended",
-  ],
+  extends: ["next/core-web-vitals", "plugin:@typescript-eslint/recommended"],
   rules: {
     // TypeScript
     "@typescript-eslint/no-unused-vars": "error",
     "@typescript-eslint/no-explicit-any": "error",
     "@typescript-eslint/explicit-function-return-type": "off",
-    
+
     // React
     "react/prop-types": "off",
     "react/react-in-jsx-scope": "off",
     "react-hooks/rules-of-hooks": "error",
     "react-hooks/exhaustive-deps": "warn",
-    
+
     // 一般
     "no-console": ["warn", { allow: ["warn", "error"] }],
     "prefer-const": "error",

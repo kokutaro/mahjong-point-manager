@@ -118,18 +118,18 @@ mahjong-point-manager/
 ```typescript
 interface GameStore {
   // 現在のゲーム状態
-  gameState: GameState | null;
-  currentPlayer: PlayerState | null;
-  
+  gameState: GameState | null
+  currentPlayer: PlayerState | null
+
   // アクション
-  setGameState: (state: GameState) => void;
-  setCurrentPlayer: (player: PlayerState) => void;
-  updatePlayer: (playerId: string, updates: Partial<PlayerState>) => void;
-  
+  setGameState: (state: GameState) => void
+  setCurrentPlayer: (player: PlayerState) => void
+  updatePlayer: (playerId: string, updates: Partial<PlayerState>) => void
+
   // ゲーム操作
-  handleScoreSubmit: (scoreData: ScoreSubmission) => void;
-  handleReachDeclaration: (playerId: string) => void;
-  handleRyukyoku: (tenpaiPlayers: string[]) => void;
+  handleScoreSubmit: (scoreData: ScoreSubmission) => void
+  handleReachDeclaration: (playerId: string) => void
+  handleRyukyoku: (tenpaiPlayers: string[]) => void
 }
 ```
 
@@ -137,22 +137,33 @@ interface GameStore {
 
 ```typescript
 class PointManager {
-  private gameId: string;
-  
+  private gameId: string
+
   // 点数分配
-  async distributeWinPoints(winnerId: string, scoreResult: ScoreCalculationResult, isTsumo: boolean, loserId?: string): Promise<{gameEnded: boolean}>;
-  
+  async distributeWinPoints(
+    winnerId: string,
+    scoreResult: ScoreCalculationResult,
+    isTsumo: boolean,
+    loserId?: string
+  ): Promise<{ gameEnded: boolean }>
+
   // リーチ処理
-  async declareReach(playerId: string): Promise<void>;
-  
+  async declareReach(playerId: string): Promise<void>
+
   // 流局処理
-  async handleRyukyoku(reason: string, tenpaiPlayers: string[]): Promise<{gameEnded: boolean}>;
-  
+  async handleRyukyoku(
+    reason: string,
+    tenpaiPlayers: string[]
+  ): Promise<{ gameEnded: boolean }>
+
   // 精算計算
-  private calculateSettlement(participants: GameParticipant[], settings: GameSettings): SettlementResult[];
-  
+  private calculateSettlement(
+    participants: GameParticipant[],
+    settings: GameSettings
+  ): SettlementResult[]
+
   // ゲーム終了判定
-  async checkGameEnd(): Promise<{shouldEnd: boolean; reason?: string}>;
+  async checkGameEnd(): Promise<{ shouldEnd: boolean; reason?: string }>
 }
 ```
 
@@ -164,16 +175,16 @@ class PointManager {
 
 ```typescript
 // ルーム参加
-socket.emit('join-room', { roomCode: string, player: Player });
+socket.emit("join-room", { roomCode: string, player: Player })
 
 // ゲームアクション
-socket.emit('game-action', {
-  type: 'TSUMO' | 'RON' | 'REACH' | 'RYUKYOKU',
-  data: GameEventData
-});
+socket.emit("game-action", {
+  type: "TSUMO" | "RON" | "REACH" | "RYUKYOKU",
+  data: GameEventData,
+})
 
 // 点数更新
-socket.emit('update-score', { eventId: string, scoreData: ScoreData });
+socket.emit("update-score", { eventId: string, scoreData: ScoreData })
 ```
 
 #### Server → Client

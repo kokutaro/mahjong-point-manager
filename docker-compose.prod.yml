@@ -13,7 +13,11 @@ services:
       - postgres_data_prod:/var/lib/postgresql/data
       - ./postgres-init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mahjong_user} -d ${POSTGRES_DB:-mahjong_db}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-mahjong_user} -d ${POSTGRES_DB:-mahjong_db}",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3

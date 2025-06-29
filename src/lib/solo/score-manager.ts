@@ -1,6 +1,10 @@
-import { prisma } from '@/lib/prisma'
-import { calculateScore, ScoreCalculationInput, ScoreCalculationResult } from '@/lib/score'
-import { SoloScoreCalculationInput } from '@/schemas/solo'
+import { prisma } from "@/lib/prisma"
+import {
+  calculateScore,
+  ScoreCalculationInput,
+  ScoreCalculationResult,
+} from "@/lib/score"
+import { SoloScoreCalculationInput } from "@/schemas/solo"
 
 export interface SoloGameState {
   gameId: string
@@ -9,7 +13,7 @@ export interface SoloGameState {
   currentOya: number
   honba: number
   kyotaku: number
-  status: 'WAITING' | 'PLAYING' | 'FINISHED'
+  status: "WAITING" | "PLAYING" | "FINISHED"
 }
 
 export interface SoloPlayerState {
@@ -35,15 +39,15 @@ export async function updateSoloGameScore(
 ): Promise<SoloScoreUpdateResult> {
   const game = await prisma.soloGame.findUnique({
     where: { id: gameId },
-    include: { players: true }
+    include: { players: true },
   })
 
   if (!game) {
-    throw new Error('ゲームが見つかりません')
+    throw new Error("ゲームが見つかりません")
   }
 
-  if (game.status !== 'PLAYING') {
-    throw new Error('ゲームが開始されていません')
+  if (game.status !== "PLAYING") {
+    throw new Error("ゲームが開始されていません")
   }
 
   // 既存の点数計算ロジックを利用
@@ -53,11 +57,11 @@ export async function updateSoloGameScore(
     isOya: scoreInput.isOya,
     isTsumo: scoreInput.isTsumo,
     honba: game.honba,
-    kyotaku: game.kyotaku
+    kyotaku: game.kyotaku,
   }
 
   const scoreResult = await calculateScore(calculationInput)
-  
+
   // 点数変更を計算
   const pointChanges = calculateSoloPointChanges(
     game.players,
@@ -74,7 +78,7 @@ export async function updateSoloGameScore(
   return {
     gameState: updatedGameState,
     scoreResult,
-    pointChanges
+    pointChanges,
   }
 }
 
@@ -96,19 +100,19 @@ function calculateSoloPointChanges(
     if (scoreInput.isOya) {
       // 親ツモ: 子3人が同額支払い
       const perKoPayment = scoreResult.payments.fromKo || 0
-      
-      players.forEach(player => {
+
+      players.forEach((player) => {
         if (player.position === scoreInput.winnerId) {
           // 勝者
           changes.push({
             position: player.position,
-            change: perKoPayment * 3 + scoreResult.kyotakuPayment
+            change: perKoPayment * 3 + scoreResult.kyotakuPayment,
           })
         } else {
           // 敗者
           changes.push({
             position: player.position,
-            change: -perKoPayment
+            change: -perKoPayment,
           })
         }
       })
@@ -116,25 +120,25 @@ function calculateSoloPointChanges(
       // 子ツモ: 親と子で支払額が異なる
       const oyaPayment = scoreResult.payments.fromOya || 0
       const koPayment = scoreResult.payments.fromKo || 0
-      
-      players.forEach(player => {
+
+      players.forEach((player) => {
         if (player.position === scoreInput.winnerId) {
           // 勝者
           changes.push({
             position: player.position,
-            change: oyaPayment + (koPayment * 2) + scoreResult.kyotakuPayment
+            change: oyaPayment + koPayment * 2 + scoreResult.kyotakuPayment,
           })
         } else if (player.position === 0) {
           // 親（敗者）
           changes.push({
             position: player.position,
-            change: -oyaPayment
+            change: -oyaPayment,
           })
         } else {
           // 子（敗者）
           changes.push({
             position: player.position,
-            change: -koPayment
+            change: -koPayment,
           })
         }
       })
@@ -142,25 +146,25 @@ function calculateSoloPointChanges(
   } else {
     // ロンの場合
     const loserPayment = scoreResult.totalScore
-    
-    players.forEach(player => {
+
+    players.forEach((player) => {
       if (player.position === scoreInput.winnerId) {
         // 勝者
         changes.push({
           position: player.position,
-          change: loserPayment
+          change: loserPayment,
         })
       } else if (player.position === scoreInput.loserId) {
         // 敗者
         changes.push({
           position: player.position,
-          change: -loserPayment
+          change: -loserPayment,
         })
       } else {
         // その他
         changes.push({
           position: player.position,
-          change: 0
+          change: 0,
         })
       }
     })
@@ -184,13 +188,13 @@ async function updateSoloGameState(
       await tx.soloPlayer.updateMany({
         where: {
           soloGameId: gameId,
-          position: change.position
+          position: change.position,
         },
         data: {
           currentPoints: {
-            increment: change.change
-          }
-        }
+            increment: change.change,
+          },
+        },
       })
     }
 
@@ -215,8 +219,8 @@ async function updateSoloGameState(
       data: {
         currentOya: newOya,
         honba: newHonba,
-        kyotaku: 0 // 和了時に供託はクリア
-      }
+        kyotaku: 0, // 和了時に供託はクリア
+      },
     })
 
     // イベントを記録
@@ -224,7 +228,7 @@ async function updateSoloGameState(
       data: {
         soloGameId: gameId,
         position: scoreInput.winnerId,
-        eventType: scoreInput.isTsumo ? 'TSUMO' : 'RON',
+        eventType: scoreInput.isTsumo ? "TSUMO" : "RON",
         round: game.currentRound,
         honba: game.honba,
         eventData: {
@@ -233,9 +237,9 @@ async function updateSoloGameState(
           winnerId: scoreInput.winnerId,
           loserId: scoreInput.loserId,
           scoreResult: JSON.parse(JSON.stringify(scoreResult)),
-          pointChanges: pointChanges
-        }
-      }
+          pointChanges: pointChanges,
+        },
+      },
     })
   })
 }
@@ -248,29 +252,29 @@ export async function getSoloGameState(gameId: string): Promise<SoloGameState> {
     where: { id: gameId },
     include: {
       players: {
-        orderBy: { position: 'asc' }
-      }
-    }
+        orderBy: { position: "asc" },
+      },
+    },
   })
 
   if (!game) {
-    throw new Error('ゲームが見つかりません')
+    throw new Error("ゲームが見つかりません")
   }
 
   return {
     gameId: game.id,
-    players: game.players.map(p => ({
+    players: game.players.map((p) => ({
       position: p.position,
       name: p.name,
       points: p.currentPoints,
       isReach: p.isReach,
-      reachRound: p.reachRound || undefined
+      reachRound: p.reachRound || undefined,
     })),
     currentRound: game.currentRound,
     currentOya: game.currentOya,
     honba: game.honba,
     kyotaku: game.kyotaku,
-    status: game.status as 'WAITING' | 'PLAYING' | 'FINISHED'
+    status: game.status as "WAITING" | "PLAYING" | "FINISHED",
   }
 }
 
@@ -287,15 +291,15 @@ export async function declareSoloReach(
     await tx.soloPlayer.updateMany({
       where: {
         soloGameId: gameId,
-        position: position
+        position: position,
       },
       data: {
         currentPoints: {
-          decrement: 1000
+          decrement: 1000,
         },
         isReach: true,
-        reachRound: round
-      }
+        reachRound: round,
+      },
     })
 
     // ゲームの供託を1増加
@@ -303,9 +307,9 @@ export async function declareSoloReach(
       where: { id: gameId },
       data: {
         kyotaku: {
-          increment: 1
-        }
-      }
+          increment: 1,
+        },
+      },
     })
 
     // イベントを記録
@@ -314,14 +318,14 @@ export async function declareSoloReach(
       data: {
         soloGameId: gameId,
         position: position,
-        eventType: 'REACH',
+        eventType: "REACH",
         round: game?.currentRound || 1,
         honba: game?.honba || 0,
         eventData: {
           position: position,
-          round: round
-        }
-      }
+          round: round,
+        },
+      },
     })
   })
 
@@ -339,10 +343,10 @@ export async function processSoloRyukyoku(
   await prisma.$transaction(async (tx) => {
     const game = await tx.soloGame.findUnique({
       where: { id: gameId },
-      include: { players: true }
+      include: { players: true },
     })
 
-    if (!game) throw new Error('ゲームが見つかりません')
+    if (!game) throw new Error("ゲームが見つかりません")
 
     // 流局時の点数分配
     const tenpaiCount = tenpaiPlayers.length
@@ -358,16 +362,16 @@ export async function processSoloRyukyoku(
           await tx.soloPlayer.update({
             where: { id: player.id },
             data: {
-              currentPoints: player.currentPoints + pointPerTenpai
-            }
+              currentPoints: player.currentPoints + pointPerTenpai,
+            },
           })
         } else {
           // ノーテン者は支払い
           await tx.soloPlayer.update({
             where: { id: player.id },
             data: {
-              currentPoints: player.currentPoints - pointPerNaten
-            }
+              currentPoints: player.currentPoints - pointPerNaten,
+            },
           })
         }
       }
@@ -387,8 +391,8 @@ export async function processSoloRyukyoku(
       where: { id: gameId },
       data: {
         currentOya: newOya,
-        honba: newHonba
-      }
+        honba: newHonba,
+      },
     })
 
     // イベントを記録
@@ -396,16 +400,16 @@ export async function processSoloRyukyoku(
       data: {
         soloGameId: gameId,
         position: null,
-        eventType: 'RYUKYOKU',
+        eventType: "RYUKYOKU",
         round: game.currentRound,
         honba: game.honba,
         eventData: {
           tenpaiPlayers: tenpaiPlayers,
           reachPlayers: reachPlayers,
           pointPerTenpai: tenpaiCount > 0 ? Math.floor(3000 / tenpaiCount) : 0,
-          pointPerNaten: natenCount > 0 ? Math.floor(3000 / natenCount) : 0
-        }
-      }
+          pointPerNaten: natenCount > 0 ? Math.floor(3000 / natenCount) : 0,
+        },
+      },
     })
   })
 

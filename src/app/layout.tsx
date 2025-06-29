@@ -1,12 +1,12 @@
-'use client'
+"use client"
 
-import { Inter } from 'next/font/google'
-import './globals.css'
-import '@mantine/core/styles.css'
-import { MantineProvider, ColorSchemeScript } from '@mantine/core'
-import { AuthProvider } from '@/contexts/AuthContext'
+import { Inter } from "next/font/google"
+import "./globals.css"
+import "@mantine/core/styles.css"
+import { MantineProvider, ColorSchemeScript } from "@mantine/core"
+import { AuthProvider } from "@/contexts/AuthContext"
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ["latin"] })
 
 export default function RootLayout({
   children,
@@ -21,9 +21,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <MantineProvider defaultColorScheme="light">
           <AuthProvider>
-            <main className="min-h-screen">
-              {children}
-            </main>
+            <main className="min-h-screen">{children}</main>
           </AuthProvider>
         </MantineProvider>
       </body>

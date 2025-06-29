@@ -1,8 +1,19 @@
 // ゲーム関連の型定義
 
-export type GameType = 'TONPUU' | 'HANCHAN'
-export type GameStatus = 'WAITING' | 'STARTING' | 'PLAYING' | 'FINISHED' | 'CANCELLED'
-export type EventType = 'TSUMO' | 'RON' | 'REACH' | 'RYUKYOKU' | 'GAME_START' | 'GAME_END'
+export type GameType = "TONPUU" | "HANCHAN"
+export type GameStatus =
+  | "WAITING"
+  | "STARTING"
+  | "PLAYING"
+  | "FINISHED"
+  | "CANCELLED"
+export type EventType =
+  | "TSUMO"
+  | "RON"
+  | "REACH"
+  | "RYUKYOKU"
+  | "GAME_START"
+  | "GAME_END"
 
 export interface Game {
   id: string

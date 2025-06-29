@@ -1,7 +1,7 @@
-'use client'
+"use client"
 
-import { useEffect, useState } from 'react'
-import ErrorDisplay from './ErrorDisplay'
+import { useEffect, useState } from "react"
+import ErrorDisplay from "./ErrorDisplay"
 
 interface SessionPlayer {
   playerId: string
@@ -18,7 +18,7 @@ interface SessionPlayer {
 interface GameResult {
   gameNumber: number
   gameId: string
-  gameType: 'TONPUU' | 'HANCHAN'
+  gameType: "TONPUU" | "HANCHAN"
   endedAt: string | null
   results: Record<string, number> // playerId -> settlement
 }
@@ -50,35 +50,45 @@ interface SessionHistoryTableProps {
   sessionId: string
 }
 
-export default function SessionHistoryTable({ sessionId }: SessionHistoryTableProps) {
+export default function SessionHistoryTable({
+  sessionId,
+}: SessionHistoryTableProps) {
   const [sessionData, setSessionData] = useState<SessionDetails | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [error, setError] = useState("")
 
   const fetchSessionDetails = async () => {
     try {
       setIsLoading(true)
-      setError('')
+      setError("")
 
       const response = await fetch(`/api/sessions/${sessionId}`, {
-        method: 'GET',
-        credentials: 'include'
+        method: "GET",
+        credentials: "include",
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error?.message || 'セッション詳細の取得に失敗しました')
+        throw new Error(
+          data.error?.message || "セッション詳細の取得に失敗しました"
+        )
       }
 
       if (data.success) {
         setSessionData(data.data)
       } else {
-        throw new Error(data.error?.message || 'セッション詳細の取得に失敗しました')
+        throw new Error(
+          data.error?.message || "セッション詳細の取得に失敗しました"
+        )
       }
     } catch (error) {
-      console.error('Session details fetch error:', error)
-      setError(error instanceof Error ? error.message : 'セッション詳細の取得に失敗しました')
+      console.error("Session details fetch error:", error)
+      setError(
+        error instanceof Error
+          ? error.message
+          : "セッション詳細の取得に失敗しました"
+      )
     } finally {
       setIsLoading(false)
     }
@@ -88,13 +98,15 @@ export default function SessionHistoryTable({ sessionId }: SessionHistoryTablePr
     if (sessionId) {
       fetchSessionDetails()
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId])
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="text-xl text-gray-600">セッション履歴を読み込み中...</div>
+        <div className="text-xl text-gray-600">
+          セッション履歴を読み込み中...
+        </div>
       </div>
     )
   }
@@ -102,9 +114,9 @@ export default function SessionHistoryTable({ sessionId }: SessionHistoryTablePr
   if (error) {
     return (
       <ErrorDisplay
-        error={{ type: 'general', message: error, isRetryable: true }}
+        error={{ type: "general", message: error, isRetryable: true }}
         onRetry={fetchSessionDetails}
-        onDismiss={() => setError('')}
+        onDismiss={() => setError("")}
       />
     )
   }
@@ -129,7 +141,8 @@ export default function SessionHistoryTable({ sessionId }: SessionHistoryTablePr
               {session.name || `セッション ${session.sessionCode}`}
             </h2>
             <div className="text-sm text-gray-600 mt-1">
-              ホスト: {session.hostPlayer.name} | 総対局数: {gameResults.length}局
+              ホスト: {session.hostPlayer.name} | 総対局数: {gameResults.length}
+              局
             </div>
           </div>
           <div className="text-sm text-gray-600">
@@ -146,12 +159,14 @@ export default function SessionHistoryTable({ sessionId }: SessionHistoryTablePr
         <table className="w-full text-sm">
           <thead className="bg-gray-100">
             <tr>
-              <th className="px-4 py-3 text-left font-medium text-gray-700 border-r">局数</th>
+              <th className="px-4 py-3 text-left font-medium text-gray-700 border-r">
+                局数
+              </th>
               {players
                 .sort((a, b) => a.position - b.position)
                 .map((player) => (
-                  <th 
-                    key={player.playerId} 
+                  <th
+                    key={player.playerId}
                     className="px-4 py-3 text-center font-medium text-gray-700 border-r last:border-r-0"
                   >
                     {player.name}
@@ -169,7 +184,7 @@ export default function SessionHistoryTable({ sessionId }: SessionHistoryTablePr
                 <td className="px-4 py-3 font-medium text-gray-800 border-r">
                   {game.gameNumber}局
                   <div className="text-xs text-gray-500">
-                    {game.gameType === 'TONPUU' ? '東風' : '半荘'}
+                    {game.gameType === "TONPUU" ? "東風" : "半荘"}
                   </div>
                 </td>
                 {players
@@ -177,25 +192,28 @@ export default function SessionHistoryTable({ sessionId }: SessionHistoryTablePr
                   .map((player) => {
                     const settlement = game.results[player.playerId] || 0
                     return (
-                      <td 
-                        key={player.playerId} 
+                      <td
+                        key={player.playerId}
                         className="px-4 py-3 text-center border-r last:border-r-0"
                       >
-                        <span className={`font-medium ${
-                          settlement > 0 
-                            ? 'text-green-600' 
-                            : settlement < 0 
-                              ? 'text-red-600' 
-                              : 'text-gray-600'
-                        }`}>
-                          {settlement > 0 ? '+' : ''}{settlement.toLocaleString()}
+                        <span
+                          className={`font-medium ${
+                            settlement > 0
+                              ? "text-green-600"
+                              : settlement < 0
+                                ? "text-red-600"
+                                : "text-gray-600"
+                          }`}
+                        >
+                          {settlement > 0 ? "+" : ""}
+                          {settlement.toLocaleString()}
                         </span>
                       </td>
                     )
                   })}
               </tr>
             ))}
-            
+
             {/* 合計行 */}
             {gameResults.length > 0 && (
               <tr className="bg-gray-100 border-t-2 border-gray-300 font-semibold">
@@ -205,18 +223,21 @@ export default function SessionHistoryTable({ sessionId }: SessionHistoryTablePr
                   .map((player) => {
                     const total = totalRow[player.playerId] || 0
                     return (
-                      <td 
-                        key={player.playerId} 
+                      <td
+                        key={player.playerId}
                         className="px-4 py-3 text-center border-r last:border-r-0"
                       >
-                        <span className={`text-lg font-bold ${
-                          total > 0 
-                            ? 'text-green-600' 
-                            : total < 0 
-                              ? 'text-red-600' 
-                              : 'text-gray-600'
-                        }`}>
-                          {total > 0 ? '+' : ''}{total.toLocaleString()}
+                        <span
+                          className={`text-lg font-bold ${
+                            total > 0
+                              ? "text-green-600"
+                              : total < 0
+                                ? "text-red-600"
+                                : "text-gray-600"
+                          }`}
+                        >
+                          {total > 0 ? "+" : ""}
+                          {total.toLocaleString()}
                         </span>
                       </td>
                     )
@@ -237,7 +258,9 @@ export default function SessionHistoryTable({ sessionId }: SessionHistoryTablePr
       {/* セッション統計 */}
       {gameResults.length > 0 && (
         <div className="bg-gray-50 px-6 py-4 border-t">
-          <h3 className="text-lg font-semibold text-gray-800 mb-3">セッション統計</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-3">
+            セッション統計
+          </h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {players
               .sort((a, b) => a.position - b.position)
@@ -251,10 +274,10 @@ export default function SessionHistoryTable({ sessionId }: SessionHistoryTablePr
                     <div>4位: {player.fourthPlace}回</div>
                   </div>
                   <div className="text-sm font-semibold mt-2">
-                    平均: {player.totalGames > 0 
+                    平均:{" "}
+                    {player.totalGames > 0
                       ? (player.totalSettlement / player.totalGames).toFixed(1)
-                      : '0'
-                    }
+                      : "0"}
                   </div>
                 </div>
               ))}

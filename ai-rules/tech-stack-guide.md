@@ -78,14 +78,20 @@ interface ButtonProps {
   size?: "sm" | "md" | "lg"
 }
 
-export function Button({ variant = "primary", size = "md", className, ...props }: ButtonProps) {
+export function Button({
+  variant = "primary",
+  size = "md",
+  className,
+  ...props
+}: ButtonProps) {
   return (
     <button
       className={cn(
         "rounded-md font-medium transition-colors",
         {
           "bg-blue-600 text-white hover:bg-blue-700": variant === "primary",
-          "bg-gray-200 text-gray-900 hover:bg-gray-300": variant === "secondary",
+          "bg-gray-200 text-gray-900 hover:bg-gray-300":
+            variant === "secondary",
           "px-3 py-1.5 text-sm": size === "sm",
           "px-4 py-2": size === "md",
           "px-6 py-3 text-lg": size === "lg",
@@ -104,14 +110,14 @@ export function Button({ variant = "primary", size = "md", className, ...props }
 
 ```typescript
 // stores/userStore.ts
-import { create } from 'zustand'
-import { devtools, persist } from 'zustand/middleware'
+import { create } from "zustand"
+import { devtools, persist } from "zustand/middleware"
 
 interface UserState {
   user: User | null
   isLoading: boolean
   error: string | null
-  
+
   // アクション
   setUser: (user: User) => void
   clearUser: () => void
@@ -125,16 +131,16 @@ export const useUserStore = create<UserState>()(
         user: null,
         isLoading: false,
         error: null,
-        
+
         setUser: (user) => set({ user, error: null }),
         clearUser: () => set({ user: null }),
-        updateUser: (updates) => 
-          set((state) => ({ 
-            user: state.user ? { ...state.user, ...updates } : null 
+        updateUser: (updates) =>
+          set((state) => ({
+            user: state.user ? { ...state.user, ...updates } : null,
           })),
       }),
       {
-        name: 'user-storage',
+        name: "user-storage",
       }
     )
   )
@@ -154,13 +160,13 @@ const isLoggedIn = useUserStore((state) => !!state.user)
 ```typescript
 const fetchUser = async () => {
   const { setUser } = useUserStore.getState()
-  
+
   try {
-    const response = await fetch('/api/user')
+    const response = await fetch("/api/user")
     const user = await response.json()
     setUser(user)
   } catch (error) {
-    console.error('Failed to fetch user:', error)
+    console.error("Failed to fetch user:", error)
   }
 }
 ```
@@ -171,23 +177,23 @@ const fetchUser = async () => {
 
 ```typescript
 // schemas/user.ts
-import { z } from 'zod'
+import { z } from "zod"
 
 export const UserSchema = z.object({
   id: z.string().uuid(),
   email: z.string().email(),
   name: z.string().min(1, "名前は必須です"),
   age: z.number().int().positive().optional(),
-  role: z.enum(['admin', 'user', 'guest']),
+  role: z.enum(["admin", "user", "guest"]),
   createdAt: z.date(),
 })
 
 export type User = z.infer<typeof UserSchema>
 
 // フォームバリデーション用
-export const CreateUserSchema = UserSchema.omit({ 
-  id: true, 
-  createdAt: true 
+export const CreateUserSchema = UserSchema.omit({
+  id: true,
+  createdAt: true,
 })
 
 export type CreateUserInput = z.infer<typeof CreateUserSchema>
@@ -201,22 +207,19 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     const validatedData = CreateUserSchema.parse(body)
-    
+
     // Prismaでユーザー作成
     const user = await prisma.user.create({
       data: validatedData,
     })
-    
+
     return NextResponse.json(user)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { errors: error.errors },
-        { status: 400 }
-      )
+      return NextResponse.json({ errors: error.errors }, { status: 400 })
     }
     return NextResponse.json(
-      { error: 'Internal Server Error' },
+      { error: "Internal Server Error" },
       { status: 500 }
     )
   }
@@ -227,19 +230,19 @@ export async function POST(request: Request) {
 
 ```typescript
 // React Hook Formとの統合
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 
 export function UserForm() {
   const form = useForm<CreateUserInput>({
     resolver: zodResolver(CreateUserSchema),
     defaultValues: {
-      name: '',
-      email: '',
-      role: 'user',
+      name: "",
+      email: "",
+      role: "user",
     },
   })
-  
+
   // ...
 }
 ```
@@ -259,7 +262,7 @@ model User {
   profile   Profile?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@index([email])
 }
 
@@ -272,7 +275,7 @@ model Post {
   authorId  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@index([authorId])
 }
 
@@ -287,7 +290,7 @@ enum Role {
 
 ```typescript
 // lib/prisma.ts
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from "@prisma/client"
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -295,7 +298,7 @@ const globalForPrisma = globalThis as unknown as {
 
 export const prisma = globalForPrisma.prisma ?? new PrismaClient()
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma
 
 // 使用例: 関連データの効率的な取得
 const getUserWithPosts = async (userId: string) => {
@@ -304,7 +307,7 @@ const getUserWithPosts = async (userId: string) => {
     include: {
       posts: {
         where: { published: true },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         take: 10,
       },
       profile: true,
@@ -324,14 +327,14 @@ const createUserWithProfile = async (data: CreateUserWithProfileInput) => {
         name: data.name,
       },
     })
-    
+
     const profile = await tx.profile.create({
       data: {
         bio: data.bio,
         userId: user.id,
       },
     })
-    
+
     return { user, profile }
   })
 }
@@ -343,36 +346,36 @@ const createUserWithProfile = async (data: CreateUserWithProfileInput) => {
 
 ```typescript
 // app/actions/user.ts
-'use server'
+"use server"
 
-import { CreateUserSchema } from '@/schemas/user'
-import { prisma } from '@/lib/prisma'
-import { revalidatePath } from 'next/cache'
+import { CreateUserSchema } from "@/schemas/user"
+import { prisma } from "@/lib/prisma"
+import { revalidatePath } from "next/cache"
 
 export async function createUser(formData: FormData) {
   const rawData = Object.fromEntries(formData)
-  
+
   const validation = CreateUserSchema.safeParse(rawData)
-  
+
   if (!validation.success) {
     return {
       success: false,
       errors: validation.error.flatten().fieldErrors,
     }
   }
-  
+
   try {
     const user = await prisma.user.create({
       data: validation.data,
     })
-    
-    revalidatePath('/users')
-    
+
+    revalidatePath("/users")
+
     return { success: true, user }
   } catch (error) {
     return {
       success: false,
-      error: 'ユーザーの作成に失敗しました',
+      error: "ユーザーの作成に失敗しました",
     }
   }
 }
@@ -387,7 +390,7 @@ export function useUser(userId: string) {
     userId ? `/api/users/${userId}` : null,
     fetcher
   )
-  
+
   return {
     user: data,
     isLoading,

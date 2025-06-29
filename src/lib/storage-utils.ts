@@ -9,22 +9,22 @@ export function clearLocalStorageOnQuotaError() {
   try {
     // 古いデータを削除
     const keysToRemove = [
-      'mahjong-app-store',
-      'game_state',
-      'player_preferences'
+      "mahjong-app-store",
+      "game_state",
+      "player_preferences",
     ]
-    
-    keysToRemove.forEach(key => {
+
+    keysToRemove.forEach((key) => {
       try {
         localStorage.removeItem(key)
       } catch (err) {
         console.error(`Failed to remove ${key}:`, err)
       }
     })
-    
-    console.log('LocalStorage cleared due to quota exceeded')
+
+    console.log("LocalStorage cleared due to quota exceeded")
   } catch (err) {
-    console.error('Failed to clear localStorage:', err)
+    console.error("Failed to clear localStorage:", err)
   }
 }
 
@@ -42,7 +42,7 @@ export function checkLocalStorageUsage() {
     console.log(`LocalStorage usage: ${(totalSize / 1024).toFixed(2)} KB`)
     return totalSize
   } catch (err) {
-    console.error('Failed to check localStorage usage:', err)
+    console.error("Failed to check localStorage usage:", err)
     return 0
   }
 }
@@ -56,15 +56,18 @@ export function safeSetLocalStorage(key: string, value: string): boolean {
     return true
   } catch (err) {
     console.error(`Failed to save to localStorage (${key}):`, err)
-    
-    if (err instanceof Error && err.name === 'QuotaExceededError') {
+
+    if (err instanceof Error && err.name === "QuotaExceededError") {
       // 容量エラーの場合はクリアして再試行
       clearLocalStorageOnQuotaError()
       try {
         localStorage.setItem(key, value)
         return true
       } catch (retryErr) {
-        console.error(`Failed to save after clearing localStorage (${key}):`, retryErr)
+        console.error(
+          `Failed to save after clearing localStorage (${key}):`,
+          retryErr
+        )
         return false
       }
     }

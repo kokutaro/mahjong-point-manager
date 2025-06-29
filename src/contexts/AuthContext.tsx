@@ -1,7 +1,13 @@
-'use client'
+"use client"
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { AuthFallback, fetchWithAuth } from '@/lib/auth-fallback'
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react"
+import { AuthFallback, fetchWithAuth } from "@/lib/auth-fallback"
 
 interface AuthUser {
   playerId: string
@@ -41,30 +47,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       // ブラウザ情報を取得
       const browserInfo = AuthFallback.getBrowserInfo()
-      console.log('🔍 Browser info:', browserInfo)
-      
+      console.log("🔍 Browser info:", browserInfo)
+
       // フォールバック機能でセッションをチェック
       const fallbackSession = AuthFallback.getSession()
-      console.log('🔍 Fallback session:', fallbackSession)
-      
+      console.log("🔍 Fallback session:", fallbackSession)
+
       // 認証対応のfetchを使用
-      const response = await fetchWithAuth('/api/auth/player', {
-        method: 'GET'
+      const response = await fetchWithAuth("/api/auth/player", {
+        method: "GET",
       })
 
       if (response.ok) {
         const data = await response.json()
-        console.log('🔍 Auth response:', data)
-        
+        console.log("🔍 Auth response:", data)
+
         if (data.success) {
           setUser(data.data)
-          
+
           // Safari/モバイルの場合、LocalStorageにも保存
-          if (!browserInfo.cookieSupported || browserInfo.isSafari || browserInfo.isMobile) {
+          if (
+            !browserInfo.cookieSupported ||
+            browserInfo.isSafari ||
+            browserInfo.isMobile
+          ) {
             AuthFallback.setSession({
               playerId: data.data.playerId,
-              sessionToken: data.data.sessionToken || fallbackSession?.sessionToken || '',
-              expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24時間
+              sessionToken:
+                data.data.sessionToken || fallbackSession?.sessionToken || "",
+              expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24時間
             })
           }
         }
@@ -73,7 +84,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         AuthFallback.clearSession()
       }
     } catch (error) {
-      console.error('Session check failed:', error)
+      console.error("Session check failed:", error)
       AuthFallback.clearSession()
     } finally {
       setIsLoading(false)
@@ -86,55 +97,63 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setError(null)
 
       // デバイスIDを取得または生成
-      const storedDeviceId = deviceId || localStorage.getItem('mahjong_device_id')
+      const storedDeviceId =
+        deviceId || localStorage.getItem("mahjong_device_id")
       let finalDeviceId = storedDeviceId
 
       if (!finalDeviceId) {
         finalDeviceId = generateDeviceId()
-        localStorage.setItem('mahjong_device_id', finalDeviceId)
+        localStorage.setItem("mahjong_device_id", finalDeviceId)
       }
 
-      const response = await fetch('/api/auth/player', {
-        method: 'POST',
+      const response = await fetch("/api/auth/player", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           name,
-          deviceId: finalDeviceId
+          deviceId: finalDeviceId,
         }),
-        credentials: 'include'
+        credentials: "include",
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error?.message || 'ログインに失敗しました')
+        throw new Error(data.error?.message || "ログインに失敗しました")
       }
 
       if (data.success) {
         setUser(data.data)
-        
-        console.log('✅ Login successful:', data)
-        
+
+        console.log("✅ Login successful:", data)
+
         // Safari/モバイルの場合、LocalStorageにセッション保存
         const browserInfo = AuthFallback.getBrowserInfo()
-        if (!browserInfo.cookieSupported || browserInfo.isSafari || browserInfo.isMobile) {
+        if (
+          !browserInfo.cookieSupported ||
+          browserInfo.isSafari ||
+          browserInfo.isMobile
+        ) {
           AuthFallback.setSession({
             playerId: data.data.playerId,
             sessionToken: data.data.sessionToken,
-            expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24時間
+            expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24時間
           })
-          console.log('📱 Session saved to localStorage for browser compatibility')
+          console.log(
+            "📱 Session saved to localStorage for browser compatibility"
+          )
         }
-        
+
         // デバイスIDを更新
-        localStorage.setItem('mahjong_device_id', data.data.deviceId)
+        localStorage.setItem("mahjong_device_id", data.data.deviceId)
       } else {
-        throw new Error(data.error?.message || 'ログインに失敗しました')
+        throw new Error(data.error?.message || "ログインに失敗しました")
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'ログインに失敗しました'
+      const errorMessage =
+        error instanceof Error ? error.message : "ログインに失敗しました"
       setError(errorMessage)
       throw error
     } finally {
@@ -148,21 +167,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setError(null)
 
       // フォールバック認証を使用してログアウト
-      await fetchWithAuth('/api/auth/logout', {
-        method: 'POST'
+      await fetchWithAuth("/api/auth/logout", {
+        method: "POST",
       })
 
       // LocalStorageのセッションもクリア
       AuthFallback.clearSession()
       setUser(null)
-      
-      console.log('✅ Logout successful')
+
+      console.log("✅ Logout successful")
     } catch (error) {
-      console.error('Logout failed:', error)
+      console.error("Logout failed:", error)
       // エラーでもローカルセッションはクリア
       AuthFallback.clearSession()
       setUser(null)
-      setError('ログアウトに失敗しました')
+      setError("ログアウトに失敗しました")
     } finally {
       setIsLoading(false)
     }
@@ -173,13 +192,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setError(null)
       await checkExistingSession()
     } catch (error) {
-      console.error('Auth refresh failed:', error)
-      setError('認証情報の更新に失敗しました')
+      console.error("Auth refresh failed:", error)
+      setError("認証情報の更新に失敗しました")
     }
   }
 
   const generateDeviceId = (): string => {
-    return 'device_' + Math.random().toString(36).substring(2, 11) + Date.now().toString(36)
+    return (
+      "device_" +
+      Math.random().toString(36).substring(2, 11) +
+      Date.now().toString(36)
+    )
   }
 
   const value: AuthContextType = {
@@ -189,20 +212,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     login,
     logout,
     refreshAuth,
-    error
+    error,
   }
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  )
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext)
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    throw new Error("useAuth must be used within an AuthProvider")
   }
   return context
 }

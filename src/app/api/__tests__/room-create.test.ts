@@ -1,9 +1,9 @@
 // Simple validation tests for room creation logic
-describe('Room Creation API', () => {
-  test('API endpoint validation schema', () => {
+describe("Room Creation API", () => {
+  test("API endpoint validation schema", () => {
     const validRequest = {
-      hostPlayerName: 'TestPlayer',
-      gameType: 'HANCHAN',
+      hostPlayerName: "TestPlayer",
+      gameType: "HANCHAN",
       initialPoints: 25000,
       basePoints: 30000,
       hasTobi: true,
@@ -18,18 +18,18 @@ describe('Room Creation API', () => {
     expect(validRequest.basePoints).toBeGreaterThanOrEqual(20000)
     expect(validRequest.basePoints).toBeLessThanOrEqual(50000)
     expect(validRequest.uma).toHaveLength(4)
-    expect(typeof validRequest.hasTobi).toBe('boolean')
+    expect(typeof validRequest.hasTobi).toBe("boolean")
   })
 
-  test('Host player name validation', () => {
-    const validName = 'TestPlayer'
-    const invalidName = ''
+  test("Host player name validation", () => {
+    const validName = "TestPlayer"
+    const invalidName = ""
 
     expect(validName.length).toBeGreaterThan(0)
     expect(invalidName.length).toBe(0)
   })
 
-  test('Point settings validation', () => {
+  test("Point settings validation", () => {
     const validInitialPoints = 25000
     const validBasePoints = 30000
     const invalidInitialPoints = 15000 // Too low
@@ -39,12 +39,12 @@ describe('Room Creation API', () => {
     expect(validInitialPoints).toBeLessThanOrEqual(50000)
     expect(validBasePoints).toBeGreaterThanOrEqual(20000)
     expect(validBasePoints).toBeLessThanOrEqual(50000)
-    
+
     expect(invalidInitialPoints).toBeLessThan(20000)
     expect(invalidBasePoints).toBeGreaterThan(50000)
   })
 
-  test('Uma configuration validation', () => {
+  test("Uma configuration validation", () => {
     const validUma = [20, 10, -10, -20]
     const invalidUma = [20, 10, -10] // Wrong length
 
@@ -53,14 +53,14 @@ describe('Room Creation API', () => {
     expect(invalidUma).not.toHaveLength(4)
   })
 
-  test('Game type validation', () => {
-    const validTypes = ['TONPUU', 'HANCHAN']
-    const invalidType = 'INVALID'
+  test("Game type validation", () => {
+    const validTypes = ["TONPUU", "HANCHAN"]
+    const invalidType = "INVALID"
 
-    validTypes.forEach(type => {
+    validTypes.forEach((type) => {
       expect(type).toMatch(/^(TONPUU|HANCHAN)$/)
     })
-    
+
     expect(invalidType).not.toMatch(/^(TONPUU|HANCHAN)$/)
   })
 })

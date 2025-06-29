@@ -1,4 +1,7 @@
-import { Button as MantineButton, ButtonProps as MantineButtonProps } from '@mantine/core'
+import {
+  Button as MantineButton,
+  ButtonProps as MantineButtonProps,
+} from "@mantine/core"
 
 export type ButtonProps = MantineButtonProps
 

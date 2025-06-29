@@ -1,8 +1,8 @@
-'use client'
+"use client"
 
-import { memo, useState } from 'react'
-import Image from 'next/image'
-import LoadingSpinner from './LoadingSpinner'
+import { memo, useState } from "react"
+import Image from "next/image"
+import LoadingSpinner from "./LoadingSpinner"
 
 interface OptimizedImageProps {
   src: string
@@ -12,7 +12,7 @@ interface OptimizedImageProps {
   className?: string
   priority?: boolean
   quality?: number
-  placeholder?: 'blur' | 'empty'
+  placeholder?: "blur" | "empty"
   blurDataURL?: string
 }
 
@@ -21,11 +21,11 @@ const OptimizedImage = memo(function OptimizedImage({
   alt,
   width = 400,
   height = 400,
-  className = '',
+  className = "",
   priority = false,
   quality = 85,
-  placeholder = 'empty',
-  blurDataURL
+  placeholder = "empty",
+  blurDataURL,
 }: OptimizedImageProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
@@ -41,7 +41,7 @@ const OptimizedImage = memo(function OptimizedImage({
 
   if (hasError) {
     return (
-      <div 
+      <div
         className={`flex items-center justify-center bg-gray-100 text-gray-400 ${className}`}
         style={{ width, height }}
       >
@@ -68,7 +68,7 @@ const OptimizedImage = memo(function OptimizedImage({
         blurDataURL={blurDataURL}
         onLoad={handleLoad}
         onError={handleError}
-        className={`${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
+        className={`${isLoading ? "opacity-0" : "opacity-100"} transition-opacity duration-300`}
         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
       />
     </div>

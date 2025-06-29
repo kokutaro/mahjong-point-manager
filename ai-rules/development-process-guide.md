@@ -31,6 +31,7 @@ graph LR
 # 悪い例: ユーザー管理機能の実装
 
 # 良い例:
+
 1. ユーザーモデルの作成
 2. ユーザー作成APIの実装
 3. ユーザー一覧表示UIの実装
@@ -45,6 +46,7 @@ graph LR
 ## タスク: ユーザー作成APIの実装
 
 ### 要件
+
 - [ ] POSTエンドポイント `/api/users`
 - [ ] 入力検証（email, name必須）
 - [ ] 重複メールチェック
@@ -52,6 +54,7 @@ graph LR
 - [ ] 成功時は201ステータス
 
 ### 技術要件
+
 - [ ] Zodスキーマ定義
 - [ ] Prismaモデル定義
 - [ ] APIルートハンドラー
@@ -95,25 +98,22 @@ find . -name "*.ts" -o -name "*.tsx" | xargs grep -l "user"
 ```typescript
 // 影響範囲マトリクス
 interface ImpactAnalysis {
-  directImpact: string[]      // 直接変更するファイル
-  indirectImpact: string[]    // 間接的に影響を受けるファイル
-  breakingChanges: string[]   // 破壊的変更
+  directImpact: string[] // 直接変更するファイル
+  indirectImpact: string[] // 間接的に影響を受けるファイル
+  breakingChanges: string[] // 破壊的変更
   requiredMigrations: string[] // 必要なマイグレーション
 }
 
 // 例
 const impactAnalysis: ImpactAnalysis = {
   directImpact: [
-    'prisma/schema.prisma',
-    'app/api/users/route.ts',
-    'schemas/user.ts',
+    "prisma/schema.prisma",
+    "app/api/users/route.ts",
+    "schemas/user.ts",
   ],
-  indirectImpact: [
-    'components/UserList.tsx',
-    'hooks/useUsers.ts',
-  ],
+  indirectImpact: ["components/UserList.tsx", "hooks/useUsers.ts"],
   breakingChanges: [],
-  requiredMigrations: ['create_users_table'],
+  requiredMigrations: ["create_users_table"],
 }
 ```
 
@@ -125,9 +125,11 @@ const impactAnalysis: ImpactAnalysis = {
 # 実装計画: [機能名]
 
 ## 概要
+
 [1-2文で機能の説明]
 
 ## 技術的アプローチ
+
 1. [ステップ1の説明]
 2. [ステップ2の説明]
 3. ...
@@ -137,16 +139,16 @@ const impactAnalysis: ImpactAnalysis = {
 
 src/
 ├── app/
-│   └── api/
-│       └── users/
-│           └── route.ts        # APIエンドポイント
+│ └── api/
+│ └── users/
+│ └── route.ts # APIエンドポイント
 ├── schemas/
-│   └── user.ts                # Zodスキーマ
+│ └── user.ts # Zodスキーマ
 ├── lib/
-│   └── api/
-│       └── users.ts           # API関数
+│ └── api/
+│ └── users.ts # API関数
 └── types/
-    └── user.ts                # 型定義
+└── user.ts # 型定義
 
 ```text
 
@@ -187,7 +189,10 @@ const decision: DesignDecision = {
   decision: "Server ActionsではなくAPI Routesを使用",
   rationale: "外部システムとの連携を考慮",
   alternatives: ["Server Actions", "tRPC"],
-  consequences: ["クライアント側でのfetch処理が必要", "エラーハンドリングの統一化が必要"]
+  consequences: [
+    "クライアント側でのfetch処理が必要",
+    "エラーハンドリングの統一化が必要",
+  ],
 }
 ```
 
@@ -243,7 +248,7 @@ function processUser(user: User | null) {
 function processUser(user: User | null) {
   if (!user) return
   if (!user.isActive) return
-  
+
   // 処理
 }
 ```
@@ -261,26 +266,35 @@ interface ApiError {
 // エラーハンドリングユーティリティ
 export function handleApiError(error: unknown): NextResponse {
   if (error instanceof z.ZodError) {
-    return NextResponse.json({
-      code: 'VALIDATION_ERROR',
-      message: '入力データが無効です',
-      details: error.errors,
-    }, { status: 400 })
+    return NextResponse.json(
+      {
+        code: "VALIDATION_ERROR",
+        message: "入力データが無効です",
+        details: error.errors,
+      },
+      { status: 400 }
+    )
   }
-  
+
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    if (error.code === 'P2002') {
-      return NextResponse.json({
-        code: 'DUPLICATE_ERROR',
-        message: 'データが既に存在します',
-      }, { status: 409 })
+    if (error.code === "P2002") {
+      return NextResponse.json(
+        {
+          code: "DUPLICATE_ERROR",
+          message: "データが既に存在します",
+        },
+        { status: 409 }
+      )
     }
   }
-  
-  return NextResponse.json({
-    code: 'INTERNAL_ERROR',
-    message: 'サーバーエラーが発生しました',
-  }, { status: 500 })
+
+  return NextResponse.json(
+    {
+      code: "INTERNAL_ERROR",
+      message: "サーバーエラーが発生しました",
+    },
+    { status: 500 }
+  )
 }
 ```
 
@@ -350,30 +364,37 @@ npm run build
 
 ```markdown
 ## 概要
+
 [変更の概要を1-2文で説明]
 
 ## 変更内容
+
 - [ ] 機能A を実装
 - [ ] バグB を修正
 - [ ] ドキュメントC を更新
 
 ## 技術的な変更
+
 - 使用した新しいライブラリ:
 - 変更したデータベーススキーマ:
 - 追加したAPI:
 
 ## テスト
+
 - [ ] 単体テストを追加/更新
 - [ ] 統合テストを実行
 - [ ] 手動テストを完了
 
 ## スクリーンショット
+
 [UIの変更がある場合は追加]
 
 ## 破壊的変更
+
 [ある場合は記載]
 
 ## 関連Issue
+
 Closes #123
 ```
 

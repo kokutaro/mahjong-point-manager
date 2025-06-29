@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import type { Prisma } from '@prisma/client'
+import { NextRequest, NextResponse } from "next/server"
+import { prisma } from "@/lib/prisma"
+import type { Prisma } from "@prisma/client"
 
 // ゲームタイプ別統計の型定義
 type GameTypeStats = {
@@ -21,27 +21,27 @@ export async function GET(
   try {
     const { playerId } = await params
     const { searchParams } = new URL(request.url)
-    const gameType = searchParams.get('gameType') // 'TONPUU' | 'HANCHAN'
+    const gameType = searchParams.get("gameType") // 'TONPUU' | 'HANCHAN'
 
     // 基本的なクエリ条件
     const whereCondition: Prisma.GameParticipantWhereInput = {
       playerId: playerId,
       game: {
-        status: 'FINISHED',
-        endedAt: { not: null }
-      }
+        status: "FINISHED",
+        endedAt: { not: null },
+      },
     }
 
     // ゲームタイプフィルター
     if (gameType) {
       // 有効なGameTypeかチェック
-      const validGameTypes = ['TONPUU', 'HANCHAN']
+      const validGameTypes = ["TONPUU", "HANCHAN"]
       if (validGameTypes.includes(gameType)) {
         if (!whereCondition.game) {
           whereCondition.game = {}
         }
         whereCondition.game.settings = {
-          gameType: gameType as 'TONPUU' | 'HANCHAN'
+          gameType: gameType as "TONPUU" | "HANCHAN",
         }
       }
     }
@@ -53,8 +53,8 @@ export async function GET(
         player: {
           select: {
             id: true,
-            name: true
-          }
+            name: true,
+          },
         },
         game: {
           select: {
@@ -62,17 +62,17 @@ export async function GET(
             endedAt: true,
             settings: {
               select: {
-                gameType: true
-              }
-            }
-          }
-        }
+                gameType: true,
+              },
+            },
+          },
+        },
       },
       orderBy: {
         game: {
-          endedAt: 'desc'
-        }
-      }
+          endedAt: "desc",
+        },
+      },
     })
 
     if (participations.length === 0) {
@@ -80,7 +80,7 @@ export async function GET(
         success: true,
         data: {
           playerId,
-          playerName: '',
+          playerName: "",
           totalGames: 0,
           winRate: 0,
           averageRank: 0,
@@ -89,8 +89,8 @@ export async function GET(
           rankDistribution: { 1: 0, 2: 0, 3: 0, 4: 0 },
           gameTypeStats: {},
           recentGames: [],
-          monthlyStats: {}
-        }
+          monthlyStats: {},
+        },
       })
     }
 
@@ -104,7 +104,7 @@ export async function GET(
     let totalPoints = 0
     let totalSettlement = 0
 
-    participations.forEach(p => {
+    participations.forEach((p) => {
       if (p.finalRank) {
         rankDistribution[p.finalRank as keyof typeof rankDistribution]++
         totalRank += p.finalRank
@@ -118,31 +118,38 @@ export async function GET(
     })
 
     // 勝率（1位率）
-    const winRate = totalGames > 0 ? (rankDistribution[1] / totalGames) * 100 : 0
+    const winRate =
+      totalGames > 0 ? (rankDistribution[1] / totalGames) * 100 : 0
 
     // 平均順位
     const averageRank = totalGames > 0 ? totalRank / totalGames : 0
 
     // 平均点数
-    const averagePoints = totalGames > 0 ? Math.round(totalPoints / totalGames) : 0
+    const averagePoints =
+      totalGames > 0 ? Math.round(totalPoints / totalGames) : 0
 
     // ゲームタイプ別統計
     const gameTypeStats: Record<string, GameTypeStats> = {}
-    const gameTypeGroups = participations.reduce((acc, p) => {
-      const type = p.game.settings?.gameType || 'HANCHAN'
-      if (!acc[type]) acc[type] = []
-      acc[type].push(p)
-      return acc
-    }, {} as Record<string, typeof participations>)
+    const gameTypeGroups = participations.reduce(
+      (acc, p) => {
+        const type = p.game.settings?.gameType || "HANCHAN"
+        if (!acc[type]) acc[type] = []
+        acc[type].push(p)
+        return acc
+      },
+      {} as Record<string, typeof participations>
+    )
 
     Object.entries(gameTypeGroups).forEach(([type, games]) => {
       const typeRankDistribution = { 1: 0, 2: 0, 3: 0, 4: 0 }
       let typeRankTotal = 0
       let typeSettlementTotal = 0
 
-      games.forEach(g => {
+      games.forEach((g) => {
         if (g.finalRank) {
-          typeRankDistribution[g.finalRank as keyof typeof typeRankDistribution]++
+          typeRankDistribution[
+            g.finalRank as keyof typeof typeRankDistribution
+          ]++
           typeRankTotal += g.finalRank
         }
         if (g.settlement) {
@@ -152,33 +159,37 @@ export async function GET(
 
       gameTypeStats[type] = {
         totalGames: games.length,
-        winRate: games.length > 0 ? (typeRankDistribution[1] / games.length) * 100 : 0,
+        winRate:
+          games.length > 0 ? (typeRankDistribution[1] / games.length) * 100 : 0,
         averageRank: games.length > 0 ? typeRankTotal / games.length : 0,
         totalSettlement: typeSettlementTotal,
-        rankDistribution: typeRankDistribution
+        rankDistribution: typeRankDistribution,
       }
     })
 
     // 最近の対局（最新5件）
-    const recentGames = participations.slice(0, 5).map(p => ({
+    const recentGames = participations.slice(0, 5).map((p) => ({
       gameId: p.game.id,
       endedAt: p.game.endedAt,
       gameType: p.game.settings?.gameType,
       rank: p.finalRank,
       points: p.finalPoints,
-      settlement: p.settlement
+      settlement: p.settlement,
     }))
 
     // 月別統計（過去12ヶ月）
-    const monthlyStats: Record<string, { games: number; wins: number; totalSettlement: number }> = {}
+    const monthlyStats: Record<
+      string,
+      { games: number; wins: number; totalSettlement: number }
+    > = {}
     const twelveMonthsAgo = new Date()
     twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12)
 
     participations
-      .filter(p => p.game.endedAt && p.game.endedAt >= twelveMonthsAgo)
-      .forEach(p => {
+      .filter((p) => p.game.endedAt && p.game.endedAt >= twelveMonthsAgo)
+      .forEach((p) => {
         if (p.game.endedAt) {
-          const monthKey = `${p.game.endedAt.getFullYear()}-${String(p.game.endedAt.getMonth() + 1).padStart(2, '0')}`
+          const monthKey = `${p.game.endedAt.getFullYear()}-${String(p.game.endedAt.getMonth() + 1).padStart(2, "0")}`
           if (!monthlyStats[monthKey]) {
             monthlyStats[monthKey] = { games: 0, wins: 0, totalSettlement: 0 }
           }
@@ -205,23 +216,28 @@ export async function GET(
         rankDistribution,
         gameTypeStats,
         recentGames,
-        monthlyStats
-      }
+        monthlyStats,
+      },
     })
 
     // Add cache headers for player statistics
-    response.headers.set('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=240')
-    
-    return response
+    response.headers.set(
+      "Cache-Control",
+      "public, s-maxage=120, stale-while-revalidate=240"
+    )
 
+    return response
   } catch (error) {
-    console.error('Stats API error:', error)
-    return NextResponse.json({
-      success: false,
-      error: {
-        message: '統計の取得に失敗しました',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      }
-    }, { status: 500 })
+    console.error("Stats API error:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          message: "統計の取得に失敗しました",
+          details: error instanceof Error ? error.message : "Unknown error",
+        },
+      },
+      { status: 500 }
+    )
   }
 }

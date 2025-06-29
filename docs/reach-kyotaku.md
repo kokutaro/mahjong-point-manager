@@ -32,28 +32,28 @@
 
 ```typescript
 interface ReachState {
-  playerId: string;
-  isReach: boolean;
-  reachRound?: number;       // リーチした局
-  reachTurn?: number;        // リーチしたターン
-  declaredAt: Date;
-  canWin: boolean;           // 和了可能状態
+  playerId: string
+  isReach: boolean
+  reachRound?: number // リーチした局
+  reachTurn?: number // リーチしたターン
+  declaredAt: Date
+  canWin: boolean // 和了可能状態
 }
 
 interface KyotakuState {
-  gameId: string;
-  reachSticks: number;       // リーチ棒の数
-  honbaSticks: number;       // 本場棒の数（別途管理）
-  totalValue: number;        // 総価値（1000×リーチ棒数）
-  history: KyotakuEvent[];   // 供託履歴
+  gameId: string
+  reachSticks: number // リーチ棒の数
+  honbaSticks: number // 本場棒の数（別途管理）
+  totalValue: number // 総価値（1000×リーチ棒数）
+  history: KyotakuEvent[] // 供託履歴
 }
 
 interface KyotakuEvent {
-  eventType: 'REACH_DECLARED' | 'KYOTAKU_DISTRIBUTED' | 'ROUND_END';
-  playerId?: string;
-  amount: number;
-  round: number;
-  timestamp: Date;
+  eventType: "REACH_DECLARED" | "KYOTAKU_DISTRIBUTED" | "ROUND_END"
+  playerId?: string
+  amount: number
+  round: number
+  timestamp: Date
 }
 ```
 
@@ -67,15 +67,15 @@ export class ReachManager {
     private prisma: PrismaClient,
     private pointsManager: PointsManagerService
   ) {}
-  
+
   async declareReach(
     gameId: string,
     playerId: string,
     round: number
   ): Promise<ReachResult> {
     // バリデーション
-    await this.validateReachDeclaration(gameId, playerId);
-    
+    await this.validateReachDeclaration(gameId, playerId)
+
     return await this.prisma.$transaction(async (tx) => {
       // プレイヤーのリーチ状態更新
       await tx.gameParticipant.update({
@@ -83,76 +83,80 @@ export class ReachManager {
         data: {
           isReach: true,
           reachRound: round,
-          currentPoints: { decrement: 1000 }
-        }
-      });
-      
+          currentPoints: { decrement: 1000 },
+        },
+      })
+
       // 供託数増加
       await tx.game.update({
         where: { id: gameId },
-        data: { kyotaku: { increment: 1 } }
-      });
-      
+        data: { kyotaku: { increment: 1 } },
+      })
+
       // イベント記録
-      await this.recordReachEvent(tx, gameId, playerId, round);
-      
-      return await this.getUpdatedState(tx, gameId);
-    });
+      await this.recordReachEvent(tx, gameId, playerId, round)
+
+      return await this.getUpdatedState(tx, gameId)
+    })
   }
-  
+
   private async validateReachDeclaration(
     gameId: string,
     playerId: string
   ): Promise<void> {
     const participant = await this.prisma.gameParticipant.findUnique({
-      where: { gameId_playerId: { gameId, playerId } }
-    });
-    
+      where: { gameId_playerId: { gameId, playerId } },
+    })
+
     if (!participant) {
-      throw new PlayerNotFoundError(playerId);
+      throw new PlayerNotFoundError(playerId)
     }
-    
+
     if (participant.isReach) {
-      throw new AlreadyReachError(playerId);
+      throw new AlreadyReachError(playerId)
     }
-    
+
     if (participant.currentPoints < 1000) {
-      throw new InsufficientPointsError(playerId, 1000, participant.currentPoints);
+      throw new InsufficientPointsError(
+        playerId,
+        1000,
+        participant.currentPoints
+      )
     }
   }
-  
+
   async distributeKyotaku(
     gameId: string,
     winnerId: string
   ): Promise<KyotakuDistribution> {
     const game = await this.prisma.game.findUnique({
-      where: { id: gameId }
-    });
-    
+      where: { id: gameId },
+    })
+
     if (!game || game.kyotaku === 0) {
-      return { amount: 0, distributed: false };
+      return { amount: 0, distributed: false }
     }
-    
-    const kyotakuValue = game.kyotaku * 1000;
-    
+
+    const kyotakuValue = game.kyotaku * 1000
+
     return await this.prisma.$transaction(async (tx) => {
       // 勝者に供託分配
       await tx.gameParticipant.update({
         where: { gameId_playerId: { gameId, playerId: winnerId } },
-        data: { currentPoints: { increment: kyotakuValue } }
-      });
-      
+        data: { currentPoints: { increment: kyotakuValue } },
+      })
+
       // 供託クリア
       await tx.game.update({
         where: { id: gameId },
-        data: { kyotaku: 0 }
-      });
-      
+        data: { kyotaku: 0 },
+      })
+
       // 分配イベント記録
-      await this.recordKyotakuDistribution(tx, gameId, winnerId, kyotakuValue);
-      
-      return { amount: kyotakuValue, distributed: true };
-    });
+      await this.recordKyotakuDistribution(tx, gameId, winnerId, kyotakuValue)
+
+      return { amount: kyotakuValue, distributed: true }
+    })
   }
 }
 ```
@@ -169,23 +173,23 @@ export class RyukyokuProcessor {
       // 全員のリーチ状態解除
       await tx.gameParticipant.updateMany({
         where: { gameId },
-        data: { 
+        data: {
           isReach: false,
-          reachRound: null
-        }
-      });
-      
+          reachRound: null,
+        },
+      })
+
       // 供託は継続（次局に持ち越し）
       // kyotaku値はそのまま維持
-      
+
       // 流局イベント記録
-      await this.recordRyukyokuEvent(tx, gameId, reason);
-      
+      await this.recordRyukyokuEvent(tx, gameId, reason)
+
       return {
         kyotakuCarriedOver: await this.getCurrentKyotaku(tx, gameId),
-        reachStatesCleared: true
-      };
-    });
+        reachStatesCleared: true,
+      }
+    })
   }
 }
 ```
@@ -195,9 +199,9 @@ export class RyukyokuProcessor {
 ### リーチボタン・表示
 
 ```typescript
-const ReachButton: React.FC<{ 
-  playerId: string; 
-  canReach: boolean; 
+const ReachButton: React.FC<{
+  playerId: string;
+  canReach: boolean;
   onReach: () => void;
 }> = ({ playerId, canReach, onReach }) => {
   return (
@@ -253,9 +257,9 @@ const KyotakuDisplay: React.FC<{ kyotaku: number }> = ({ kyotaku }) => {
 
 ```typescript
 interface DoubleReachRule {
-  enabled: boolean;
-  bonusValue: number;        // ボーナス翻数
-  firstTurnOnly: boolean;    // 第一ツモでのみ有効
+  enabled: boolean
+  bonusValue: number // ボーナス翻数
+  firstTurnOnly: boolean // 第一ツモでのみ有効
 }
 ```
 
@@ -263,8 +267,8 @@ interface DoubleReachRule {
 
 ```typescript
 interface IppatsuRule {
-  enabled: boolean;
-  cancelConditions: string[]; // ['CHII', 'PON', 'KAN']
+  enabled: boolean
+  cancelConditions: string[] // ['CHII', 'PON', 'KAN']
 }
 ```
 
@@ -292,25 +296,25 @@ const validateReachDeclaration = (
   participant: GameParticipant,
   gameState: GameState
 ): ValidationResult => {
-  const errors: string[] = [];
-  
+  const errors: string[] = []
+
   if (participant.isReach) {
-    errors.push('既にリーチ中です');
+    errors.push("既にリーチ中です")
   }
-  
+
   if (participant.currentPoints < 1000) {
-    errors.push('点数が不足しています');
+    errors.push("点数が不足しています")
   }
-  
-  if (gameState.status !== 'PLAYING') {
-    errors.push('対局中ではありません');
+
+  if (gameState.status !== "PLAYING") {
+    errors.push("対局中ではありません")
   }
-  
+
   return {
     isValid: errors.length === 0,
-    errors
-  };
-};
+    errors,
+  }
+}
 ```
 
 ## テスト設計
@@ -318,32 +322,32 @@ const validateReachDeclaration = (
 ### リーチ機能テスト
 
 ```typescript
-describe('ReachManager', () => {
-  it('正常にリーチ宣言できる', async () => {
-    const result = await reachManager.declareReach(gameId, playerId, 3);
-    
-    expect(result.participant.isReach).toBe(true);
-    expect(result.participant.currentPoints).toBe(24000); // 25000 - 1000
-    expect(result.kyotaku).toBe(1);
-  });
-  
-  it('点数不足時はリーチできない', async () => {
+describe("ReachManager", () => {
+  it("正常にリーチ宣言できる", async () => {
+    const result = await reachManager.declareReach(gameId, playerId, 3)
+
+    expect(result.participant.isReach).toBe(true)
+    expect(result.participant.currentPoints).toBe(24000) // 25000 - 1000
+    expect(result.kyotaku).toBe(1)
+  })
+
+  it("点数不足時はリーチできない", async () => {
     // プレイヤーの点数を500に設定
-    await setupPlayerPoints(playerId, 500);
-    
+    await setupPlayerPoints(playerId, 500)
+
     await expect(
       reachManager.declareReach(gameId, playerId, 3)
-    ).rejects.toThrow(InsufficientPointsError);
-  });
-  
-  it('供託が正しく分配される', async () => {
+    ).rejects.toThrow(InsufficientPointsError)
+  })
+
+  it("供託が正しく分配される", async () => {
     // 供託3本の状態で
-    await setupKyotaku(gameId, 3);
-    
-    const result = await reachManager.distributeKyotaku(gameId, winnerId);
-    
-    expect(result.amount).toBe(3000);
-    expect(result.distributed).toBe(true);
-  });
-});
+    await setupKyotaku(gameId, 3)
+
+    const result = await reachManager.distributeKyotaku(gameId, winnerId)
+
+    expect(result.amount).toBe(3000)
+    expect(result.distributed).toBe(true)
+  })
+})
 ```

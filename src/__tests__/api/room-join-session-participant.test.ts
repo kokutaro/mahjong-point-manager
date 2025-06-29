@@ -2,12 +2,12 @@
  * ルーム参加時のセッション参加者登録テスト
  * クライアントプレイヤーがルーム参加時にSessionParticipantとして登録されることを確認
  */
-import { POST } from '@/app/api/room/join/route'
-import { prisma } from '@/lib/prisma'
-import { NextRequest } from 'next/server'
+import { POST } from "@/app/api/room/join/route"
+import { prisma } from "@/lib/prisma"
+import { NextRequest } from "next/server"
 
 // Prismaのモック
-jest.mock('@/lib/prisma', () => ({
+jest.mock("@/lib/prisma", () => ({
   prisma: {
     game: {
       findFirst: jest.fn(),
@@ -32,14 +32,14 @@ jest.mock('@/lib/prisma', () => ({
 }))
 
 // Cookiesのモック
-jest.mock('next/headers', () => ({
+jest.mock("next/headers", () => ({
   cookies: jest.fn(() => ({
-    get: jest.fn(() => ({ value: 'test-player-id' })),
+    get: jest.fn(() => ({ value: "test-player-id" })),
   })),
 }))
 
 // SocketIOのモック
-jest.mock('@/lib/socket', () => ({
+jest.mock("@/lib/socket", () => ({
   getIO: jest.fn(() => ({
     to: jest.fn(() => ({
       emit: jest.fn(),
@@ -48,7 +48,7 @@ jest.mock('@/lib/socket', () => ({
 }))
 
 // NextRequestとNextResponseのモック
-jest.mock('next/server', () => {
+jest.mock("next/server", () => {
   return {
     NextRequest: jest.fn().mockImplementation((url, options) => {
       let requestBody = {}
@@ -62,7 +62,7 @@ jest.mock('next/server', () => {
 
       return {
         url,
-        method: options?.method || 'GET',
+        method: options?.method || "GET",
         json: jest.fn(() => Promise.resolve(requestBody)),
         headers: new Map(),
       }
@@ -84,77 +84,75 @@ jest.mock('next/server', () => {
 
 const mockPrisma = prisma as jest.Mocked<typeof prisma>
 
-describe('ルーム参加時のセッション参加者登録', () => {
+describe("ルーム参加時のセッション参加者登録", () => {
   beforeEach(() => {
     jest.clearAllMocks()
   })
 
-  it('クライアントプレイヤーがルーム参加時にSessionParticipantとして登録される', async () => {
+  it("クライアントプレイヤーがルーム参加時にSessionParticipantとして登録される", async () => {
     const mockGame = {
-      id: 'game-1',
-      roomCode: 'ABCDEF',
-      hostPlayerId: 'host-player',
-      status: 'WAITING',
-      participants: [
-        { playerId: 'host-player', position: 0 }
-      ],
+      id: "game-1",
+      roomCode: "ABCDEF",
+      hostPlayerId: "host-player",
+      status: "WAITING",
+      participants: [{ playerId: "host-player", position: 0 }],
       settings: { initialPoints: 25000 },
       session: {
-        id: 'session-1',
-        participants: [
-          { playerId: 'host-player', position: 0 }
-        ]
-      }
+        id: "session-1",
+        participants: [{ playerId: "host-player", position: 0 }],
+      },
     }
 
     const mockPlayer = {
-      id: 'test-player-id',
-      name: 'テストプレイヤー'
+      id: "test-player-id",
+      name: "テストプレイヤー",
     }
 
     const mockGameParticipant = {
-      id: 'game-participant-1',
-      gameId: 'game-1',
-      playerId: 'test-player-id',
-      position: 1
+      id: "game-participant-1",
+      gameId: "game-1",
+      playerId: "test-player-id",
+      position: 1,
     }
 
     // Prismaのモック設定
     mockPrisma.game.findFirst.mockResolvedValue(mockGame as any)
     mockPrisma.player.findUnique.mockResolvedValue(mockPlayer as any)
     mockPrisma.gameParticipant.findMany.mockResolvedValue([
-      { player: { name: 'ホストプレイヤー' } }
+      { player: { name: "ホストプレイヤー" } },
     ] as any)
     mockPrisma.game.findUnique.mockResolvedValue({
       ...mockGame,
       participants: [
         {
-          playerId: 'host-player',
+          playerId: "host-player",
           position: 0,
-          player: { name: 'ホストプレイヤー' }
+          player: { name: "ホストプレイヤー" },
         },
         {
-          playerId: 'test-player-id',
+          playerId: "test-player-id",
           position: 1,
-          player: { name: 'テストプレイヤー' }
-        }
-      ]
+          player: { name: "テストプレイヤー" },
+        },
+      ],
     } as any)
 
     // トランザクション内のモック関数
-    const mockTxGameParticipantFindMany = jest.fn().mockResolvedValue([
-      { playerId: 'host-player', position: 0 }
-    ])
-    const mockTxGameParticipantCreate = jest.fn().mockResolvedValue(mockGameParticipant)
+    const mockTxGameParticipantFindMany = jest
+      .fn()
+      .mockResolvedValue([{ playerId: "host-player", position: 0 }])
+    const mockTxGameParticipantCreate = jest
+      .fn()
+      .mockResolvedValue(mockGameParticipant)
     const mockTxSessionParticipantFindFirst = jest.fn().mockResolvedValue(null)
-    const mockTxSessionParticipantFindMany = jest.fn().mockResolvedValue([
-      { playerId: 'host-player', position: 0 }
-    ])
+    const mockTxSessionParticipantFindMany = jest
+      .fn()
+      .mockResolvedValue([{ playerId: "host-player", position: 0 }])
     const mockTxSessionParticipantCreate = jest.fn().mockResolvedValue({
-      id: 'session-participant-1',
-      sessionId: 'session-1',
-      playerId: 'test-player-id',
-      position: 1
+      id: "session-participant-1",
+      sessionId: "session-1",
+      playerId: "test-player-id",
+      position: 1,
     })
 
     mockPrisma.$transaction.mockImplementation(async (callback) => {
@@ -172,11 +170,11 @@ describe('ルーム参加時のセッション参加者登録', () => {
       return callback(mockTx as any)
     })
 
-    const request = new NextRequest('http://localhost/api/room/join', {
-      method: 'POST',
+    const request = new NextRequest("http://localhost/api/room/join", {
+      method: "POST",
       body: JSON.stringify({
-        roomCode: 'ABCDEF',
-        playerName: 'テストプレイヤー'
+        roomCode: "ABCDEF",
+        playerName: "テストプレイヤー",
       }),
     })
 
@@ -189,96 +187,98 @@ describe('ルーム参加時のセッション参加者登録', () => {
     // GameParticipantが作成されることを確認
     expect(mockTxGameParticipantCreate).toHaveBeenCalledWith({
       data: {
-        gameId: 'game-1',
-        playerId: 'test-player-id',
+        gameId: "game-1",
+        playerId: "test-player-id",
         position: 1,
         currentPoints: 25000,
-        isReach: false
-      }
+        isReach: false,
+      },
     })
 
     // SessionParticipantが作成されることを確認
     expect(mockTxSessionParticipantCreate).toHaveBeenCalledWith({
       data: {
-        sessionId: 'session-1',
-        playerId: 'test-player-id',
+        sessionId: "session-1",
+        playerId: "test-player-id",
         position: 1,
         totalGames: 0,
         totalSettlement: 0,
         firstPlace: 0,
         secondPlace: 0,
         thirdPlace: 0,
-        fourthPlace: 0
-      }
+        fourthPlace: 0,
+      },
     })
   })
 
-  it('既にセッション参加者として登録済みの場合はSessionParticipantを重複作成しない', async () => {
+  it("既にセッション参加者として登録済みの場合はSessionParticipantを重複作成しない", async () => {
     const mockGame = {
-      id: 'game-1',
-      roomCode: 'ABCDEF',
-      hostPlayerId: 'host-player',
-      status: 'WAITING',
-      participants: [
-        { playerId: 'host-player', position: 0 }
-      ],
+      id: "game-1",
+      roomCode: "ABCDEF",
+      hostPlayerId: "host-player",
+      status: "WAITING",
+      participants: [{ playerId: "host-player", position: 0 }],
       settings: { initialPoints: 25000 },
       session: {
-        id: 'session-1',
+        id: "session-1",
         participants: [
-          { playerId: 'host-player', position: 0 },
-          { playerId: 'test-player-id', position: 1 }
-        ]
-      }
+          { playerId: "host-player", position: 0 },
+          { playerId: "test-player-id", position: 1 },
+        ],
+      },
     }
 
     const mockPlayer = {
-      id: 'test-player-id',
-      name: 'テストプレイヤー'
+      id: "test-player-id",
+      name: "テストプレイヤー",
     }
 
     const mockGameParticipant = {
-      id: 'game-participant-1',
-      gameId: 'game-1',
-      playerId: 'test-player-id',
-      position: 1
+      id: "game-participant-1",
+      gameId: "game-1",
+      playerId: "test-player-id",
+      position: 1,
     }
 
     const mockExistingSessionParticipant = {
-      id: 'session-participant-1',
-      sessionId: 'session-1',
-      playerId: 'test-player-id',
-      position: 1
+      id: "session-participant-1",
+      sessionId: "session-1",
+      playerId: "test-player-id",
+      position: 1,
     }
 
     // Prismaのモック設定
     mockPrisma.game.findFirst.mockResolvedValue(mockGame as any)
     mockPrisma.player.findUnique.mockResolvedValue(mockPlayer as any)
     mockPrisma.gameParticipant.findMany.mockResolvedValue([
-      { player: { name: 'ホストプレイヤー' } }
+      { player: { name: "ホストプレイヤー" } },
     ] as any)
     mockPrisma.game.findUnique.mockResolvedValue({
       ...mockGame,
       participants: [
         {
-          playerId: 'host-player',
+          playerId: "host-player",
           position: 0,
-          player: { name: 'ホストプレイヤー' }
+          player: { name: "ホストプレイヤー" },
         },
         {
-          playerId: 'test-player-id',
+          playerId: "test-player-id",
           position: 1,
-          player: { name: 'テストプレイヤー' }
-        }
-      ]
+          player: { name: "テストプレイヤー" },
+        },
+      ],
     } as any)
 
     // トランザクション内のモック関数
-    const mockTxGameParticipantFindMany = jest.fn().mockResolvedValue([
-      { playerId: 'host-player', position: 0 }
-    ])
-    const mockTxGameParticipantCreate = jest.fn().mockResolvedValue(mockGameParticipant)
-    const mockTxSessionParticipantFindFirst = jest.fn().mockResolvedValue(mockExistingSessionParticipant)
+    const mockTxGameParticipantFindMany = jest
+      .fn()
+      .mockResolvedValue([{ playerId: "host-player", position: 0 }])
+    const mockTxGameParticipantCreate = jest
+      .fn()
+      .mockResolvedValue(mockGameParticipant)
+    const mockTxSessionParticipantFindFirst = jest
+      .fn()
+      .mockResolvedValue(mockExistingSessionParticipant)
     const mockTxSessionParticipantCreate = jest.fn()
 
     mockPrisma.$transaction.mockImplementation(async (callback) => {
@@ -295,11 +295,11 @@ describe('ルーム参加時のセッション参加者登録', () => {
       return callback(mockTx as any)
     })
 
-    const request = new NextRequest('http://localhost/api/room/join', {
-      method: 'POST',
+    const request = new NextRequest("http://localhost/api/room/join", {
+      method: "POST",
       body: JSON.stringify({
-        roomCode: 'ABCDEF',
-        playerName: 'テストプレイヤー'
+        roomCode: "ABCDEF",
+        playerName: "テストプレイヤー",
       }),
     })
 
@@ -316,58 +316,58 @@ describe('ルーム参加時のセッション参加者登録', () => {
     expect(mockTxSessionParticipantCreate).not.toHaveBeenCalled()
   })
 
-  it('セッションが存在しない場合はSessionParticipantを作成しない', async () => {
+  it("セッションが存在しない場合はSessionParticipantを作成しない", async () => {
     const mockGame = {
-      id: 'game-1',
-      roomCode: 'ABCDEF',
-      hostPlayerId: 'host-player',
-      status: 'WAITING',
-      participants: [
-        { playerId: 'host-player', position: 0 }
-      ],
+      id: "game-1",
+      roomCode: "ABCDEF",
+      hostPlayerId: "host-player",
+      status: "WAITING",
+      participants: [{ playerId: "host-player", position: 0 }],
       settings: { initialPoints: 25000 },
-      session: null
+      session: null,
     }
 
     const mockPlayer = {
-      id: 'test-player-id',
-      name: 'テストプレイヤー'
+      id: "test-player-id",
+      name: "テストプレイヤー",
     }
 
     const mockGameParticipant = {
-      id: 'game-participant-1',
-      gameId: 'game-1',
-      playerId: 'test-player-id',
-      position: 1
+      id: "game-participant-1",
+      gameId: "game-1",
+      playerId: "test-player-id",
+      position: 1,
     }
 
     // Prismaのモック設定
     mockPrisma.game.findFirst.mockResolvedValue(mockGame as any)
     mockPrisma.player.findUnique.mockResolvedValue(mockPlayer as any)
     mockPrisma.gameParticipant.findMany.mockResolvedValue([
-      { player: { name: 'ホストプレイヤー' } }
+      { player: { name: "ホストプレイヤー" } },
     ] as any)
     mockPrisma.game.findUnique.mockResolvedValue({
       ...mockGame,
       participants: [
         {
-          playerId: 'host-player',
+          playerId: "host-player",
           position: 0,
-          player: { name: 'ホストプレイヤー' }
+          player: { name: "ホストプレイヤー" },
         },
         {
-          playerId: 'test-player-id',
+          playerId: "test-player-id",
           position: 1,
-          player: { name: 'テストプレイヤー' }
-        }
-      ]
+          player: { name: "テストプレイヤー" },
+        },
+      ],
     } as any)
 
     // トランザクション内のモック関数
-    const mockTxGameParticipantFindMany = jest.fn().mockResolvedValue([
-      { playerId: 'host-player', position: 0 }
-    ])
-    const mockTxGameParticipantCreate = jest.fn().mockResolvedValue(mockGameParticipant)
+    const mockTxGameParticipantFindMany = jest
+      .fn()
+      .mockResolvedValue([{ playerId: "host-player", position: 0 }])
+    const mockTxGameParticipantCreate = jest
+      .fn()
+      .mockResolvedValue(mockGameParticipant)
     const mockTxSessionParticipantCreate = jest.fn()
 
     mockPrisma.$transaction.mockImplementation(async (callback) => {
@@ -383,11 +383,11 @@ describe('ルーム参加時のセッション参加者登録', () => {
       return callback(mockTx as any)
     })
 
-    const request = new NextRequest('http://localhost/api/room/join', {
-      method: 'POST',
+    const request = new NextRequest("http://localhost/api/room/join", {
+      method: "POST",
       body: JSON.stringify({
-        roomCode: 'ABCDEF',
-        playerName: 'テストプレイヤー'
+        roomCode: "ABCDEF",
+        playerName: "テストプレイヤー",
       }),
     })
 

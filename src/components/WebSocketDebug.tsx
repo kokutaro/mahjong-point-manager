@@ -1,7 +1,7 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
-import { AuthFallback } from '@/lib/auth-fallback'
+import { useState, useEffect } from "react"
+import { AuthFallback } from "@/lib/auth-fallback"
 
 interface BrowserInfo {
   isSafari: boolean
@@ -39,24 +39,24 @@ interface DebugProps {
 export default function WebSocketDebug({ show = false }: DebugProps) {
   const [status, setStatus] = useState<WebSocketStatus | null>(null)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string>('')
+  const [error, setError] = useState<string>("")
   const [browserInfo, setBrowserInfo] = useState<BrowserInfo | null>(null)
 
   const checkWebSocketStatus = async () => {
     setLoading(true)
-    setError('')
-    
+    setError("")
+
     try {
-      const response = await fetch('/api/websocket-status')
+      const response = await fetch("/api/websocket-status")
       const data = await response.json()
-      
+
       if (data.success) {
         setStatus(data.status)
       } else {
-        setError(data.message || 'WebSocket status check failed')
+        setError(data.message || "WebSocket status check failed")
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch status')
+      setError(err instanceof Error ? err.message : "Failed to fetch status")
     } finally {
       setLoading(false)
     }
@@ -68,7 +68,7 @@ export default function WebSocketDebug({ show = false }: DebugProps) {
       // ブラウザ情報を取得
       setBrowserInfo({
         ...AuthFallback.getBrowserInfo(),
-        fallbackSession: AuthFallback.getSession() || undefined
+        fallbackSession: AuthFallback.getSession() || undefined,
       })
     }
   }, [show])
@@ -84,7 +84,7 @@ export default function WebSocketDebug({ show = false }: DebugProps) {
           disabled={loading}
           className="text-sm bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 disabled:opacity-50"
         >
-          {loading ? '更新中...' : '更新'}
+          {loading ? "更新中..." : "更新"}
         </button>
       </div>
 
@@ -97,16 +97,20 @@ export default function WebSocketDebug({ show = false }: DebugProps) {
       {status && (
         <div className="space-y-2 text-xs">
           <div>
-            <strong>WebSocket Status:</strong>{' '}
-            <span className={status.websocketInitialized ? 'text-green-600' : 'text-red-600'}>
-              {status.websocketInitialized ? '✅ Initialized' : '❌ Not Found'}
+            <strong>WebSocket Status:</strong>{" "}
+            <span
+              className={
+                status.websocketInitialized ? "text-green-600" : "text-red-600"
+              }
+            >
+              {status.websocketInitialized ? "✅ Initialized" : "❌ Not Found"}
             </span>
           </div>
-          
+
           <div>
             <strong>Environment:</strong> {status.environment}
           </div>
-          
+
           <div>
             <strong>Socket.IO:</strong> {status.socketioVersion}
           </div>
@@ -114,7 +118,9 @@ export default function WebSocketDebug({ show = false }: DebugProps) {
           <div>
             <strong>Server Info:</strong>
             <ul className="ml-2 mt-1">
-              <li>Host: {status.serverInfo.hostname}:{status.serverInfo.port}</li>
+              <li>
+                Host: {status.serverInfo.hostname}:{status.serverInfo.port}
+              </li>
               <li>Auth URL: {status.serverInfo.nextauthUrl}</li>
             </ul>
           </div>
@@ -124,8 +130,8 @@ export default function WebSocketDebug({ show = false }: DebugProps) {
             <ul className="ml-2 mt-1">
               <li>Host: {status.headers.host}</li>
               <li>Origin: {status.headers.origin}</li>
-              <li>Upgrade: {status.headers.upgrade || 'None'}</li>
-              <li>Connection: {status.headers.connection || 'None'}</li>
+              <li>Upgrade: {status.headers.upgrade || "None"}</li>
+              <li>Connection: {status.headers.connection || "None"}</li>
             </ul>
           </div>
 
@@ -134,7 +140,7 @@ export default function WebSocketDebug({ show = false }: DebugProps) {
             <ul className="ml-2 mt-1">
               <li>Protocol: {window.location.protocol}</li>
               <li>Hostname: {window.location.hostname}</li>
-              <li>Port: {window.location.port || 'Default'}</li>
+              <li>Port: {window.location.port || "Default"}</li>
             </ul>
           </div>
 
@@ -148,11 +154,13 @@ export default function WebSocketDebug({ show = false }: DebugProps) {
         <div className="mt-4 p-2 bg-blue-50 rounded text-xs">
           <strong>ブラウザ・認証情報:</strong>
           <ul className="ml-2 mt-1">
-            <li>Safari: {browserInfo.isSafari ? '✅' : '❌'}</li>
-            <li>Mobile: {browserInfo.isMobile ? '✅' : '❌'}</li>
-            <li>iOS: {browserInfo.isIOS ? '✅' : '❌'}</li>
-            <li>Cookie Support: {browserInfo.cookieSupported ? '✅' : '❌'}</li>
-            <li>Fallback Session: {browserInfo.fallbackSession ? '✅' : '❌'}</li>
+            <li>Safari: {browserInfo.isSafari ? "✅" : "❌"}</li>
+            <li>Mobile: {browserInfo.isMobile ? "✅" : "❌"}</li>
+            <li>iOS: {browserInfo.isIOS ? "✅" : "❌"}</li>
+            <li>Cookie Support: {browserInfo.cookieSupported ? "✅" : "❌"}</li>
+            <li>
+              Fallback Session: {browserInfo.fallbackSession ? "✅" : "❌"}
+            </li>
             {browserInfo.fallbackSession && (
               <li>Session Player: {browserInfo.fallbackSession.playerId}</li>
             )}
@@ -170,14 +178,14 @@ export function useWebSocketDebug() {
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       // Ctrl+Shift+W でデバッグパネル表示/非表示
-      if (e.ctrlKey && e.shiftKey && e.key === 'W') {
+      if (e.ctrlKey && e.shiftKey && e.key === "W") {
         e.preventDefault()
-        setShowDebug(prev => !prev)
+        setShowDebug((prev) => !prev)
       }
     }
 
-    window.addEventListener('keydown', handleKeyPress)
-    return () => window.removeEventListener('keydown', handleKeyPress)
+    window.addEventListener("keydown", handleKeyPress)
+    return () => window.removeEventListener("keydown", handleKeyPress)
   }, [])
 
   return { showDebug, setShowDebug }

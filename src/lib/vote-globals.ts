@@ -1,4 +1,4 @@
-import { VoteState } from '@/components/VotingProgress'
+import { VoteState } from "@/components/VotingProgress"
 
 // WebSocket 型定義
 export interface SocketIOInstance {
@@ -8,7 +8,7 @@ export interface SocketIOInstance {
 }
 
 // socket.tsからSocketIOServerをインポート
-import { Server as SocketIOServer } from 'socket.io'
+import { Server as SocketIOServer } from "socket.io"
 
 // グローバル型定義
 declare global {
@@ -18,7 +18,7 @@ declare global {
       __socketio?: SocketIOServer
     }
   }
-  
+
   // eslint-disable-next-line no-var
   var gameVotes: Record<string, VoteState> | undefined
   // eslint-disable-next-line no-var

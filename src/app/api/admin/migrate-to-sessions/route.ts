@@ -1,5 +1,5 @@
-import { prisma } from '@/lib/prisma'
-import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from "@/lib/prisma"
+import { NextRequest, NextResponse } from "next/server"
 
 // 既存の個別対局を自動でセッションに移行するユーティリティAPI
 export async function POST(request: NextRequest) {
@@ -11,29 +11,29 @@ export async function POST(request: NextRequest) {
     const standAloneGames = await prisma.game.findMany({
       where: {
         sessionId: null,
-        status: 'FINISHED',
-        endedAt: { not: null }
+        status: "FINISHED",
+        endedAt: { not: null },
       },
       include: {
         hostPlayer: true,
         participants: {
           include: {
-            player: true
+            player: true,
           },
-          orderBy: { position: 'asc' }
+          orderBy: { position: "asc" },
         },
-        settings: true
+        settings: true,
       },
       orderBy: {
-        createdAt: 'asc'
-      }
+        createdAt: "asc",
+      },
     })
 
     if (standAloneGames.length === 0) {
       return NextResponse.json({
         success: true,
-        message: 'セッション化が必要な対局がありません',
-        data: { processedGames: 0 }
+        message: "セッション化が必要な対局がありません",
+        data: { processedGames: 0 },
       })
     }
 
@@ -43,9 +43,9 @@ export async function POST(request: NextRequest) {
     for (const game of standAloneGames) {
       // グループキー: ホストID + 参加者ID（ソート済み）
       const participantIds = game.participants
-        .map(p => p.playerId)
+        .map((p) => p.playerId)
         .sort()
-        .join(',')
+        .join(",")
       const groupKey = `${game.hostPlayerId}-${participantIds}`
 
       if (!sessionGroups[groupKey]) {
@@ -63,27 +63,29 @@ export async function POST(request: NextRequest) {
         // Phase 1: すべての対局をセッション化（単発対局も含む）
         const isMultiGame = games.length > 1
         const firstGame = games[0]
-        const sessionCode = Math.floor(100000 + Math.random() * 900000).toString()
+        const sessionCode = Math.floor(
+          100000 + Math.random() * 900000
+        ).toString()
 
         // セッション作成
-        const sessionName = isMultiGame 
+        const sessionName = isMultiGame
           ? `自動移行セッション (${games.length}局)`
           : `単発対局セッション`
-          
+
         const session = await prisma.gameSession.create({
           data: {
             sessionCode,
             hostPlayerId: firstGame.hostPlayerId,
             name: sessionName,
-            status: 'FINISHED',
+            status: "FINISHED",
             settingsId: firstGame.settingsId,
             createdAt: firstGame.createdAt,
-            endedAt: games[games.length - 1].endedAt
-          }
+            endedAt: games[games.length - 1].endedAt,
+          },
         })
 
         // セッション参加者作成
-        const participantPromises = firstGame.participants.map(participant => 
+        const participantPromises = firstGame.participants.map((participant) =>
           prisma.sessionParticipant.create({
             data: {
               sessionId: session.id,
@@ -91,26 +93,36 @@ export async function POST(request: NextRequest) {
               position: participant.position,
               totalGames: games.length,
               totalSettlement: games.reduce((sum, game) => {
-                const gameParticipant = game.participants.find(p => p.playerId === participant.playerId)
+                const gameParticipant = game.participants.find(
+                  (p) => p.playerId === participant.playerId
+                )
                 return sum + (gameParticipant?.settlement || 0)
               }, 0),
-              firstPlace: games.filter(game => {
-                const gameParticipant = game.participants.find(p => p.playerId === participant.playerId)
+              firstPlace: games.filter((game) => {
+                const gameParticipant = game.participants.find(
+                  (p) => p.playerId === participant.playerId
+                )
                 return gameParticipant?.finalRank === 1
               }).length,
-              secondPlace: games.filter(game => {
-                const gameParticipant = game.participants.find(p => p.playerId === participant.playerId)
+              secondPlace: games.filter((game) => {
+                const gameParticipant = game.participants.find(
+                  (p) => p.playerId === participant.playerId
+                )
                 return gameParticipant?.finalRank === 2
               }).length,
-              thirdPlace: games.filter(game => {
-                const gameParticipant = game.participants.find(p => p.playerId === participant.playerId)
+              thirdPlace: games.filter((game) => {
+                const gameParticipant = game.participants.find(
+                  (p) => p.playerId === participant.playerId
+                )
                 return gameParticipant?.finalRank === 3
               }).length,
-              fourthPlace: games.filter(game => {
-                const gameParticipant = game.participants.find(p => p.playerId === participant.playerId)
+              fourthPlace: games.filter((game) => {
+                const gameParticipant = game.participants.find(
+                  (p) => p.playerId === participant.playerId
+                )
                 return gameParticipant?.finalRank === 4
-              }).length
-            }
+              }).length,
+            },
           })
         )
 
@@ -122,8 +134,8 @@ export async function POST(request: NextRequest) {
             where: { id: game.id },
             data: {
               sessionId: session.id,
-              sessionOrder: index + 1
-            }
+              sessionOrder: index + 1,
+            },
           })
         )
 
@@ -135,7 +147,7 @@ export async function POST(request: NextRequest) {
           sessionCode: session.sessionCode,
           gameCount: games.length,
           hostPlayer: firstGame.hostPlayer.name,
-          participants: firstGame.participants.map(p => p.player.name)
+          participants: firstGame.participants.map((p) => p.player.name),
         })
       }
     } else {
@@ -147,12 +159,12 @@ export async function POST(request: NextRequest) {
           groupKey,
           gameCount: games.length,
           hostPlayer: firstGame.hostPlayer.name,
-          participants: firstGame.participants.map(p => p.player.name),
+          participants: firstGame.participants.map((p) => p.player.name),
           dateRange: {
             start: games[0].createdAt,
-            end: games[games.length - 1].endedAt
+            end: games[games.length - 1].endedAt,
           },
-          type: games.length > 1 ? 'multi-game' : 'single-game'
+          type: games.length > 1 ? "multi-game" : "single-game",
         })
         processedGames += games.length
       }
@@ -160,24 +172,26 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: dryRun 
+      message: dryRun
         ? `${processedGames}局がセッション化の対象です（ドライラン）`
         : `${processedGames}局をセッションに移行しました`,
       data: {
         processedGames,
         operations,
-        dryRun
-      }
+        dryRun,
+      },
     })
-
   } catch (error) {
-    console.error('Session migration error:', error)
-    return NextResponse.json({
-      success: false,
-      error: {
-        message: 'セッション移行に失敗しました',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      }
-    }, { status: 500 })
+    console.error("Session migration error:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          message: "セッション移行に失敗しました",
+          details: error instanceof Error ? error.message : "Unknown error",
+        },
+      },
+      { status: 500 }
+    )
   }
 }

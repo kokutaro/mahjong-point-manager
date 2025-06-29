@@ -1,21 +1,21 @@
-'use client'
+"use client"
 
-import QRCodeModal from '@/components/QRCodeModal'
-import { useAuth } from '@/contexts/AuthContext'
-import { useSocket } from '@/hooks/useSocket'
-import { getPositionName } from '@/lib/utils'
-import { useMediaQuery } from '@mantine/hooks'
-import { Reorder } from 'framer-motion'
-import { GripVertical, QrCode } from 'lucide-react'
-import { useParams, useRouter } from 'next/navigation'
-import { QRCodeSVG } from 'qrcode.react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import QRCodeModal from "@/components/QRCodeModal"
+import { useAuth } from "@/contexts/AuthContext"
+import { useSocket } from "@/hooks/useSocket"
+import { getPositionName } from "@/lib/utils"
+import { useMediaQuery } from "@mantine/hooks"
+import { Reorder } from "framer-motion"
+import { GripVertical, QrCode } from "lucide-react"
+import { useParams, useRouter } from "next/navigation"
+import { QRCodeSVG } from "qrcode.react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import type {
   RoomInfo,
   PlayerJoinedData,
   GameStartedData,
-  SocketIOError
-} from '@/types/socket'
+  SocketIOError,
+} from "@/types/socket"
 
 interface GamePlayer {
   playerId: string
@@ -33,28 +33,34 @@ interface GameState {
   currentOya: number
   honba: number
   kyotaku: number
-  gamePhase: 'waiting' | 'playing' | 'finished'
+  gamePhase: "waiting" | "playing" | "finished"
 }
 
 export default function RoomPage() {
   const params = useParams()
   const router = useRouter()
   const { user, isAuthenticated, refreshAuth } = useAuth()
-  const { socket, isConnected, joinRoom, gameState: socketGameState } = useSocket()
+  const {
+    socket,
+    isConnected,
+    joinRoom,
+    gameState: socketGameState,
+  } = useSocket()
   const [gameState, setGameState] = useState<GameState | null>(null)
   const [roomInfo, setRoomInfo] = useState<RoomInfo | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [error, setError] = useState("")
   const [isStarting, setIsStarting] = useState(false)
   const [showQrModal, setShowQrModal] = useState(false)
 
-  const isDesktop = useMediaQuery('(min-width: 768px)')
+  const isDesktop = useMediaQuery("(min-width: 768px)")
 
   const roomCode = params.roomCode as string
 
-  const joinUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/room/${roomCode}`
-    : ''
+  const joinUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/room/${roomCode}`
+      : ""
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -69,12 +75,12 @@ export default function RoomPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error?.message || 'ルーム情報の取得に失敗しました')
+        throw new Error(data.error?.message || "ルーム情報の取得に失敗しました")
       }
 
       if (data.success) {
-        console.log('Room info fetched:', data.data)
-        console.log('Current user:', user)
+        console.log("Room info fetched:", data.data)
+        console.log("Current user:", user)
         setRoomInfo(data.data)
         setGameState({
           gameId: data.data.gameId,
@@ -83,11 +89,15 @@ export default function RoomPage() {
           currentOya: data.data.currentOya,
           honba: data.data.honba,
           kyotaku: data.data.kyotaku,
-          gamePhase: data.data.gamePhase
+          gamePhase: data.data.gamePhase,
         })
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'ルーム情報の取得に失敗しました')
+      setError(
+        error instanceof Error
+          ? error.message
+          : "ルーム情報の取得に失敗しました"
+      )
     } finally {
       setIsLoading(false)
     }
@@ -102,7 +112,7 @@ export default function RoomPage() {
   // Socket game state を監視
   useEffect(() => {
     if (socketGameState) {
-      console.log('Socket game state updated:', socketGameState)
+      console.log("Socket game state updated:", socketGameState)
       setGameState(socketGameState)
     }
   }, [socketGameState])
@@ -110,44 +120,48 @@ export default function RoomPage() {
   useEffect(() => {
     if (socket && user && roomCode && roomInfo && isConnected) {
       // プレイヤーがこのゲームに参加しているかチェック
-      const isParticipant = roomInfo.players?.some(p => p.playerId === user.playerId)
-      console.log('WebSocket connection check:', { 
+      const isParticipant = roomInfo.players?.some(
+        (p) => p.playerId === user.playerId
+      )
+      console.log("WebSocket connection check:", {
         isConnected,
-        isParticipant, 
-        userId: user.playerId, 
+        isParticipant,
+        userId: user.playerId,
         players: roomInfo.players,
-        socketId: socket.id 
+        socketId: socket.id,
       })
-      
+
       // プレイヤーが参加者の場合のみWebSocket接続
       if (isParticipant) {
-        console.log('Joining room via WebSocket:', roomCode)
+        console.log("Joining room via WebSocket:", roomCode)
         joinRoom(roomCode, user.playerId)
-        
+
         // Socket events - using socket instance directly for more control
-        socket.on('game_state', (state: GameState) => {
-          console.log('Received game_state:', state)
+        socket.on("game_state", (state: GameState) => {
+          console.log("Received game_state:", state)
           setGameState(state)
         })
 
-        socket.on('player_joined', (data: PlayerJoinedData) => {
-          console.log('Player joined event received:', data)
+        socket.on("player_joined", (data: PlayerJoinedData) => {
+          console.log("Player joined event received:", data)
           if (data.gameState) {
             setGameState(data.gameState)
             // ルーム情報も更新
-            setRoomInfo((prevRoomInfo: RoomInfo | null) => (
-              prevRoomInfo ? {
-                ...prevRoomInfo,
-                players: data.gameState?.players || prevRoomInfo.players
-              } : null
-            ))
+            setRoomInfo((prevRoomInfo: RoomInfo | null) =>
+              prevRoomInfo
+                ? {
+                    ...prevRoomInfo,
+                    players: data.gameState?.players || prevRoomInfo.players,
+                  }
+                : null
+            )
           }
           // 念のためルーム情報を再取得
           setTimeout(() => fetchRoomInfo(), 100)
         })
 
-        socket.on('player_rejoined', (data: PlayerJoinedData) => {
-          console.log('Player rejoined event received:', data)
+        socket.on("player_rejoined", (data: PlayerJoinedData) => {
+          console.log("Player rejoined event received:", data)
           if (data.gameState) {
             setGameState(data.gameState)
           }
@@ -155,8 +169,8 @@ export default function RoomPage() {
           setTimeout(() => fetchRoomInfo(), 100)
         })
 
-        socket.on('game_started', (data: GameStartedData) => {
-          console.log('Game started event received:', data)
+        socket.on("game_started", (data: GameStartedData) => {
+          console.log("Game started event received:", data)
           if (data.gameState) {
             setGameState(data.gameState)
             // ゲーム開始時は全員を自動的にゲーム画面に遷移
@@ -164,46 +178,57 @@ export default function RoomPage() {
           }
         })
 
-        socket.on('error', (error: SocketIOError) => {
-          console.error('WebSocket error:', error)
+        socket.on("error", (error: SocketIOError) => {
+          console.error("WebSocket error:", error)
           setError(error.message)
         })
 
         return () => {
-          socket.off('game_state')
-          socket.off('player_joined')
-          socket.off('player_rejoined')
-          socket.off('game_started')
-          socket.off('error')
+          socket.off("game_state")
+          socket.off("player_joined")
+          socket.off("player_rejoined")
+          socket.off("game_started")
+          socket.off("error")
         }
       } else {
-        console.log('User is not a participant in this room, skipping WebSocket connection')
+        console.log(
+          "User is not a participant in this room, skipping WebSocket connection"
+        )
       }
     }
-  }, [socket, user, roomCode, roomInfo, isConnected, joinRoom, router, fetchRoomInfo])
+  }, [
+    socket,
+    user,
+    roomCode,
+    roomInfo,
+    isConnected,
+    joinRoom,
+    router,
+    fetchRoomInfo,
+  ])
 
   const handleJoinRoom = async () => {
     if (!user) return
 
     try {
-      setError('')
-      
-      const response = await fetch('/api/room/join', {
-        method: 'POST',
+      setError("")
+
+      const response = await fetch("/api/room/join", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           roomCode: roomCode,
-          playerName: user.name
+          playerName: user.name,
         }),
-        credentials: 'include'
+        credentials: "include",
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error?.message || 'ルーム参加に失敗しました')
+        throw new Error(data.error?.message || "ルーム参加に失敗しました")
       }
 
       if (data.success) {
@@ -214,7 +239,9 @@ export default function RoomPage() {
         await fetchRoomInfo()
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'ルーム参加に失敗しました')
+      setError(
+        error instanceof Error ? error.message : "ルーム参加に失敗しました"
+      )
     }
   }
 
@@ -222,34 +249,34 @@ export default function RoomPage() {
     if (!user) return
 
     try {
-      setError('')
-      
+      setError("")
+
       const response = await fetch(`/api/room/${roomCode}/rejoin`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          playerName: user.name
+          playerName: user.name,
         }),
-        credentials: 'include'
+        credentials: "include",
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error?.message || 'ルーム再参加に失敗しました')
+        throw new Error(data.error?.message || "ルーム再参加に失敗しました")
       }
 
       if (data.success) {
-        console.log('Rejoin successful:', data.data)
-        
+        console.log("Rejoin successful:", data.data)
+
         // 認証情報を更新
         await refreshAuth()
-        
+
         // ルーム情報を再取得
         await fetchRoomInfo()
-        
+
         // 少し遅延させてからWebSocket接続を確認
         setTimeout(() => {
           if (socket) {
@@ -258,8 +285,10 @@ export default function RoomPage() {
         }, 300)
       }
     } catch (error) {
-      console.error('Rejoin failed:', error)
-      setError(error instanceof Error ? error.message : 'ルーム再参加に失敗しました')
+      console.error("Rejoin failed:", error)
+      setError(
+        error instanceof Error ? error.message : "ルーム再参加に失敗しました"
+      )
     }
   }
 
@@ -268,50 +297,53 @@ export default function RoomPage() {
 
     try {
       setIsStarting(true)
-      setError('')
+      setError("")
 
-      console.log('Starting game with:', {
+      console.log("Starting game with:", {
         gameId: roomInfo.gameId,
         hostPlayerId: user.playerId,
         roomInfo: roomInfo,
-        user: user
+        user: user,
       })
 
       const response = await fetch(`/api/game/${roomInfo.gameId}/start`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          hostPlayerId: user.playerId
+          hostPlayerId: user.playerId,
         }),
-        credentials: 'include'
+        credentials: "include",
       })
 
       const data = await response.json()
-      console.log('Game start response:', { response: response.status, data })
+      console.log("Game start response:", { response: response.status, data })
 
       if (!response.ok) {
-        throw new Error(data.error?.message || 'ゲーム開始に失敗しました')
+        throw new Error(data.error?.message || "ゲーム開始に失敗しました")
       }
 
       if (data.success) {
         router.push(`/game/${data.data.gameId}`)
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'ゲーム開始に失敗しました')
+      setError(
+        error instanceof Error ? error.message : "ゲーム開始に失敗しました"
+      )
     } finally {
       setIsStarting(false)
     }
   }
-
 
   const [seatOrder, setSeatOrder] = useState<GamePlayer[]>([])
   const seatOrderRef = useRef<GamePlayer[]>([])
 
   useEffect(() => {
     if (gameState && gameState.players.length === 4) {
-      const sorted = [...gameState.players].sort((a, b) => a.position - b.position)
+      const sorted = [...gameState.players].sort(
+        (a, b) => a.position - b.position
+      )
       setSeatOrder(sorted)
       seatOrderRef.current = sorted
     } else {
@@ -324,19 +356,24 @@ export default function RoomPage() {
     async (order: GamePlayer[]) => {
       try {
         const response = await fetch(`/api/room/${roomCode}/seat-order`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({
-            positions: order.map((p, i) => ({ playerId: p.playerId, position: i }))
-          })
+            positions: order.map((p, i) => ({
+              playerId: p.playerId,
+              position: i,
+            })),
+          }),
         })
         const data = await response.json()
         if (!response.ok) {
-          throw new Error(data.error?.message || '席順の更新に失敗しました')
+          throw new Error(data.error?.message || "席順の更新に失敗しました")
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : '席順の更新に失敗しました')
+        setError(
+          err instanceof Error ? err.message : "席順の更新に失敗しました"
+        )
       }
     },
     [roomCode]
@@ -354,7 +391,8 @@ export default function RoomPage() {
   }
 
   const isHost = user && roomInfo && user.playerId === roomInfo.hostPlayer?.id
-  const canStartGame = roomInfo?.players.length === 4 && roomInfo?.status === 'WAITING'
+  const canStartGame =
+    roomInfo?.players.length === 4 && roomInfo?.status === "WAITING"
 
   if (!isAuthenticated) {
     return (
@@ -378,7 +416,7 @@ export default function RoomPage() {
         <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
           <div className="text-red-500 mb-4">{error}</div>
           <button
-            onClick={() => router.push('/')}
+            onClick={() => router.push("/")}
             className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
           >
             ホームに戻る
@@ -407,17 +445,28 @@ export default function RoomPage() {
                 <QRCodeSVG value={joinUrl} size={80} />
               ) : (
                 <>
-                  <button onClick={() => setShowQrModal(true)} aria-label="Show QR">
+                  <button
+                    onClick={() => setShowQrModal(true)}
+                    aria-label="Show QR"
+                  >
                     <QrCode className="w-6 h-6 text-gray-700" />
                   </button>
-                  <QRCodeModal isOpen={showQrModal} onClose={() => setShowQrModal(false)} qrCodeData={joinUrl} />
+                  <QRCodeModal
+                    isOpen={showQrModal}
+                    onClose={() => setShowQrModal(false)}
+                    qrCodeData={joinUrl}
+                  />
                 </>
               )}
               <div className="text-right">
-                <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm ${
-                  isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                }`}>
-                  {isConnected ? '✓ 接続中' : '✗ 切断'}
+                <div
+                  className={`inline-flex items-center px-3 py-1 rounded-full text-sm ${
+                    isConnected
+                      ? "bg-green-100 text-green-800"
+                      : "bg-red-100 text-red-800"
+                  }`}
+                >
+                  {isConnected ? "✓ 接続中" : "✗ 切断"}
                 </div>
                 <div className="text-sm text-gray-500 mt-1">
                   {gameState?.players.length || 0}/4 プレイヤー
@@ -429,10 +478,17 @@ export default function RoomPage() {
 
         {/* プレイヤー一覧 */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">プレイヤー</h2>
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">
+            プレイヤー
+          </h2>
           <div className="grid gap-4">
             {seatOrder.length === 4 && isHost ? (
-              <Reorder.Group axis="y" values={seatOrder} onReorder={handleReorder} className="grid gap-4">
+              <Reorder.Group
+                axis="y"
+                values={seatOrder}
+                onReorder={handleReorder}
+                className="grid gap-4"
+              >
                 {seatOrder.map((player, idx) => (
                   <Reorder.Item
                     key={player.playerId}
@@ -440,7 +496,7 @@ export default function RoomPage() {
                     className="p-4 rounded-lg border-2 border-green-200 bg-green-50"
                     layout
                     onDragEnd={handleReorderEnd}
-                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
                   >
                     <div className="flex justify-between items-center">
                       <div className="flex items-center space-x-3">
@@ -449,14 +505,22 @@ export default function RoomPage() {
                           {getPositionName(idx)}
                         </div>
                         <div>
-                          <div className="font-medium text-gray-800">{player.name}</div>
-                          <div className="text-sm text-gray-500">{player.points.toLocaleString()}点</div>
+                          <div className="font-medium text-gray-800">
+                            {player.name}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {player.points.toLocaleString()}点
+                          </div>
                         </div>
                       </div>
                       <div className="flex space-x-2">
-                        {player.isConnected && <span className="text-green-600 text-sm">●</span>}
+                        {player.isConnected && (
+                          <span className="text-green-600 text-sm">●</span>
+                        )}
                         {player.isReach && (
-                          <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs">リーチ</span>
+                          <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs">
+                            リーチ
+                          </span>
                         )}
                       </div>
                     </div>
@@ -465,36 +529,48 @@ export default function RoomPage() {
               </Reorder.Group>
             ) : (
               [0, 1, 2, 3].map((position) => {
-                  const player = gameState?.players.find((p) => p.position === position)
-                  return (
-                    <div
-                      key={position}
-                      className={`p-4 rounded-lg border-2 ${
-                        player ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'
-                      }`}
-                    >
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center font-semibold text-gray-700">
-                            {getPositionName(position)}
-                          </div>
-                          <div>
-                            <div className="font-medium text-gray-800">{player?.name || '待機中...'}</div>
-                            {player && (
-                              <div className="text-sm text-gray-500">{player.points.toLocaleString()}点</div>
-                            )}
-                          </div>
+                const player = gameState?.players.find(
+                  (p) => p.position === position
+                )
+                return (
+                  <div
+                    key={position}
+                    className={`p-4 rounded-lg border-2 ${
+                      player
+                        ? "border-green-200 bg-green-50"
+                        : "border-gray-200 bg-gray-50"
+                    }`}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center font-semibold text-gray-700">
+                          {getPositionName(position)}
                         </div>
-                        <div className="flex space-x-2">
-                          {player?.isConnected && <span className="text-green-600 text-sm">●</span>}
-                          {player?.isReach && (
-                            <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs">リーチ</span>
+                        <div>
+                          <div className="font-medium text-gray-800">
+                            {player?.name || "待機中..."}
+                          </div>
+                          {player && (
+                            <div className="text-sm text-gray-500">
+                              {player.points.toLocaleString()}点
+                            </div>
                           )}
                         </div>
                       </div>
+                      <div className="flex space-x-2">
+                        {player?.isConnected && (
+                          <span className="text-green-600 text-sm">●</span>
+                        )}
+                        {player?.isReach && (
+                          <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs">
+                            リーチ
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  )
-                })
+                  </div>
+                )
+              })
             )}
           </div>
         </div>
@@ -502,12 +578,16 @@ export default function RoomPage() {
         {/* ゲーム設定 */}
         {roomInfo?.settings && (
           <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">ゲーム設定</h2>
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">
+              ゲーム設定
+            </h2>
             <div className="grid md:grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-gray-600">ゲームタイプ:</span>
                 <span className="ml-2 font-medium">
-                  {roomInfo.settings.gameType === 'HANCHAN' ? '半荘戦' : '東風戦'}
+                  {roomInfo.settings.gameType === "HANCHAN"
+                    ? "半荘戦"
+                    : "東風戦"}
                 </span>
               </div>
               <div>
@@ -519,7 +599,7 @@ export default function RoomPage() {
               <div>
                 <span className="text-gray-600">ウマ:</span>
                 <span className="ml-2 font-medium">
-                  {roomInfo.settings.uma?.join(', ')}
+                  {roomInfo.settings.uma?.join(", ")}
                 </span>
               </div>
             </div>
@@ -531,7 +611,7 @@ export default function RoomPage() {
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
             <div className="text-red-600">{error}</div>
             <button
-              onClick={() => setError('')}
+              onClick={() => setError("")}
               className="text-red-500 hover:text-red-700 text-sm mt-2"
             >
               閉じる
@@ -540,79 +620,88 @@ export default function RoomPage() {
         )}
 
         {/* プレイヤーがルーム参加者でない場合の参加ボタン */}
-        {roomInfo && user && !roomInfo.players?.some(p => p.playerId === user.playerId) && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <div className="text-yellow-800">
-              {(() => {
-                // 同じ名前のプレイヤーが既に参加している場合は再参加ボタンを表示
-                const existingPlayerWithSameName = roomInfo.players?.find(p => p.name === user.name)
-                
-                if (existingPlayerWithSameName) {
-                  return (
-                    <>
-                      <div className="font-semibold mb-2">同じ名前でプレイヤーが参加しています</div>
-                      <div className="text-sm mb-4">
-                        このルームに「{user.name}」として参加し直しますか？
-                      </div>
-                      <button
-                        onClick={handleRejoinRoom}
-                        className="bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
-                      >
-                        ルームに再参加
-                      </button>
-                    </>
+        {roomInfo &&
+          user &&
+          !roomInfo.players?.some((p) => p.playerId === user.playerId) && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+              <div className="text-yellow-800">
+                {(() => {
+                  // 同じ名前のプレイヤーが既に参加している場合は再参加ボタンを表示
+                  const existingPlayerWithSameName = roomInfo.players?.find(
+                    (p) => p.name === user.name
                   )
-                } else if (roomInfo.players.length < 4) {
-                  return (
-                    <>
-                      <div className="font-semibold mb-2">このルームに参加しますか？</div>
-                      <div className="text-sm mb-4">
-                        現在 {roomInfo.players.length}/4 人が参加しています。
-                      </div>
-                      <button
-                        onClick={handleJoinRoom}
-                        className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-                      >
-                        ルームに参加
-                      </button>
-                    </>
-                  )
-                } else {
-                  return (
-                    <>
-                      <div className="font-semibold mb-2">ルームが満員です</div>
-                      <div className="text-sm">
-                        このルームは既に4人揃っているため参加できません。
-                      </div>
-                    </>
-                  )
-                }
-              })()}
-            </div>
-          </div>
-        )}
 
+                  if (existingPlayerWithSameName) {
+                    return (
+                      <>
+                        <div className="font-semibold mb-2">
+                          同じ名前でプレイヤーが参加しています
+                        </div>
+                        <div className="text-sm mb-4">
+                          このルームに「{user.name}」として参加し直しますか？
+                        </div>
+                        <button
+                          onClick={handleRejoinRoom}
+                          className="bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
+                        >
+                          ルームに再参加
+                        </button>
+                      </>
+                    )
+                  } else if (roomInfo.players.length < 4) {
+                    return (
+                      <>
+                        <div className="font-semibold mb-2">
+                          このルームに参加しますか？
+                        </div>
+                        <div className="text-sm mb-4">
+                          現在 {roomInfo.players.length}/4 人が参加しています。
+                        </div>
+                        <button
+                          onClick={handleJoinRoom}
+                          className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                        >
+                          ルームに参加
+                        </button>
+                      </>
+                    )
+                  } else {
+                    return (
+                      <>
+                        <div className="font-semibold mb-2">
+                          ルームが満員です
+                        </div>
+                        <div className="text-sm">
+                          このルームは既に4人揃っているため参加できません。
+                        </div>
+                      </>
+                    )
+                  }
+                })()}
+              </div>
+            </div>
+          )}
 
         {/* アクションボタン */}
         <div className="bg-white rounded-lg shadow-lg p-6">
           <div className="flex gap-4">
             <button
-              onClick={() => router.push('/')}
+              onClick={() => router.push("/")}
               className="flex-1 bg-gray-500 text-white py-3 px-4 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
             >
               ホームに戻る
             </button>
-            
+
             {isHost && canStartGame && (
               <button
                 onClick={handleStartGame}
                 disabled={isStarting}
                 className="flex-1 bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {isStarting ? 'ゲーム開始中...' : 'ゲーム開始'}
+                {isStarting ? "ゲーム開始中..." : "ゲーム開始"}
               </button>
             )}
-            
+
             {!canStartGame && roomInfo?.players.length !== 4 && (
               <div className="flex-1 bg-gray-200 text-gray-600 py-3 px-4 rounded-md text-center">
                 4人揃うまでお待ちください ({roomInfo?.players.length || 0}/4)

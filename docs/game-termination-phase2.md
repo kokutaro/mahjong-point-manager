@@ -32,8 +32,8 @@ Phase 1で実装したホスト権限基盤を活用し、ゲーム結果画面�
 <div className="mb-4">
   {/* 既存のボタン */}
   <button onClick={onBack}>ゲームに戻る</button>
-  <button onClick={() => window.location.href = '/'}>ホームに戻る</button>
-  
+  <button onClick={() => (window.location.href = "/")}>ホームに戻る</button>
+
   {/* 新規追加: ホスト専用強制終了ボタン */}
   {isHost && (
     <button
@@ -65,9 +65,7 @@ const showForceEndButton = isHost && isSessionActive
 
 ```tsx
 // モバイル・タブレット・PC対応
-<button
-  className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white py-3 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors mb-3 sm:mb-0 sm:ml-4"
->
+<button className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white py-3 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors mb-3 sm:mb-0 sm:ml-4">
   ⚠️ セッション強制終了
 </button>
 ```
@@ -85,25 +83,25 @@ interface ForceEndConfirmModalProps {
   sessionName?: string
 }
 
-export default function ForceEndConfirmModal({ 
-  isOpen, 
-  onClose, 
-  onConfirm, 
-  sessionName 
+export default function ForceEndConfirmModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  sessionName,
 }: ForceEndConfirmModalProps) {
-  const [reason, setReason] = useState('')
-  const [customReason, setCustomReason] = useState('')
-  
+  const [reason, setReason] = useState("")
+  const [customReason, setCustomReason] = useState("")
+
   const predefinedReasons = [
-    'ホストによる終了',
-    '時間切れ',
-    '技術的問題',
-    'プレイヤー都合',
-    'その他'
+    "ホストによる終了",
+    "時間切れ",
+    "技術的問題",
+    "プレイヤー都合",
+    "その他",
   ]
 
   const handleConfirm = () => {
-    const finalReason = reason === 'その他' ? customReason : reason
+    const finalReason = reason === "その他" ? customReason : reason
     onConfirm(finalReason)
     onClose()
   }
@@ -117,14 +115,15 @@ export default function ForceEndConfirmModal({
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             セッション強制終了の確認
           </h3>
-          
+
           <div className="mb-6">
             <p className="text-gray-600 mb-2">
               セッション「{sessionName}」を強制終了しますか？
             </p>
             <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
               <p className="text-yellow-800 text-sm">
-                ⚠️ この操作は取り消せません。全てのプレイヤーがセッションから退出します。
+                ⚠️
+                この操作は取り消せません。全てのプレイヤーがセッションから退出します。
               </p>
             </div>
           </div>
@@ -140,11 +139,13 @@ export default function ForceEndConfirmModal({
             >
               <option value="">理由を選択...</option>
               {predefinedReasons.map((r) => (
-                <option key={r} value={r}>{r}</option>
+                <option key={r} value={r}>
+                  {r}
+                </option>
               ))}
             </select>
-            
-            {reason === 'その他' && (
+
+            {reason === "その他" && (
               <input
                 type="text"
                 value={customReason}
@@ -164,7 +165,9 @@ export default function ForceEndConfirmModal({
             </button>
             <button
               onClick={handleConfirm}
-              disabled={!reason || (reason === 'その他' && !customReason.trim())}
+              disabled={
+                !reason || (reason === "その他" && !customReason.trim())
+              }
               className="flex-1 bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
             >
               強制終了
@@ -190,36 +193,35 @@ const handleHostForceEnd = () => {
 
 const handleForceEndConfirm = async (reason: string) => {
   if (!resultData) return
-  
+
   try {
     setLoading(true)
     const response = await fetch(`/api/game/${resultData.gameId}/end`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ reason })
+      body: JSON.stringify({ reason }),
     })
 
     const data = await response.json()
 
     if (!response.ok) {
       if (response.status === 403) {
-        setGlobalError('ホスト権限が必要です')
+        setGlobalError("ホスト権限が必要です")
       } else if (response.status === 401) {
-        setGlobalError('認証が必要です')
+        setGlobalError("認証が必要です")
       } else {
-        setGlobalError(data.error?.message || 'セッション終了に失敗しました')
+        setGlobalError(data.error?.message || "セッション終了に失敗しました")
       }
       return
     }
 
     // 成功時はホームに遷移
-    window.location.href = '/'
-
+    window.location.href = "/"
   } catch (error) {
-    console.error('Force end failed:', error)
-    setGlobalError('セッション終了に失敗しました')
+    console.error("Force end failed:", error)
+    setGlobalError("セッション終了に失敗しました")
   } finally {
     setLoading(false)
   }
@@ -234,15 +236,15 @@ const handleForceEndConfirm = async (reason: string) => {
 
 ```typescript
 // Socket.IO サーバーサイド
-io.to(game.roomCode).emit('session_force_ended', {
+io.to(game.roomCode).emit("session_force_ended", {
   gameState: updatedGameState,
   reason: validatedData.reason,
   endedBy: {
     playerId: player.playerId,
-    name: player.name
+    name: player.name,
   },
   endedAt: new Date().toISOString(),
-  forced: true
+  forced: true,
 })
 ```
 
@@ -250,20 +252,28 @@ io.to(game.roomCode).emit('session_force_ended', {
 
 ```tsx
 // GameResult.tsx内のWebSocket処理拡張
-socketInstance.on('session_force_ended', ({ reason, endedBy }: { 
-  reason: string, 
-  endedBy: { playerId: string, name: string } 
-}) => {
-  // ホスト以外のプレイヤーに通知
-  if (user?.playerId !== endedBy.playerId) {
-    alert(`セッションが${endedBy.name}により強制終了されました。\n理由: ${reason}`)
+socketInstance.on(
+  "session_force_ended",
+  ({
+    reason,
+    endedBy,
+  }: {
+    reason: string
+    endedBy: { playerId: string; name: string }
+  }) => {
+    // ホスト以外のプレイヤーに通知
+    if (user?.playerId !== endedBy.playerId) {
+      alert(
+        `セッションが${endedBy.name}により強制終了されました。\n理由: ${reason}`
+      )
+    }
+
+    // 5秒後にホームページに遷移
+    setTimeout(() => {
+      window.location.href = "/"
+    }, 5000)
   }
-  
-  // 5秒後にホームページに遷移
-  setTimeout(() => {
-    window.location.href = '/'
-  }, 5000)
-})
+)
 ```
 
 ### 3.4. セッション状態の更新
@@ -277,7 +287,7 @@ async forceEndGame(reason: string, endedBy?: string): Promise<void> {
     // ゲーム状態を FINISHED に更新
     await tx.game.update({
       where: { id: this.gameId },
-      data: { 
+      data: {
         status: 'FINISHED',
         endedAt: new Date()
       }
@@ -292,7 +302,7 @@ async forceEndGame(reason: string, endedBy?: string): Promise<void> {
     if (game?.sessionId) {
       await tx.gameSession.update({
         where: { id: game.sessionId },
-        data: { 
+        data: {
           status: 'FINISHED',
           endedAt: new Date()
         }
@@ -369,23 +379,23 @@ describe('Host Force End Button', () => {
   test('ホストユーザーに強制終了ボタンが表示される', () => {
     const hostUser = { playerId: 'host-id', name: 'ホスト' }
     const data = { ...mockGameResultData, hostPlayerId: 'host-id' }
-    
+
     // useAuthモックでホストユーザーを返すよう設定
     ;(useAuth as jest.Mock).mockReturnValue({ user: hostUser })
-    
+
     render(<GameResult gameId="test" onBack={jest.fn()} />)
-    
+
     expect(screen.getByText('⚠️ セッション強制終了')).toBeInTheDocument()
   })
-  
+
   test('非ホストユーザーに強制終了ボタンが表示されない', () => {
     const nonHostUser = { playerId: 'player-id', name: 'プレイヤー' }
     const data = { ...mockGameResultData, hostPlayerId: 'host-id' }
-    
+
     ;(useAuth as jest.Mock).mockReturnValue({ user: nonHostUser })
-    
+
     render(<GameResult gameId="test" onBack={jest.fn()} />)
-    
+
     expect(screen.queryByText('⚠️ セッション強制終了')).not.toBeInTheDocument()
   })
 })
@@ -397,16 +407,16 @@ describe('Host Force End Button', () => {
 describe('Force End Confirmation Modal', () => {
   test('強制終了ボタンクリックで確認ダイアログが表示される', async () => {
     render(<GameResult gameId="test" onBack={jest.fn()} />)
-    
+
     const forceEndButton = screen.getByText('⚠️ セッション強制終了')
     fireEvent.click(forceEndButton)
-    
+
     expect(screen.getByText('セッション強制終了の確認')).toBeInTheDocument()
   })
-  
+
   test('理由選択なしでは確定ボタンが無効', () => {
     render(<ForceEndConfirmModal isOpen={true} onClose={jest.fn()} onConfirm={jest.fn()} />)
-    
+
     const confirmButton = screen.getByText('強制終了')
     expect(confirmButton).toBeDisabled()
   })
@@ -423,14 +433,14 @@ describe('Host Force End API Integration', () => {
       json: () => Promise.resolve({ success: true })
     })
     global.fetch = mockFetch
-    
+
     render(<GameResult gameId="test" onBack={jest.fn()} />)
-    
+
     // 強制終了フローを実行
     fireEvent.click(screen.getByText('⚠️ セッション強制終了'))
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'ホストによる終了' } })
     fireEvent.click(screen.getByText('強制終了'))
-    
+
     expect(mockFetch).toHaveBeenCalledWith('/api/game/test/end', expect.objectContaining({
       method: 'POST',
       body: JSON.stringify({ reason: 'ホストによる終了' })

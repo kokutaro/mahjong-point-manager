@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Production builds
+.next/
+out/
+dist/
+build/
+
+# Environment files
+.env*
+
+# Lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Database
+prisma/migrations/
+
+# Coverage reports
+coverage/
+
+# Auto-generated files
+*.d.ts
+!src/**/*.d.ts

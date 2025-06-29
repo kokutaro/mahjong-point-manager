@@ -139,7 +139,7 @@ docker-compose logs --grep ERROR
    # ポート使用状況を確認
    lsof -i :3000
    lsof -i :5432
-   
+
    # 環境変数でポートを変更
    echo "APP_PORT=3001" >> .env.docker.local
    ```
@@ -149,7 +149,7 @@ docker-compose logs --grep ERROR
    ```bash
    # PostgreSQL コンテナの状態確認
    docker-compose ps postgres
-   
+
    # データベースログを確認
    docker-compose logs postgres
    ```
@@ -159,7 +159,7 @@ docker-compose logs --grep ERROR
    ```bash
    # キャッシュをクリアしてリビルド
    docker-compose build --no-cache app
-   
+
    # 全ての Docker キャッシュをクリア
    docker system prune -a
    ```
@@ -178,7 +178,7 @@ docker-compose logs --grep ERROR
    ```bash
    # Docker ボリューム使用量
    docker system df
-   
+
    # 不要なボリュームの削除
    docker volume prune
    ```

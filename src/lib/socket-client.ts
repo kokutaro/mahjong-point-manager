@@ -1,4 +1,4 @@
-import { io, Socket } from 'socket.io-client'
+import { io, Socket } from "socket.io-client"
 import type {
   SocketError,
   PlayerConnectedData,
@@ -7,8 +7,8 @@ import type {
   RiichiDeclaredData,
   RyukyokuData,
   SeatOrderUpdatedData,
-  GameStateData
-} from '@/types/socket'
+  GameStateData,
+} from "@/types/socket"
 
 export class SocketClient {
   private socket: Socket | null = null
@@ -29,30 +29,36 @@ export class SocketClient {
     }
 
     let socketUrl = url
-    
-    if (!socketUrl && typeof window !== 'undefined') {
+
+    if (!socketUrl && typeof window !== "undefined") {
       // 現在のページのURLベースでWebSocket URLを生成
-      if (process.env.NODE_ENV === 'production') {
+      if (process.env.NODE_ENV === "production") {
         // プロダクション環境：現在のホスト名とプロトコルを使用（ポートなし）
         socketUrl = `${window.location.protocol}//${window.location.host}`
       } else {
         // 開発環境：ポート3000を指定
-        const port = window.location.port || '3000'
+        const port = window.location.port || "3000"
         socketUrl = `${window.location.protocol}//${window.location.hostname}:${port}`
       }
     }
-    
+
     // フォールバック（通常使用されない）
     if (!socketUrl) {
-      socketUrl = process.env.NODE_ENV === 'production' 
-        ? `${typeof window !== 'undefined' ? window.location.origin : 'http://localhost'}` 
-        : 'http://localhost:3000'
+      socketUrl =
+        process.env.NODE_ENV === "production"
+          ? `${typeof window !== "undefined" ? window.location.origin : "http://localhost"}`
+          : "http://localhost:3000"
     }
-    
-    console.log('Connecting to WebSocket:', socketUrl, 'NODE_ENV:', process.env.NODE_ENV)
-    
+
+    console.log(
+      "Connecting to WebSocket:",
+      socketUrl,
+      "NODE_ENV:",
+      process.env.NODE_ENV
+    )
+
     this.socket = io(socketUrl, {
-      transports: ['websocket', 'polling'],
+      transports: ["websocket", "polling"],
       timeout: 10000,
       forceNew: false,
       reconnection: true,
@@ -61,19 +67,19 @@ export class SocketClient {
       reconnectionDelayMax: 10000,
       autoConnect: true,
       upgrade: true,
-      rememberUpgrade: true
+      rememberUpgrade: true,
     })
 
-    this.socket.on('connect', () => {
-      console.log('WebSocket connected:', this.socket?.id)
+    this.socket.on("connect", () => {
+      console.log("WebSocket connected:", this.socket?.id)
     })
 
-    this.socket.on('disconnect', (reason) => {
-      console.log('WebSocket disconnected:', reason)
+    this.socket.on("disconnect", (reason) => {
+      console.log("WebSocket disconnected:", reason)
     })
 
-    this.socket.on('connect_error', (error) => {
-      console.error('WebSocket connection error:', error)
+    this.socket.on("connect_error", (error) => {
+      console.error("WebSocket connection error:", error)
     })
 
     return this.socket
@@ -92,13 +98,17 @@ export class SocketClient {
 
   // ルーム参加
   joinRoom(roomCode: string, playerId: string) {
-    console.log('🏠 Emitting join_room:', { roomCode, playerId, socketId: this.socket?.id })
-    this.socket?.emit('join_room', { roomCode, playerId })
+    console.log("🏠 Emitting join_room:", {
+      roomCode,
+      playerId,
+      socketId: this.socket?.id,
+    })
+    this.socket?.emit("join_room", { roomCode, playerId })
   }
 
   // プレイヤー準備完了
   setReady(gameId: string, playerId: string) {
-    this.socket?.emit('player_ready', { gameId, playerId })
+    this.socket?.emit("player_ready", { gameId, playerId })
   }
 
   // 点数計算
@@ -110,93 +120,97 @@ export class SocketClient {
     isTsumo: boolean
     loserId?: string
   }) {
-    this.socket?.emit('calculate_score', data)
+    this.socket?.emit("calculate_score", data)
   }
 
   // リーチ宣言
   declareReach(gameId: string, playerId: string) {
-    this.socket?.emit('declare_reach', { gameId, playerId })
+    this.socket?.emit("declare_reach", { gameId, playerId })
   }
 
   // 流局
-  declareRyukyoku(gameId: string, reason: string, tenpaiPlayers: string[] = []) {
-    this.socket?.emit('ryukyoku', { gameId, reason, tenpaiPlayers })
+  declareRyukyoku(
+    gameId: string,
+    reason: string,
+    tenpaiPlayers: string[] = []
+  ) {
+    this.socket?.emit("ryukyoku", { gameId, reason, tenpaiPlayers })
   }
 
   // イベントリスナー登録
   onGameState(callback: (gameState: GameStateData) => void) {
-    this.socket?.on('game_state', callback)
+    this.socket?.on("game_state", callback)
   }
 
   onPlayerJoined(callback: (data: PlayerJoinedData) => void) {
-    this.socket?.on('player_joined', callback)
+    this.socket?.on("player_joined", callback)
   }
 
   onPlayerConnected(callback: (data: PlayerConnectedData) => void) {
-    this.socket?.on('player_connected', callback)
+    this.socket?.on("player_connected", callback)
   }
 
   onGameStart(callback: (gameState: GameStateData) => void) {
-    this.socket?.on('game_start', callback)
-    this.socket?.on('game_started', callback)
+    this.socket?.on("game_start", callback)
+    this.socket?.on("game_started", callback)
   }
 
   onScoreUpdated(callback: (data: ScoreUpdatedData) => void) {
-    this.socket?.on('score_updated', callback)
+    this.socket?.on("score_updated", callback)
   }
 
   onRiichiDeclared(callback: (data: RiichiDeclaredData) => void) {
-    this.socket?.on('riichi_declared', callback)
+    this.socket?.on("riichi_declared", callback)
   }
 
   onRyukyoku(callback: (data: RyukyokuData) => void) {
-    this.socket?.on('ryukyoku', callback)
+    this.socket?.on("ryukyoku", callback)
   }
 
   onSeatOrderUpdated(callback: (data: SeatOrderUpdatedData) => void) {
-    this.socket?.on('seat_order_updated', callback)
+    this.socket?.on("seat_order_updated", callback)
   }
 
   onError(callback: (error: SocketError) => void) {
-    this.socket?.on('error', callback)
+    this.socket?.on("error", callback)
   }
 
   // イベントリスナー削除
   offGameState(callback?: (gameState: GameStateData) => void) {
-    this.socket?.off('game_state', callback)
+    this.socket?.off("game_state", callback)
   }
 
   offPlayerJoined(callback?: (data: PlayerJoinedData) => void) {
-    this.socket?.off('player_joined', callback)
+    this.socket?.off("player_joined", callback)
   }
 
   offPlayerConnected(callback?: (data: PlayerConnectedData) => void) {
-    this.socket?.off('player_connected', callback)
+    this.socket?.off("player_connected", callback)
   }
 
   offGameStart(callback?: (gameState: GameStateData) => void) {
-    this.socket?.off('game_start', callback)
-    this.socket?.off('game_started', callback)
+    this.socket?.off("game_start", callback)
+    this.socket?.off("game_started", callback)
   }
 
   offScoreUpdated(callback?: (data: ScoreUpdatedData) => void) {
-    this.socket?.off('score_updated', callback)
+    this.socket?.off("score_updated", callback)
   }
 
   offRiichiDeclared(callback?: (data: RiichiDeclaredData) => void) {
-    this.socket?.off('riichi_declared', callback)
+    this.socket?.off("riichi_declared", callback)
   }
 
   offRyukyoku(callback?: (data: RyukyokuData) => void) {
-    this.socket?.off('ryukyoku', callback)
+    this.socket?.off("ryukyoku", callback)
   }
 
   offSeatOrderUpdated(callback?: (data: SeatOrderUpdatedData) => void) {
-    this.socket?.off('seat_order_updated', callback)
+    this.socket?.off("seat_order_updated", callback)
   }
 
   offError(callback?: (error: SocketError) => void) {
-    this.socket?.off('error', callback)
+    this.socket?.off("error", callback)
   }
 }
 

@@ -313,12 +313,12 @@ GET /api/score/patterns
 
 ```javascript
 // クライアント側
-const socket = io('/api/socket', {
+const socket = io("/api/socket", {
   auth: {
-    playerId: 'player_id',
-    gameId: 'game_id'
-  }
-});
+    playerId: "player_id",
+    gameId: "game_id",
+  },
+})
 ```
 
 #### サーバー側認証
@@ -326,16 +326,16 @@ const socket = io('/api/socket', {
 ```javascript
 // サーバー側でプレイヤー・ゲーム検証
 io.use((socket, next) => {
-  const { playerId, gameId } = socket.handshake.auth;
+  const { playerId, gameId } = socket.handshake.auth
   // 認証ロジック
   if (valid) {
-    socket.playerId = playerId;
-    socket.gameId = gameId;
-    next();
+    socket.playerId = playerId
+    socket.gameId = gameId
+    next()
   } else {
-    next(new Error('Authentication failed'));
+    next(new Error("Authentication failed"))
   }
-});
+})
 ```
 
 ### ルーム管理
@@ -405,44 +405,44 @@ io.to(roomCode).emit('game-event', {
 
 ```javascript
 // Client → Server
-socket.emit('game-action', {
-  type: 'RON',
+socket.emit("game-action", {
+  type: "RON",
   data: {
     han: 2,
     fu: 30,
-    targetPlayerId: 'target_player_id'
-  }
-});
+    targetPlayerId: "target_player_id",
+  },
+})
 ```
 
 #### リーチ
 
 ```javascript
 // Client → Server
-socket.emit('game-action', {
-  type: 'REACH',
-  data: {}
-});
+socket.emit("game-action", {
+  type: "REACH",
+  data: {},
+})
 
 // Server → All Clients
-io.to(roomCode).emit('game-event', {
-  type: 'REACH',
-  playerId: 'player_id',
+io.to(roomCode).emit("game-event", {
+  type: "REACH",
+  playerId: "player_id",
   round: 3,
-  honba: 1
-});
+  honba: 1,
+})
 ```
 
 #### 流局
 
 ```javascript
 // Client → Server
-socket.emit('game-action', {
-  type: 'RYUKYOKU',
+socket.emit("game-action", {
+  type: "RYUKYOKU",
   data: {
-    reason: 'NINE_TERMINALS' | 'FOUR_WINDS' | 'DRAW'
-  }
-});
+    reason: "NINE_TERMINALS" | "FOUR_WINDS" | "DRAW",
+  },
+})
 ```
 
 ### 点数更新
@@ -451,27 +451,27 @@ socket.emit('game-action', {
 
 ```javascript
 // Server → All Clients
-io.to(roomCode).emit('points-updated', {
+io.to(roomCode).emit("points-updated", {
   participants: [
     {
-      playerId: 'player1',
+      playerId: "player1",
       currentPoints: 26000,
-      isReach: false
-    }
-  ]
-});
+      isReach: false,
+    },
+  ],
+})
 ```
 
 #### 親・本場更新
 
 ```javascript
 // Server → All Clients
-io.to(roomCode).emit('round-updated', {
+io.to(roomCode).emit("round-updated", {
   currentRound: 4,
   currentOya: 1,
   honba: 2,
-  kyotaku: 1
-});
+  kyotaku: 1,
+})
 ```
 
 ### ゲーム終了
@@ -480,20 +480,20 @@ io.to(roomCode).emit('round-updated', {
 
 ```javascript
 // Server → All Clients
-io.to(roomCode).emit('game-finished', {
+io.to(roomCode).emit("game-finished", {
   result: {
     rankings: [
       {
-        playerId: 'player1',
+        playerId: "player1",
         finalPoints: 35000,
         rank: 1,
         uma: 20000,
         rawScore: 10000,
-        settlement: 30000
-      }
-    ]
-  }
-});
+        settlement: 30000,
+      },
+    ],
+  },
+})
 ```
 
 ### エラーハンドリング
@@ -502,14 +502,14 @@ io.to(roomCode).emit('game-finished', {
 
 ```javascript
 // Server → Client
-socket.emit('error', {
-  code: 'INVALID_ACTION',
-  message: '無効なアクションです',
+socket.emit("error", {
+  code: "INVALID_ACTION",
+  message: "無効なアクションです",
   details: {
-    action: 'TSUMO',
-    reason: 'NOT_YOUR_TURN'
-  }
-});
+    action: "TSUMO",
+    reason: "NOT_YOUR_TURN",
+  },
+})
 ```
 
 #### エラーコード一覧

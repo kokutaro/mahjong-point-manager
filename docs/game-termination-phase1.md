@@ -13,7 +13,7 @@ Phase 1では、低リスク・高効果な基本的なホスト権限強化を�
 - **目的**: ゲーム結果画面でホストを明確に識別表示
 - **効果**: プレイヤーがホストの権限を理解し、責任の所在を明確化
 
-### 2.2. 強制終了API権限チェック強化  
+### 2.2. 強制終了API権限チェック強化
 
 - **目的**: ホスト以外による不正な強制終了を防止
 - **効果**: セキュリティ脆弱性の解決と権限の明確化
@@ -61,30 +61,33 @@ Phase 1では、低リスク・高効果な基本的なホスト権限強化を�
 #### 3.2.2. セキュリティ仕様
 
 ```typescript
-export async function POST(request: Request, { params }: { params: { gameId: string } }) {
+export async function POST(
+  request: Request,
+  { params }: { params: { gameId: string } }
+) {
   try {
     // 1. 認証確認
     const player = await requireAuth()
-    
+
     // 2. ホスト権限チェック
     const hasHostAccess = await checkHostAccess(params.gameId, player.playerId)
-    
+
     if (!hasHostAccess) {
       return NextResponse.json(
-        { error: 'この操作にはホスト権限が必要です' }, 
+        { error: "この操作にはホスト権限が必要です" },
         { status: 403 }
       )
     }
-    
+
     // 3. 既存の強制終了処理
-    const reason = await request.json().then(body => body.reason) || 'HOST_FORCE_END'
-    
+    const reason =
+      (await request.json().then((body) => body.reason)) || "HOST_FORCE_END"
+
     // ... 既存の実装継続
-    
   } catch (error) {
-    console.error('Game end error:', error)
+    console.error("Game end error:", error)
     return NextResponse.json(
-      { error: 'ゲーム終了処理でエラーが発生しました' }, 
+      { error: "ゲーム終了処理でエラーが発生しました" },
       { status: 500 }
     )
   }
@@ -95,12 +98,15 @@ export async function POST(request: Request, { params }: { params: { gameId: str
 
 ```typescript
 // /lib/auth.ts の checkHostAccess 関数を利用
-async function checkHostAccess(gameId: string, playerId: string): Promise<boolean> {
+async function checkHostAccess(
+  gameId: string,
+  playerId: string
+): Promise<boolean> {
   const game = await prisma.game.findUnique({
     where: { id: gameId },
-    select: { hostPlayerId: true }
+    select: { hostPlayerId: true },
   })
-  
+
   return game?.hostPlayerId === playerId
 }
 ```
@@ -108,7 +114,7 @@ async function checkHostAccess(gameId: string, playerId: string): Promise<boolea
 #### 3.2.4. エラーハンドリング
 
 - **403 Forbidden**: ホスト権限なしの場合
-- **404 Not Found**: ゲームが存在しない場合  
+- **404 Not Found**: ゲームが存在しない場合
 - **500 Internal Server Error**: システムエラーの場合
 
 ### 3.3. データベース影響
@@ -127,7 +133,7 @@ Game {
 -- GameSession テーブル（既存）
 GameSession {
   id: String @id
-  hostPlayerId: String  
+  hostPlayerId: String
   hostPlayer: Player @relation(fields: [hostPlayerId], references: [id])
   -- その他既存フィールド
 }
@@ -182,17 +188,17 @@ describe('Host Badge Display', () => {
       results: [{ playerId: 'host123', playerName: 'ホストプレイヤー' }],
       hostPlayerId: 'host123'
     }
-    
+
     render(<GameResult {...props} />)
     expect(screen.getByText('👑 ホスト')).toBeInTheDocument()
   })
-  
+
   it('should not display host badge for non-host players', () => {
     const props = {
       results: [{ playerId: 'player123', playerName: '一般プレイヤー' }],
       hostPlayerId: 'host123'
     }
-    
+
     render(<GameResult {...props} />)
     expect(screen.queryByText('👑 ホスト')).not.toBeInTheDocument()
   })
@@ -211,33 +217,33 @@ describe('Host Badge Display', () => {
 
 ```typescript
 // api/game/[gameId]/end.test.ts
-describe('Game End API Authorization', () => {
-  it('should allow host to end game', async () => {
+describe("Game End API Authorization", () => {
+  it("should allow host to end game", async () => {
     // モックデータでホストとして認証
     const response = await request(app)
-      .post('/api/game/test-game-id/end')
-      .set('Authorization', 'Bearer host-token')
-      .send({ reason: 'HOST_FORCE_END' })
-    
+      .post("/api/game/test-game-id/end")
+      .set("Authorization", "Bearer host-token")
+      .send({ reason: "HOST_FORCE_END" })
+
     expect(response.status).toBe(200)
   })
-  
-  it('should deny non-host to end game', async () => {
+
+  it("should deny non-host to end game", async () => {
     // モックデータで非ホストとして認証
     const response = await request(app)
-      .post('/api/game/test-game-id/end')
-      .set('Authorization', 'Bearer non-host-token')
-      .send({ reason: 'UNAUTHORIZED_ATTEMPT' })
-    
+      .post("/api/game/test-game-id/end")
+      .set("Authorization", "Bearer non-host-token")
+      .send({ reason: "UNAUTHORIZED_ATTEMPT" })
+
     expect(response.status).toBe(403)
-    expect(response.body.error).toContain('ホスト権限が必要です')
+    expect(response.body.error).toContain("ホスト権限が必要です")
   })
-  
-  it('should handle unauthenticated requests', async () => {
+
+  it("should handle unauthenticated requests", async () => {
     const response = await request(app)
-      .post('/api/game/test-game-id/end')
-      .send({ reason: 'NO_AUTH' })
-    
+      .post("/api/game/test-game-id/end")
+      .send({ reason: "NO_AUTH" })
+
     expect(response.status).toBe(401)
   })
 })
@@ -304,7 +310,7 @@ describe('Game End API Authorization', () => {
 2. 非ホストプレイヤーが強制終了APIを呼び出せない
 3. すべてのテストケースが PASS する
 
-### 7.2. 非機能面  
+### 7.2. 非機能面
 
 1. ページ表示速度に影響がない
 2. 既存機能に悪影響を与えない

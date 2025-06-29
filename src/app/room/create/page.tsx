@@ -1,40 +1,40 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
-import { useRouter } from 'next/navigation'
+import { useState } from "react"
+import { useAuth } from "@/contexts/AuthContext"
+import { useRouter } from "next/navigation"
 
 export default function CreateRoomPage() {
   const { user, isAuthenticated, refreshAuth } = useAuth()
-  const [gameType, setGameType] = useState<'TONPUU' | 'HANCHAN'>('HANCHAN')
+  const [gameType, setGameType] = useState<"TONPUU" | "HANCHAN">("HANCHAN")
   const [initialPoints, setInitialPoints] = useState(25000)
   const [basePoints, setBasePoints] = useState(30000)
   const [hasTobi, setHasTobi] = useState(true)
   const [uma, setUma] = useState([20, 10, -10, -20])
-  const [umaPreset, setUmaPreset] = useState('ワンツー')
+  const [umaPreset, setUmaPreset] = useState("ワンツー")
   // セッション関連の新しい状態
-  const [sessionName, setSessionName] = useState('')
+  const [sessionName, setSessionName] = useState("")
   const [isCreating, setIsCreating] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState("")
   const router = useRouter()
   const sessionMode = true
 
   const handleCreateRoom = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!user) {
-      setError('ログインが必要です')
+      setError("ログインが必要です")
       return
     }
 
     try {
       setIsCreating(true)
-      setError('')
+      setError("")
 
-      const response = await fetch('/api/room/create', {
-        method: 'POST',
+      const response = await fetch("/api/room/create", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           hostPlayerName: user.name,
@@ -44,15 +44,15 @@ export default function CreateRoomPage() {
           hasTobi,
           uma,
           sessionMode,
-          sessionName: sessionName ? sessionName : undefined
+          sessionName: sessionName ? sessionName : undefined,
         }),
-        credentials: 'include'
+        credentials: "include",
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error?.message || 'ルーム作成に失敗しました')
+        throw new Error(data.error?.message || "ルーム作成に失敗しました")
       }
 
       if (data.success) {
@@ -61,21 +61,23 @@ export default function CreateRoomPage() {
         router.push(`/room/${data.data.roomCode}`)
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'ルーム作成に失敗しました')
+      setError(
+        error instanceof Error ? error.message : "ルーム作成に失敗しました"
+      )
     } finally {
       setIsCreating(false)
     }
   }
 
   const umaPresets = {
-    'ゴットー': [10, 5, -5, -10],
-    'ワンツー': [20, 10, -10, -20],
-    'ワンスリー': [30, 10, -10, -30]
+    ゴットー: [10, 5, -5, -10],
+    ワンツー: [20, 10, -10, -20],
+    ワンスリー: [30, 10, -10, -30],
   }
 
   const handleUmaPresetChange = (preset: string) => {
     setUmaPreset(preset)
-    if (preset !== 'カスタム') {
+    if (preset !== "カスタム") {
       setUma(umaPresets[preset as keyof typeof umaPresets])
     }
   }
@@ -84,7 +86,7 @@ export default function CreateRoomPage() {
     const newUma = [...uma]
     newUma[index] = value
     setUma(newUma)
-    setUmaPreset('カスタム') // 手動変更時はカスタムに切り替え
+    setUmaPreset("カスタム") // 手動変更時はカスタムに切り替え
   }
 
   if (!isAuthenticated) {
@@ -103,9 +105,7 @@ export default function CreateRoomPage() {
             <h1 className="text-3xl font-bold text-gray-800 mb-2">
               ルーム作成
             </h1>
-            <p className="text-gray-600">
-              ホスト: {user?.name}
-            </p>
+            <p className="text-gray-600">ホスト: {user?.name}</p>
           </div>
 
           <form onSubmit={handleCreateRoom} className="space-y-6">
@@ -117,11 +117,11 @@ export default function CreateRoomPage() {
               <div className="grid grid-cols-2 gap-4">
                 <button
                   type="button"
-                  onClick={() => setGameType('TONPUU')}
+                  onClick={() => setGameType("TONPUU")}
                   className={`p-4 rounded-lg border-2 transition-colors ${
-                    gameType === 'TONPUU'
-                      ? 'border-green-500 bg-green-50 text-green-700'
-                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                    gameType === "TONPUU"
+                      ? "border-green-500 bg-green-50 text-green-700"
+                      : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
                   }`}
                 >
                   <div className="font-semibold">東風戦</div>
@@ -129,11 +129,11 @@ export default function CreateRoomPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setGameType('HANCHAN')}
+                  onClick={() => setGameType("HANCHAN")}
                   className={`p-4 rounded-lg border-2 transition-colors ${
-                    gameType === 'HANCHAN'
-                      ? 'border-green-500 bg-green-50 text-green-700'
-                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                    gameType === "HANCHAN"
+                      ? "border-green-500 bg-green-50 text-green-700"
+                      : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
                   }`}
                 >
                   <div className="font-semibold">半荘戦</div>
@@ -149,7 +149,10 @@ export default function CreateRoomPage() {
               </label>
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="sessionName" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="sessionName"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     セッション名（任意）
                   </label>
                   <input
@@ -164,7 +167,7 @@ export default function CreateRoomPage() {
                     セッション名を設定すると履歴で識別しやすくなります
                   </p>
                 </div>
-                
+
                 <div className="bg-blue-50 p-3 rounded-lg">
                   <div className="text-sm text-blue-800">
                     <strong>セッションについて:</strong>
@@ -179,7 +182,10 @@ export default function CreateRoomPage() {
 
             {/* 初期点数 */}
             <div>
-              <label htmlFor="initialPoints" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="initialPoints"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 初期点数
               </label>
               <select
@@ -196,7 +202,10 @@ export default function CreateRoomPage() {
 
             {/* 返し点 */}
             <div>
-              <label htmlFor="basePoints" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="basePoints"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 返し点（基準点）
               </label>
               <select
@@ -219,7 +228,7 @@ export default function CreateRoomPage() {
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 ウマ設定
               </label>
-              
+
               {/* プリセット選択 */}
               <div className="mb-4">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -230,23 +239,25 @@ export default function CreateRoomPage() {
                       onClick={() => handleUmaPresetChange(preset)}
                       className={`p-3 rounded-lg border-2 text-sm transition-colors ${
                         umaPreset === preset
-                          ? 'border-green-500 bg-green-50 text-green-700'
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                          ? "border-green-500 bg-green-50 text-green-700"
+                          : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
                       }`}
                     >
                       <div className="font-semibold">{preset}</div>
                       <div className="text-xs text-gray-500">
-                        {umaPresets[preset as keyof typeof umaPresets].join(',')}
+                        {umaPresets[preset as keyof typeof umaPresets].join(
+                          ","
+                        )}
                       </div>
                     </button>
                   ))}
                   <button
                     type="button"
-                    onClick={() => handleUmaPresetChange('カスタム')}
+                    onClick={() => handleUmaPresetChange("カスタム")}
                     className={`p-3 rounded-lg border-2 text-sm transition-colors ${
-                      umaPreset === 'カスタム'
-                        ? 'border-green-500 bg-green-50 text-green-700'
-                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                      umaPreset === "カスタム"
+                        ? "border-green-500 bg-green-50 text-green-700"
+                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
                     }`}
                   >
                     <div className="font-semibold">カスタム</div>
@@ -257,20 +268,23 @@ export default function CreateRoomPage() {
 
               {/* 詳細設定 */}
               <div className="grid grid-cols-4 gap-2">
-                {['1位', '2位', '3位', '4位'].map((rank, index) => (
+                {["1位", "2位", "3位", "4位"].map((rank, index) => (
                   <div key={rank}>
-                    <label className="block text-xs text-gray-500 mb-1">{rank}</label>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      {rank}
+                    </label>
                     <input
                       type="number"
                       value={uma[index]}
-                      onChange={(e) => handleUmaChange(index, Number(e.target.value))}
+                      onChange={(e) =>
+                        handleUmaChange(index, Number(e.target.value))
+                      }
                       className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
                     />
                   </div>
                 ))}
               </div>
             </div>
-
 
             {/* 特殊ルール */}
             <div>
@@ -310,7 +324,7 @@ export default function CreateRoomPage() {
                 disabled={isCreating}
                 className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {isCreating ? '作成中...' : 'ルーム作成'}
+                {isCreating ? "作成中..." : "ルーム作成"}
               </button>
             </div>
           </form>

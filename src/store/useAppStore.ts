@@ -1,12 +1,12 @@
-import { create } from 'zustand'
-import { devtools, persist } from 'zustand/middleware'
+import { create } from "zustand"
+import { devtools, persist } from "zustand/middleware"
 
 // セッション情報の型定義
 export interface GameSession {
   id: string
   sessionCode: string
   name?: string
-  status: 'ACTIVE' | 'PAUSED' | 'FINISHED' | 'CANCELLED'
+  status: "ACTIVE" | "PAUSED" | "FINISHED" | "CANCELLED"
   hostPlayerId: string
   totalGames: number
   createdAt: string
@@ -20,7 +20,7 @@ export interface GameState {
   sessionId?: string
   sessionCode?: string
   sessionName?: string
-  status: 'WAITING' | 'PLAYING' | 'FINISHED'
+  status: "WAITING" | "PLAYING" | "FINISHED"
   players: Array<{
     playerId: string
     name: string
@@ -35,14 +35,14 @@ interface AppState {
   // セッション状態
   currentSession: GameSession | null
   sessionMode: boolean
-  
+
   // ゲーム状態
   currentGame: GameState | null
-  
+
   // UI状態
   isLoading: boolean
   error: string | null
-  
+
   // アクション
   setSession: (session: GameSession | null) => void
   setSessionMode: (mode: boolean) => void
@@ -70,80 +70,52 @@ export const useAppStore = create<AppState>()(
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       (set, get) => ({
         ...initialState,
-        
+
         // セッション関連アクション
         setSession: (session) => {
-          set(
-            { currentSession: session },
-            false,
-            'setSession'
-          )
+          set({ currentSession: session }, false, "setSession")
         },
-        
+
         setSessionMode: (mode) => {
-          set(
-            { sessionMode: mode },
-            false,
-            'setSessionMode'
-          )
+          set({ sessionMode: mode }, false, "setSessionMode")
         },
-        
+
         clearSession: () => {
           set(
-            { 
+            {
               currentSession: null,
-              sessionMode: false 
+              sessionMode: false,
             },
             false,
-            'clearSession'
+            "clearSession"
           )
         },
-        
+
         // ゲーム状態関連アクション
         setCurrentGame: (game) => {
-          set(
-            { currentGame: game },
-            false,
-            'setCurrentGame'
-          )
+          set({ currentGame: game }, false, "setCurrentGame")
         },
-        
+
         // UI状態関連アクション
         setLoading: (loading) => {
-          set(
-            { isLoading: loading },
-            false,
-            'setLoading'
-          )
+          set({ isLoading: loading }, false, "setLoading")
         },
-        
+
         setError: (error) => {
-          set(
-            { error },
-            false,
-            'setError'
-          )
+          set({ error }, false, "setError")
         },
-        
+
         clearError: () => {
-          set(
-            { error: null },
-            false,
-            'clearError'
-          )
+          set({ error: null }, false, "clearError")
         },
-        
+
         // 全状態リセット
         reset: () => {
-          set(
-            initialState,
-            false,
-            'reset'
-          )
+          set(initialState, false, "reset")
         },
       }),
       {
-        name: 'mahjong-app-store',
+        name: "mahjong-app-store",
         partialize: (state) => ({
           // セッション情報のみを永続化
           currentSession: state.currentSession,
@@ -152,7 +124,7 @@ export const useAppStore = create<AppState>()(
         // エラーハンドリングはZustandのデフォルトを使用
       }
     ),
-    { name: 'mahjong-app' }
+    { name: "mahjong-app" }
   )
 )
 
@@ -163,7 +135,7 @@ export const useSessionStore = () => {
   const setSession = useAppStore((state) => state.setSession)
   const setSessionMode = useAppStore((state) => state.setSessionMode)
   const clearSession = useAppStore((state) => state.clearSession)
-  
+
   return {
     currentSession,
     sessionMode,
@@ -176,7 +148,7 @@ export const useSessionStore = () => {
 export const useGameStore = () => {
   const currentGame = useAppStore((state) => state.currentGame)
   const setCurrentGame = useAppStore((state) => state.setCurrentGame)
-  
+
   return {
     currentGame,
     setCurrentGame,
@@ -189,7 +161,7 @@ export const useUIStore = () => {
   const setLoading = useAppStore((state) => state.setLoading)
   const setError = useAppStore((state) => state.setError)
   const clearError = useAppStore((state) => state.clearError)
-  
+
   return {
     isLoading,
     error,

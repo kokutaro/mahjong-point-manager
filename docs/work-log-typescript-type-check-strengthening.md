@@ -6,6 +6,7 @@
 ## Prompt
 
 ユーザーから以下の指示を受けました：
+
 > think hard では型チェックを行い、エラーを修正して下さい。
 
 ## Issue
@@ -26,7 +27,7 @@
 - `SoloGamePlayer` → `SoloPlayer` に修正
 - 以下のファイルで型インポートを更新：
   - `src/app/api/game/[gameId]/result/route.ts`
-  - `src/app/api/game/[gameId]/riichi/route.ts`  
+  - `src/app/api/game/[gameId]/riichi/route.ts`
   - `src/app/api/game/[gameId]/ryukyoku/route.ts`
   - `src/app/solo/game/[gameId]/page.tsx`
 
@@ -77,7 +78,7 @@
 const multiData: MultiplayerRyukyokuData = {
   type: validatedData.type,
   reason: validatedData.reason,
-  tenpaiPlayers: (validatedData.tenpaiPlayers || []).map(id => String(id))
+  tenpaiPlayers: (validatedData.tenpaiPlayers || []).map((id) => String(id)),
 }
 ```
 
@@ -108,7 +109,7 @@ const multiData: MultiplayerRyukyokuData = {
 ### ✅ 解決された主要エラー
 
 - Prisma型インポートエラー: 完全修正
-- グローバル変数重複宣言: 完全修正  
+- グローバル変数重複宣言: 完全修正
 - 主要API route型エラー: 大幅改善
 - WebSocket型定義競合: 修正済み
 
@@ -141,6 +142,7 @@ const multiData: MultiplayerRyukyokuData = {
 - Prismaとの型整合性維持の実践的手法
 
 ---
+
 **🤖 Generated with [Claude Code](https://claude.ai/code)**
 
 **Co-Authored-By: Claude <noreply@anthropic.com>**

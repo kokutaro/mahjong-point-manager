@@ -1,5 +1,5 @@
-import { prisma } from '@/lib/prisma'
-import { ScoreCalculationResult } from '@/lib/score'
+import { prisma } from "@/lib/prisma"
+import { ScoreCalculationResult } from "@/lib/score"
 
 // 型定義
 interface GameSettings {
@@ -49,7 +49,7 @@ export interface PointTransaction {
   fromPlayerId?: string
   toPlayerId: string
   amount: number
-  type: 'WIN' | 'LOSE' | 'RIICHI' | 'HONBA' | 'KYOTAKU'
+  type: "WIN" | "LOSE" | "RIICHI" | "HONBA" | "KYOTAKU"
   description: string
   timestamp: Date
 }
@@ -78,17 +78,17 @@ export class PointManager {
     loserId?: string
   ): Promise<{ gameEnded: boolean; reason?: string }> {
     const participants = await this.getParticipants()
-    const winner = participants.find(p => p.playerId === winnerId)
-    
+    const winner = participants.find((p) => p.playerId === winnerId)
+
     if (!winner) {
-      throw new Error('Winner not found')
+      throw new Error("Winner not found")
     }
 
-    const game = await prisma.game.findUnique({ 
+    const game = await prisma.game.findUnique({
       where: { id: this.gameId },
-      select: { currentOya: true, kyotaku: true }
+      select: { currentOya: true, kyotaku: true },
     })
-    
+
     const isOya = winner.position === (game?.currentOya || 0)
 
     // scoreResult.totalScoreには既に供託分が含まれているため、そのまま使用
@@ -104,19 +104,19 @@ export class PointManager {
       await tx.gameParticipant.updateMany({
         where: {
           gameId: this.gameId,
-          isReach: true
+          isReach: true,
         },
         data: {
           isReach: false,
-          reachRound: null
-        }
+          reachRound: null,
+        },
       })
 
       // 供託をクリア（点数分配は既に上で行った）
       if (game?.kyotaku && game.kyotaku > 0) {
         await tx.game.update({
           where: { id: this.gameId },
-          data: { kyotaku: 0 }
+          data: { kyotaku: 0 },
         })
       }
     })
@@ -135,45 +135,47 @@ export class PointManager {
     isOya: boolean
   ): Promise<void> {
     const participants = await this.getParticipants()
-    
+
     // 現在の親の位置を取得
     const game = await prisma.game.findUnique({
       where: { id: this.gameId },
-      select: { currentOya: true }
+      select: { currentOya: true },
     })
-    
+
     const currentOya = game?.currentOya || 0
-    
+
     for (const participant of participants) {
       if (participant.playerId === winnerId) {
         // 勝者の点数加算
         await this.updatePoints(
           participant.playerId,
           participant.currentPoints + scoreResult.totalScore,
-          'WIN',
+          "WIN",
           `ツモ和了 ${scoreResult.totalScore}点`
         )
       } else {
         // 敗者の点数減算
         let payment: number
         const isThisPlayerOya = participant.position === currentOya
-        
+
         if (isOya) {
           // 親ツモ: 子全員が同額
           payment = scoreResult.payments.fromKo || 0
         } else {
           // 子ツモ: 親と子で異なる
-          payment = isThisPlayerOya ? 
-            (scoreResult.payments.fromOya || 0) : 
-            (scoreResult.payments.fromKo || 0)
+          payment = isThisPlayerOya
+            ? scoreResult.payments.fromOya || 0
+            : scoreResult.payments.fromKo || 0
         }
-        
-        console.log(`Player position ${participant.position}, currentOya: ${currentOya}, isThisPlayerOya: ${isThisPlayerOya}, payment: ${payment}`)
-        
+
+        console.log(
+          `Player position ${participant.position}, currentOya: ${currentOya}, isThisPlayerOya: ${isThisPlayerOya}, payment: ${payment}`
+        )
+
         await this.updatePoints(
           participant.playerId,
           participant.currentPoints - payment,
-          'LOSE',
+          "LOSE",
           `ツモ支払い -${payment}点`
         )
       }
@@ -190,29 +192,30 @@ export class PointManager {
   ): Promise<void> {
     // 勝者の点数加算
     const winner = await prisma.gameParticipant.findFirst({
-      where: { gameId: this.gameId, playerId: winnerId }
+      where: { gameId: this.gameId, playerId: winnerId },
     })
-    
+
     if (winner) {
       await this.updatePoints(
         winnerId,
         winner.currentPoints + scoreResult.totalScore,
-        'WIN',
+        "WIN",
         `ロン和了 ${scoreResult.totalScore}点`
       )
     }
 
     // 敗者の点数減算
     const loser = await prisma.gameParticipant.findFirst({
-      where: { gameId: this.gameId, playerId: loserId }
+      where: { gameId: this.gameId, playerId: loserId },
     })
-    
+
     if (loser) {
-      const paymentAmount = scoreResult.payments.fromLoser || scoreResult.totalScore
+      const paymentAmount =
+        scoreResult.payments.fromLoser || scoreResult.totalScore
       await this.updatePoints(
         loserId,
         loser.currentPoints - paymentAmount,
-        'LOSE',
+        "LOSE",
         `ロン支払い -${paymentAmount}点`
       )
     }
@@ -223,19 +226,19 @@ export class PointManager {
    */
   async declareReach(playerId: string): Promise<void> {
     const participant = await prisma.gameParticipant.findFirst({
-      where: { gameId: this.gameId, playerId }
+      where: { gameId: this.gameId, playerId },
     })
 
     if (!participant) {
-      throw new Error('Player not found')
+      throw new Error("Player not found")
     }
 
     if (participant.currentPoints < 1000) {
-      throw new Error('リーチするには1000点以上必要です')
+      throw new Error("リーチするには1000点以上必要です")
     }
 
     if (participant.isReach) {
-      throw new Error('既にリーチ宣言済みです')
+      throw new Error("既にリーチ宣言済みです")
     }
 
     // リーチ宣言
@@ -243,50 +246,55 @@ export class PointManager {
       where: { id: participant.id },
       data: {
         isReach: true,
-        currentPoints: participant.currentPoints - 1000
-      }
+        currentPoints: participant.currentPoints - 1000,
+      },
     })
 
     // 供託を増加
     await prisma.game.update({
       where: { id: this.gameId },
       data: {
-        kyotaku: { increment: 1 }
-      }
+        kyotaku: { increment: 1 },
+      },
     })
 
     // 取引記録
     await this.recordTransaction({
       fromPlayerId: playerId,
-      toPlayerId: 'KYOTAKU',
+      toPlayerId: "KYOTAKU",
       amount: 1000,
-      type: 'RIICHI',
-      description: 'リーチ宣言'
+      type: "RIICHI",
+      description: "リーチ宣言",
     })
   }
 
   /**
    * 流局時の処理
    */
-  async handleRyukyoku(reason: string, tenpaiPlayers: string[] = []): Promise<{ gameEnded: boolean; reason?: string }> {
+  async handleRyukyoku(
+    reason: string,
+    tenpaiPlayers: string[] = []
+  ): Promise<{ gameEnded: boolean; reason?: string }> {
     const game = await prisma.game.findUnique({
       where: { id: this.gameId },
       include: {
         participants: {
           include: { player: true },
-          orderBy: { position: 'asc' }
-        }
-      }
+          orderBy: { position: "asc" },
+        },
+      },
     })
 
     if (!game) {
-      throw new Error('Game not found')
+      throw new Error("Game not found")
     }
 
     // 現在の親プレイヤーを取得
-    const currentOya = game.participants.find(p => p.position === game.currentOya)
+    const currentOya = game.participants.find(
+      (p) => p.position === game.currentOya
+    )
     if (!currentOya) {
-      throw new Error('親プレイヤーが見つかりません')
+      throw new Error("親プレイヤーが見つかりません")
     }
 
     // 親がテンパイかどうか
@@ -298,7 +306,6 @@ export class PointManager {
     const newRound = isOyaTenpai ? game.currentRound : game.currentRound + 1
 
     await prisma.$transaction(async (tx) => {
-
       // テンパイ料の処理
       if (tenpaiPlayers.length > 0 && tenpaiPlayers.length < 4) {
         const tenpaiCount = tenpaiPlayers.length
@@ -312,16 +319,16 @@ export class PointManager {
             await tx.gameParticipant.update({
               where: { id: participant.id },
               data: {
-                currentPoints: participant.currentPoints + pointPerTenpai
-              }
+                currentPoints: participant.currentPoints + pointPerTenpai,
+              },
             })
           } else {
             // ノーテンプレイヤー：支払い
             await tx.gameParticipant.update({
               where: { id: participant.id },
               data: {
-                currentPoints: participant.currentPoints - pointPerNoten
-              }
+                currentPoints: participant.currentPoints - pointPerNoten,
+              },
             })
           }
         }
@@ -331,12 +338,12 @@ export class PointManager {
       await tx.gameParticipant.updateMany({
         where: {
           gameId: this.gameId,
-          isReach: true
+          isReach: true,
         },
         data: {
           isReach: false,
-          reachRound: null
-        }
+          reachRound: null,
+        },
       })
 
       // ゲーム状態更新（本場増加と親移動判定）
@@ -346,32 +353,32 @@ export class PointManager {
           honba: newHonba,
           currentOya: newOya,
           currentRound: newRound,
-          updatedAt: new Date()
-        }
+          updatedAt: new Date(),
+        },
       })
 
       // イベント記録
       await tx.gameEvent.create({
         data: {
           gameId: this.gameId,
-          eventType: 'RYUKYOKU',
+          eventType: "RYUKYOKU",
           eventData: {
             reason,
             tenpaiPlayers,
             newHonba,
             kyotaku: game.kyotaku,
-            oyaContinued: isOyaTenpai
+            oyaContinued: isOyaTenpai,
           },
           round: game.currentRound,
-          honba: game.honba
-        }
+          honba: game.honba,
+        },
       })
     })
 
     // ゲーム終了判定
     const endResult = await this.checkGameEnd()
     if (endResult.shouldEnd) {
-      await this.finishGame(endResult.reason || '規定局数終了')
+      await this.finishGame(endResult.reason || "規定局数終了")
       return { gameEnded: true, reason: endResult.reason }
     }
 
@@ -381,18 +388,22 @@ export class PointManager {
   /**
    * 親ローテーション処理
    */
-  async rotateDealer(winnerId?: string): Promise<{ gameEnded: boolean; reason?: string }> {
+  async rotateDealer(
+    winnerId?: string
+  ): Promise<{ gameEnded: boolean; reason?: string }> {
     const game = await prisma.game.findUnique({
-      where: { id: this.gameId }
+      where: { id: this.gameId },
     })
 
     if (!game) {
-      throw new Error('Game not found')
+      throw new Error("Game not found")
     }
 
-    const winner = winnerId ? await prisma.gameParticipant.findFirst({
-      where: { gameId: this.gameId, playerId: winnerId }
-    }) : null
+    const winner = winnerId
+      ? await prisma.gameParticipant.findFirst({
+          where: { gameId: this.gameId, playerId: winnerId },
+        })
+      : null
 
     const isOyaWin = winner?.position === game.currentOya
 
@@ -404,19 +415,25 @@ export class PointManager {
       // 親の和了：連荘
       newHonba += 1
       // 親の和了なので局は進まない
-      console.log(`親連荘: 親=${game.currentOya}継続, 本場=${game.honba} → ${newHonba}, 局=${game.currentRound}`)
+      console.log(
+        `親連荘: 親=${game.currentOya}継続, 本場=${game.honba} → ${newHonba}, 局=${game.currentRound}`
+      )
     } else if (winnerId && !isOyaWin) {
       // 子の和了：親交代
       newOya = (game.currentOya + 1) % 4
       newHonba = 0
       newRound += 1
-      console.log(`子和了: 旧親=${game.currentOya} → 新親=${newOya}, 旧局=${game.currentRound} → 新局=${newRound}, 本場リセット`)
+      console.log(
+        `子和了: 旧親=${game.currentOya} → 新親=${newOya}, 旧局=${game.currentRound} → 新局=${newRound}, 本場リセット`
+      )
     } else {
       // 流局：親交代
       newOya = (game.currentOya + 1) % 4
       newHonba = 0
       newRound += 1
-      console.log(`流局: 旧親=${game.currentOya} → 新親=${newOya}, 旧局=${game.currentRound} → 新局=${newRound}, 本場リセット`)
+      console.log(
+        `流局: 旧親=${game.currentOya} → 新親=${newOya}, 旧局=${game.currentRound} → 新局=${newRound}, 本場リセット`
+      )
     }
 
     await prisma.game.update({
@@ -424,14 +441,14 @@ export class PointManager {
       data: {
         currentOya: newOya,
         honba: newHonba,
-        currentRound: newRound
-      }
+        currentRound: newRound,
+      },
     })
 
     // ゲーム終了判定
     const endResult = await this.checkGameEnd()
     if (endResult.shouldEnd) {
-      await this.finishGame(endResult.reason || '規定局数終了')
+      await this.finishGame(endResult.reason || "規定局数終了")
       return { gameEnded: true, reason: endResult.reason }
     }
 
@@ -442,85 +459,102 @@ export class PointManager {
    * ゲーム終了処理
    */
   async finishGame(reason: string): Promise<void> {
-    console.log('🏁 finishGame called with reason:', reason, 'gameId:', this.gameId)
-    
+    console.log(
+      "🏁 finishGame called with reason:",
+      reason,
+      "gameId:",
+      this.gameId
+    )
+
     await prisma.game.update({
       where: { id: this.gameId },
       data: {
-        status: 'FINISHED',
-        endedAt: new Date()
-      }
+        status: "FINISHED",
+        endedAt: new Date(),
+      },
     })
 
-    console.log('🏁 Game status updated to FINISHED, calling calculateFinalResults')
-    
+    console.log(
+      "🏁 Game status updated to FINISHED, calling calculateFinalResults"
+    )
+
     // 最終結果計算
     await this.calculateFinalResults()
 
-    console.log('🏁 calculateFinalResults completed, updating session statistics')
-    
+    console.log(
+      "🏁 calculateFinalResults completed, updating session statistics"
+    )
+
     // セッション統計更新
     await this.updateSessionStatistics()
 
-    console.log('🏁 Session statistics updated, creating game end event')
+    console.log("🏁 Session statistics updated, creating game end event")
 
     // イベント記録
     await prisma.gameEvent.create({
       data: {
         gameId: this.gameId,
-        eventType: 'GAME_END',
-        eventData: { 
+        eventType: "GAME_END",
+        eventData: {
           reason,
-          finalResults: true
+          finalResults: true,
         },
         round: 0,
-        honba: 0
-      }
+        honba: 0,
+      },
     })
-    
-    console.log('🏁 Game end event created')
+
+    console.log("🏁 Game end event created")
   }
 
   /**
    * 最終結果計算（ウマ・オカ含む）
    */
   async calculateFinalResults(): Promise<void> {
-    console.log('🏁 calculateFinalResults called for gameId:', this.gameId)
+    console.log("🏁 calculateFinalResults called for gameId:", this.gameId)
     const participants = await this.getParticipants()
     const game = await prisma.game.findUnique({
       where: { id: this.gameId },
-      include: { settings: true }
+      include: { settings: true },
     })
 
-    console.log('🏁 Game and participants:', { 
-      game: game ? { 
-        id: game.id, 
-        settings: game.settings ? {
-          initialPoints: game.settings.initialPoints,
-          basePoints: (game.settings as GameSettings)?.basePoints || 30000,
-          uma: game.settings.uma
-        } : null
-      } : null,
-      participants: participants.length 
+    console.log("🏁 Game and participants:", {
+      game: game
+        ? {
+            id: game.id,
+            settings: game.settings
+              ? {
+                  initialPoints: game.settings.initialPoints,
+                  basePoints:
+                    (game.settings as GameSettings)?.basePoints || 30000,
+                  uma: game.settings.uma,
+                }
+              : null,
+          }
+        : null,
+      participants: participants.length,
     })
 
     if (!game) {
-      console.log('🏁 No game found, returning')
+      console.log("🏁 No game found, returning")
       return
     }
 
     if (!game.settings) {
-      console.log('🏁 No settings found, creating default settings')
+      console.log("🏁 No settings found, creating default settings")
       // デフォルト設定で処理を続行
       const defaultSettings = {
         initialPoints: 25000,
         basePoints: 30000,
-        uma: [20, 10, -10, -20]
+        uma: [20, 10, -10, -20],
       }
-      
-      console.log('🏁 Using default settings:', defaultSettings)
-      
-      const finalResults = this.calculateSettlement(participants, defaultSettings)
+
+      console.log("🏁 Using default settings:", defaultSettings)
+
+      const finalResults = this.calculateSettlement(
+        participants,
+        defaultSettings
+      )
       await this.saveFinalResults(finalResults, participants)
       return
     }
@@ -530,13 +564,14 @@ export class PointManager {
     if (game.settings.uma) {
       if (Array.isArray(game.settings.uma)) {
         umaArray = game.settings.uma as number[]
-      } else if (typeof game.settings.uma === 'string') {
+      } else if (typeof game.settings.uma === "string") {
         try {
           umaArray = JSON.parse(game.settings.uma as string)
-        } catch (e) { // eslint-disable-line @typescript-eslint/no-unused-vars
-          console.log('🏁 Failed to parse uma JSON, using default')
+        } catch (e) {
+          // eslint-disable-line @typescript-eslint/no-unused-vars
+          console.log("🏁 Failed to parse uma JSON, using default")
         }
-      } else if (typeof game.settings.uma === 'object') {
+      } else if (typeof game.settings.uma === "object") {
         // Prisma JSON型の場合
         umaArray = game.settings.uma as unknown as number[]
       }
@@ -545,11 +580,11 @@ export class PointManager {
     const settings = {
       initialPoints: game.settings.initialPoints || 25000,
       basePoints: (game.settings as GameSettings)?.basePoints || 30000,
-      uma: umaArray
+      uma: umaArray,
     }
-    
-    console.log('🏁 Processed settings:', settings)
-    
+
+    console.log("🏁 Processed settings:", settings)
+
     const finalResults = this.calculateSettlement(participants, settings)
     await this.saveFinalResults(finalResults, participants)
   }
@@ -557,13 +592,16 @@ export class PointManager {
   /**
    * 正確な精算計算（基準点方式）
    */
-  private calculateSettlement(participants: ParticipantWithPlayer[], settings: {
-    initialPoints: number
-    basePoints: number
-    uma: number[]
-  }) {
-    console.log('🏁 Starting settlement calculation with settings:', settings)
-    
+  private calculateSettlement(
+    participants: ParticipantWithPlayer[],
+    settings: {
+      initialPoints: number
+      basePoints: number
+      uma: number[]
+    }
+  ) {
+    console.log("🏁 Starting settlement calculation with settings:", settings)
+
     // 1. 順位計算（点数→上家優先）
     const sortedParticipants = participants
       .map((p, originalIndex) => ({ ...p, originalIndex }))
@@ -576,17 +614,20 @@ export class PointManager {
         return a.position - b.position
       })
 
-    console.log('🏁 Sorted participants:', sortedParticipants.map(p => ({
-      name: p.player?.name || 'Unknown',
-      points: p.currentPoints,
-      position: p.position
-    })))
+    console.log(
+      "🏁 Sorted participants:",
+      sortedParticipants.map((p) => ({
+        name: p.player?.name || "Unknown",
+        points: p.currentPoints,
+        position: p.position,
+      }))
+    )
 
     // 2. 基準点からの差分計算
     const resultsWithDiff = sortedParticipants.map((participant, index) => {
       const rank = index + 1
       const pointDiff = participant.currentPoints - settings.basePoints
-      
+
       // 3. 1000点単位での精算計算
       let roundedDiff: number
       if (pointDiff >= 0) {
@@ -598,7 +639,7 @@ export class PointManager {
       }
 
       const uma = settings.uma[index] || 0
-      
+
       // 1位以外の精算計算：精算点数 + ウマ
       let settlement: number
       if (rank === 1) {
@@ -615,44 +656,55 @@ export class PointManager {
         pointDiff,
         roundedDiff,
         uma,
-        settlement
+        settlement,
       }
     })
 
-    console.log('🏁 Results before adjustment:', resultsWithDiff)
+    console.log("🏁 Results before adjustment:", resultsWithDiff)
 
     // 4. 1位のプレイヤーの精算計算
     // 1位の精算点数 = 他のプレイヤーの精算点数の合計の符号反転
-    const othersRoundedDiffTotal = resultsWithDiff.slice(1).reduce((sum, r) => sum + r.roundedDiff, 0)
+    const othersRoundedDiffTotal = resultsWithDiff
+      .slice(1)
+      .reduce((sum, r) => sum + r.roundedDiff, 0)
     const firstPlaceRoundedDiff = -othersRoundedDiffTotal
-    
+
     // 1位の精算点数を更新
     resultsWithDiff[0].roundedDiff = firstPlaceRoundedDiff
-    
+
     const firstPlaceUma = resultsWithDiff[0].uma
     resultsWithDiff[0].settlement = firstPlaceRoundedDiff + firstPlaceUma
-    
+
     console.log(`🏁 Others rounded diff total: ${othersRoundedDiffTotal}`)
-    console.log(`🏁 First place rounded diff: ${firstPlaceRoundedDiff} (= -${othersRoundedDiffTotal})`)
+    console.log(
+      `🏁 First place rounded diff: ${firstPlaceRoundedDiff} (= -${othersRoundedDiffTotal})`
+    )
     console.log(`🏁 First place uma: ${firstPlaceUma}`)
-    console.log(`🏁 First place settlement: ${firstPlaceRoundedDiff} + ${firstPlaceUma} = ${resultsWithDiff[0].settlement}`)
-    
+    console.log(
+      `🏁 First place settlement: ${firstPlaceRoundedDiff} + ${firstPlaceUma} = ${resultsWithDiff[0].settlement}`
+    )
+
     // 最終チェック：ゼロサム確認
     const finalTotal = resultsWithDiff.reduce((sum, r) => sum + r.settlement, 0)
     console.log(`🏁 Final total check (should be 0): ${finalTotal}`)
 
-    console.log('🏁 Final results:', resultsWithDiff)
+    console.log("🏁 Final results:", resultsWithDiff)
     return resultsWithDiff
   }
 
   /**
    * 最終結果をデータベースに保存
    */
-  private async saveFinalResults(results: SettlementResult[], participants: ParticipantWithPlayer[]) {
+  private async saveFinalResults(
+    results: SettlementResult[],
+    participants: ParticipantWithPlayer[]
+  ) {
     // 各参加者の最終結果を更新
     for (const result of results) {
-      const participant = participants.find(p => p.playerId === result.playerId)
-      
+      const participant = participants.find(
+        (p) => p.playerId === result.playerId
+      )
+
       if (participant) {
         console.log(`🏁 Updating participant ${result.playerId}:`, result)
         await prisma.gameParticipant.update({
@@ -661,8 +713,8 @@ export class PointManager {
             finalPoints: result.finalPoints,
             finalRank: result.rank,
             uma: result.uma,
-            settlement: result.settlement
-          }
+            settlement: result.settlement,
+          },
         })
       }
     }
@@ -672,11 +724,11 @@ export class PointManager {
       where: { gameId: this.gameId },
       create: {
         gameId: this.gameId,
-        results: JSON.parse(JSON.stringify(results))
+        results: JSON.parse(JSON.stringify(results)),
       },
       update: {
-        results: JSON.parse(JSON.stringify(results))
-      }
+        results: JSON.parse(JSON.stringify(results)),
+      },
     })
   }
 
@@ -686,15 +738,15 @@ export class PointManager {
   private async updatePoints(
     playerId: string,
     newPoints: number,
-    type: 'WIN' | 'LOSE' | 'RIICHI' | 'HONBA' | 'KYOTAKU',
+    type: "WIN" | "LOSE" | "RIICHI" | "HONBA" | "KYOTAKU",
     description: string
   ): Promise<void> {
     const participant = await prisma.gameParticipant.findFirst({
-      where: { gameId: this.gameId, playerId }
+      where: { gameId: this.gameId, playerId },
     })
 
     if (!participant) {
-      throw new Error('Participant not found')
+      throw new Error("Participant not found")
     }
 
     const pointChange = newPoints - participant.currentPoints
@@ -702,19 +754,18 @@ export class PointManager {
     // 点数更新
     await prisma.gameParticipant.update({
       where: { id: participant.id },
-      data: { currentPoints: newPoints }
+      data: { currentPoints: newPoints },
     })
 
     // 取引記録
     await this.recordTransaction({
-      fromPlayerId: type === 'WIN' ? undefined : playerId,
-      toPlayerId: type === 'WIN' ? playerId : 'GAME',
+      fromPlayerId: type === "WIN" ? undefined : playerId,
+      toPlayerId: type === "WIN" ? playerId : "GAME",
       amount: Math.abs(pointChange),
       type,
-      description
+      description,
     })
   }
-
 
   /**
    * 取引記録
@@ -723,11 +774,11 @@ export class PointManager {
     fromPlayerId?: string
     toPlayerId: string
     amount: number
-    type: 'WIN' | 'LOSE' | 'RIICHI' | 'HONBA' | 'KYOTAKU'
+    type: "WIN" | "LOSE" | "RIICHI" | "HONBA" | "KYOTAKU"
     description: string
   }): Promise<void> {
     // TODO: 点数履歴テーブルが必要な場合は実装
-    console.log('Transaction recorded:', data)
+    console.log("Transaction recorded:", data)
   }
 
   /**
@@ -736,7 +787,7 @@ export class PointManager {
   private async getParticipants() {
     return await prisma.gameParticipant.findMany({
       where: { gameId: this.gameId },
-      orderBy: { position: 'asc' }
+      orderBy: { position: "asc" },
     })
   }
 
@@ -747,17 +798,17 @@ export class PointManager {
     const participants = await this.getParticipants()
     const game = await prisma.game.findUnique({
       where: { id: this.gameId },
-      include: { settings: true }
+      include: { settings: true },
     })
 
     if (!game) return { shouldEnd: false }
 
     // 1. トビ判定（誰かが0点以下）
-    const tobiPlayer = participants.find(p => p.currentPoints <= 0)
+    const tobiPlayer = participants.find((p) => p.currentPoints <= 0)
     if (tobiPlayer && game.settings?.hasTobi) {
-      return { 
-        shouldEnd: true, 
-        reason: `トビ終了: ${tobiPlayer.playerId}がマイナス点数` 
+      return {
+        shouldEnd: true,
+        reason: `トビ終了: ${tobiPlayer.playerId}がマイナス点数`,
       }
     }
 
@@ -773,111 +824,137 @@ export class PointManager {
   /**
    * 局数による終了判定
    */
-  private checkRoundEnd(game: GameWithSettings, gameType?: string): { shouldEnd: boolean; reason?: string } {
+  private checkRoundEnd(
+    game: GameWithSettings,
+    gameType?: string
+  ): { shouldEnd: boolean; reason?: string } {
     const { currentRound, currentOya } = game
-    
-    console.log(`🎯 Game end check: gameType=${gameType}, currentRound=${currentRound}, currentOya=${currentOya}`)
 
-    if (gameType === 'TONPUU') {
+    console.log(
+      `🎯 Game end check: gameType=${gameType}, currentRound=${currentRound}, currentOya=${currentOya}`
+    )
+
+    if (gameType === "TONPUU") {
       // 東風戦: 東4局終了条件
-      console.log(`🎯 TONPUU check: currentRound=${currentRound} > 4?`, currentRound > 4)
+      console.log(
+        `🎯 TONPUU check: currentRound=${currentRound} > 4?`,
+        currentRound > 4
+      )
       if (currentRound > 4) {
         // 東4局が終了した後（親ローテーション後にround=5になった時点）
         console.log(`🎯 TONPUU ending: round ${currentRound}`)
-        return { 
-          shouldEnd: true, 
-          reason: '東風戦終了: 東4局完了' 
+        return {
+          shouldEnd: true,
+          reason: "東風戦終了: 東4局完了",
         }
       }
-    } else if (gameType === 'HANCHAN') {
+    } else if (gameType === "HANCHAN") {
       // 半荘戦: 南4局終了条件
-      console.log(`🎯 HANCHAN check: currentRound=${currentRound} > 8?`, currentRound > 8)
+      console.log(
+        `🎯 HANCHAN check: currentRound=${currentRound} > 8?`,
+        currentRound > 8
+      )
       if (currentRound > 8) {
         // 南4局が終了した後（親ローテーション後にround=9になった時点）
         console.log(`🎯 HANCHAN ending: round ${currentRound}`)
-        return { 
-          shouldEnd: true, 
-          reason: '半荘戦終了: 南4局完了' 
+        return {
+          shouldEnd: true,
+          reason: "半荘戦終了: 南4局完了",
         }
       }
     } else {
       console.log(`🎯 Unknown gameType: ${gameType}`)
     }
 
-    console.log(`🎯 Game continues: gameType=${gameType}, round=${currentRound}`)
+    console.log(
+      `🎯 Game continues: gameType=${gameType}, round=${currentRound}`
+    )
     return { shouldEnd: false }
   }
 
   /**
    * 強制終了処理
    */
-  async forceEndGame(reason: string = '強制終了'): Promise<void> {
-    console.log('🏁 forceEndGame called with reason:', reason, 'gameId:', this.gameId)
+  async forceEndGame(reason: string = "強制終了"): Promise<void> {
+    console.log(
+      "🏁 forceEndGame called with reason:",
+      reason,
+      "gameId:",
+      this.gameId
+    )
 
     await prisma.$transaction(async (tx) => {
       await tx.game.update({
         where: { id: this.gameId },
         data: {
-          status: 'FINISHED',
-          endedAt: new Date()
-        }
+          status: "FINISHED",
+          endedAt: new Date(),
+        },
       })
 
       const game = await tx.game.findUnique({
         where: { id: this.gameId },
-        select: { sessionId: true }
+        select: { sessionId: true },
       })
 
       if (game?.sessionId) {
         await tx.gameSession.update({
           where: { id: game.sessionId },
           data: {
-            status: 'FINISHED',
-            endedAt: new Date()
-          }
+            status: "FINISHED",
+            endedAt: new Date(),
+          },
         })
       }
 
       await tx.gameEvent.create({
         data: {
           gameId: this.gameId,
-          eventType: 'GAME_END',
+          eventType: "GAME_END",
           eventData: {
             reason,
-            forcedEnd: true
+            forcedEnd: true,
           },
           round: 0,
-          honba: 0
-        }
+          honba: 0,
+        },
       })
     })
 
-    console.log('🏁 Game status updated to FINISHED in forceEndGame, calling calculateFinalResults')
-    
+    console.log(
+      "🏁 Game status updated to FINISHED in forceEndGame, calling calculateFinalResults"
+    )
+
     // 最終結果計算
     await this.calculateFinalResults()
 
-    console.log('🏁 calculateFinalResults completed in forceEndGame, updating session statistics')
-    
+    console.log(
+      "🏁 calculateFinalResults completed in forceEndGame, updating session statistics"
+    )
+
     // セッション統計更新
     await this.updateSessionStatistics()
 
-    console.log('🏁 Session statistics updated in forceEndGame')
+    console.log("🏁 Session statistics updated in forceEndGame")
   }
 
   /**
    * セッション統計更新
    */
   async updateSessionStatistics(): Promise<void> {
-    console.log('📊 Updating session statistics for gameId:', this.gameId)
-    
+    console.log("📊 Updating session statistics for gameId:", this.gameId)
+
     // 既にこのゲームの統計が更新されているかチェック
     const existingGameResult = await prisma.gameResult.findUnique({
-      where: { gameId: this.gameId }
+      where: { gameId: this.gameId },
     })
 
     if (!existingGameResult) {
-      console.log('📊 No game result found for gameId:', this.gameId, 'skipping session statistics update')
+      console.log(
+        "📊 No game result found for gameId:",
+        this.gameId,
+        "skipping session statistics update"
+      )
       return
     }
 
@@ -886,12 +963,14 @@ export class PointManager {
       where: { id: this.gameId },
       include: {
         participants: true,
-        session: true
-      }
+        session: true,
+      },
     })
 
     if (!game || !game.sessionId) {
-      console.log('📊 No session found for game, skipping session statistics update')
+      console.log(
+        "📊 No session found for game, skipping session statistics update"
+      )
       return
     }
 
@@ -899,47 +978,73 @@ export class PointManager {
     const completedGamesInSession = await prisma.game.count({
       where: {
         sessionId: game.sessionId,
-        status: 'FINISHED'
-      }
+        status: "FINISHED",
+      },
     })
 
     // 各参加者の現在の統計を確認して、このゲームが既に含まれているかをチェック
     const sessionParticipants = await prisma.sessionParticipant.findMany({
       where: {
-        sessionId: game.sessionId
-      }
+        sessionId: game.sessionId,
+      },
     })
 
     // 統計の一貫性チェック：各参加者のtotalGamesが実際のゲーム数と一致するかチェック
-    const shouldUpdateStatistics = sessionParticipants.length === 0 || 
-      sessionParticipants.some(sp => sp.totalGames < completedGamesInSession)
+    const shouldUpdateStatistics =
+      sessionParticipants.length === 0 ||
+      sessionParticipants.some((sp) => sp.totalGames < completedGamesInSession)
 
     if (!shouldUpdateStatistics) {
-      console.log('📊 Session statistics already up to date for gameId:', this.gameId)
+      console.log(
+        "📊 Session statistics already up to date for gameId:",
+        this.gameId
+      )
       return
     }
 
-    console.log('📊 Found session:', game.sessionId, 'updating statistics for', game.participants.length, 'participants')
+    console.log(
+      "📊 Found session:",
+      game.sessionId,
+      "updating statistics for",
+      game.participants.length,
+      "participants"
+    )
 
     // 各参加者のセッション統計を更新
     for (const participant of game.participants) {
       const finalRank = participant.finalRank
       const settlement = participant.settlement || 0
 
-      console.log('📊 Updating participant:', participant.playerId, 'rank:', finalRank, 'settlement:', settlement)
-      
+      console.log(
+        "📊 Updating participant:",
+        participant.playerId,
+        "rank:",
+        finalRank,
+        "settlement:",
+        settlement
+      )
+
       if (finalRank === null || finalRank === undefined) {
-        console.log('📊 Warning: finalRank is null for participant:', participant.playerId, 'skipping statistics update')
+        console.log(
+          "📊 Warning: finalRank is null for participant:",
+          participant.playerId,
+          "skipping statistics update"
+        )
         continue
       }
 
       // 現在の統計を取得
-      const existingStats = sessionParticipants.find(sp => sp.playerId === participant.playerId)
+      const existingStats = sessionParticipants.find(
+        (sp) => sp.playerId === participant.playerId
+      )
       const currentGamesCount = existingStats?.totalGames || 0
 
       // このゲームが既に統計に含まれているかチェック
       if (currentGamesCount >= completedGamesInSession) {
-        console.log('📊 Statistics already updated for participant:', participant.playerId)
+        console.log(
+          "📊 Statistics already updated for participant:",
+          participant.playerId
+        )
         continue
       }
 
@@ -948,8 +1053,8 @@ export class PointManager {
         where: {
           sessionId_playerId: {
             sessionId: game.sessionId,
-            playerId: participant.playerId
-          }
+            playerId: participant.playerId,
+          },
         },
         create: {
           sessionId: game.sessionId,
@@ -960,7 +1065,7 @@ export class PointManager {
           firstPlace: finalRank === 1 ? 1 : 0,
           secondPlace: finalRank === 2 ? 1 : 0,
           thirdPlace: finalRank === 3 ? 1 : 0,
-          fourthPlace: finalRank === 4 ? 1 : 0
+          fourthPlace: finalRank === 4 ? 1 : 0,
         },
         update: {
           totalGames: { increment: 1 },
@@ -968,14 +1073,14 @@ export class PointManager {
           firstPlace: finalRank === 1 ? { increment: 1 } : undefined,
           secondPlace: finalRank === 2 ? { increment: 1 } : undefined,
           thirdPlace: finalRank === 3 ? { increment: 1 } : undefined,
-          fourthPlace: finalRank === 4 ? { increment: 1 } : undefined
-        }
+          fourthPlace: finalRank === 4 ? { increment: 1 } : undefined,
+        },
       })
 
-      console.log('📊 Updated session participant:', sessionParticipant.id)
+      console.log("📊 Updated session participant:", sessionParticipant.id)
     }
 
-    console.log('📊 Session statistics update completed')
+    console.log("📊 Session statistics update completed")
   }
 
   /**
@@ -992,8 +1097,8 @@ export class PointManager {
         currentOya: true,
         honba: true,
         kyotaku: true,
-        sessionId: true
-      }
+        sessionId: true,
+      },
     })
     return game
   }
@@ -1007,30 +1112,33 @@ export class PointManager {
       include: {
         participants: {
           include: { player: true },
-          orderBy: { position: 'asc' }
-        }
-      }
+          orderBy: { position: "asc" },
+        },
+      },
     })
 
     if (!game) {
-      throw new Error('Game not found')
+      throw new Error("Game not found")
     }
 
     return {
       gameId: game.id,
-      players: game.participants.map(p => ({
+      players: game.participants.map((p) => ({
         playerId: p.playerId,
         name: p.player.name,
         position: p.position,
         points: p.currentPoints,
         isReach: p.isReach,
-        isConnected: true // TODO: セッション管理
+        isConnected: true, // TODO: セッション管理
       })),
       currentRound: game.currentRound,
       currentOya: game.currentOya,
       honba: game.honba,
       kyotaku: game.kyotaku,
-      gamePhase: game.status.toLowerCase() as 'waiting' | 'playing' | 'finished'
+      gamePhase: game.status.toLowerCase() as
+        | "waiting"
+        | "playing"
+        | "finished",
     }
   }
 }

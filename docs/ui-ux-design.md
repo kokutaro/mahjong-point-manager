@@ -91,26 +91,26 @@ const PlayerLayout = () => (
 // アクションボタン群
 const ActionPanel = () => {
   const { canTsumo, canRon, canReach } = useGameActions();
-  
+
   return (
     <div className="fixed bottom-0 left-0 right-0 p-4 bg-white shadow-lg">
       <div className="grid grid-cols-3 gap-2 max-w-md mx-auto">
-        <ActionButton 
-          variant="primary" 
+        <ActionButton
+          variant="primary"
           disabled={!canTsumo}
           onClick={onTsumo}
         >
           ツモ
         </ActionButton>
-        <ActionButton 
-          variant="primary" 
+        <ActionButton
+          variant="primary"
           disabled={!canRon}
           onClick={onRon}
         >
           ロン
         </ActionButton>
-        <ActionButton 
-          variant="secondary" 
+        <ActionButton
+          variant="secondary"
           disabled={!canReach}
           onClick={onReach}
         >
@@ -128,12 +128,12 @@ const ActionPanel = () => {
 
 ```typescript
 const breakpoints = {
-  sm: '640px',   // スマートフォン縦
-  md: '768px',   // タブレット縦
-  lg: '1024px',  // タブレット横・小型PC
-  xl: '1280px',  // デスクトップ
-  '2xl': '1536px' // 大型デスクトップ
-};
+  sm: "640px", // スマートフォン縦
+  md: "768px", // タブレット縦
+  lg: "1024px", // タブレット横・小型PC
+  xl: "1280px", // デスクトップ
+  "2xl": "1536px", // 大型デスクトップ
+}
 ```
 
 ### 画面サイズ別レイアウト
@@ -149,7 +149,7 @@ const breakpoints = {
   .player-layout {
     @apply grid-cols-2;
   }
-  
+
   .action-panel {
     @apply grid-cols-4;
   }
@@ -160,7 +160,7 @@ const breakpoints = {
   .game-board {
     @apply flex flex-row;
   }
-  
+
   .player-layout {
     @apply relative h-[500px] w-[500px];
   }
@@ -175,7 +175,7 @@ const breakpoints = {
 1. ツモ/ロンボタンタップ
    ↓
 2. 点数入力モーダル表示
-   ↓ 
+   ↓
 3. 翻数・符数選択
    ↓
 4. 点数計算プレビュー表示
@@ -194,7 +194,7 @@ const ScoreInputModal = () => {
   const [han, setHan] = useState(1);
   const [fu, setFu] = useState(30);
   const scoreResult = useScoreCalculation(han, fu);
-  
+
   return (
     <Modal>
       <div className="space-y-4">
@@ -222,23 +222,23 @@ const ScoreInputModal = () => {
 ```typescript
 // リアルタイム状態管理
 const useRealtimeGameState = (gameId: string) => {
-  const [gameState, setGameState] = useState<GameState | null>(null);
-  const socket = useSocket();
-  
+  const [gameState, setGameState] = useState<GameState | null>(null)
+  const socket = useSocket()
+
   useEffect(() => {
-    socket.on('game-state-updated', setGameState);
-    socket.on('points-updated', updatePoints);
-    socket.on('round-updated', updateRound);
-    
+    socket.on("game-state-updated", setGameState)
+    socket.on("points-updated", updatePoints)
+    socket.on("round-updated", updateRound)
+
     return () => {
-      socket.off('game-state-updated');
-      socket.off('points-updated');
-      socket.off('round-updated');
-    };
-  }, [socket]);
-  
-  return gameState;
-};
+      socket.off("game-state-updated")
+      socket.off("points-updated")
+      socket.off("round-updated")
+    }
+  }, [socket])
+
+  return gameState
+}
 ```
 
 ### アニメーション
@@ -247,7 +247,7 @@ const useRealtimeGameState = (gameId: string) => {
 // 点数変動アニメーション
 const PointsDisplay = ({ points, previousPoints }) => {
   const difference = points - previousPoints;
-  
+
   return (
     <div className="relative">
       <span className="text-2xl font-bold">
@@ -295,22 +295,22 @@ const useKeyboardShortcuts = () => {
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       switch (e.key) {
-        case 't': // ツモ
-          if (canTsumo) onTsumo();
-          break;
-        case 'r': // ロン
-          if (canRon) onRon();
-          break;
-        case 'l': // リーチ
-          if (canReach) onReach();
-          break;
+        case "t": // ツモ
+          if (canTsumo) onTsumo()
+          break
+        case "r": // ロン
+          if (canRon) onRon()
+          break
+        case "l": // リーチ
+          if (canReach) onReach()
+          break
       }
-    };
-    
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [canTsumo, canRon, canReach]);
-};
+    }
+
+    window.addEventListener("keydown", handleKeyPress)
+    return () => window.removeEventListener("keydown", handleKeyPress)
+  }, [canTsumo, canRon, canReach])
+}
 ```
 
 ## エラー表示
@@ -321,7 +321,7 @@ const useKeyboardShortcuts = () => {
 const ErrorBoundary = ({ children }) => {
   const [hasError, setHasError] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  
+
   if (hasError) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">
@@ -339,7 +339,7 @@ const ErrorBoundary = ({ children }) => {
       </div>
     );
   }
-  
+
   return children;
 };
 ```
@@ -349,9 +349,9 @@ const ErrorBoundary = ({ children }) => {
 ```typescript
 const ConnectionStatus = () => {
   const { isConnected, isReconnecting } = useSocket();
-  
+
   if (isConnected) return null;
-  
+
   return (
     <div className="fixed top-0 left-0 right-0 bg-red-500 text-white p-2 text-center">
       {isReconnecting ? '再接続中...' : '接続が切断されました'}
@@ -409,39 +409,39 @@ const GameBoard = () => (
 const theme = {
   colors: {
     primary: {
-      50: '#f0f9ff',
-      500: '#3b82f6',
-      600: '#2563eb',
-      700: '#1d4ed8'
+      50: "#f0f9ff",
+      500: "#3b82f6",
+      600: "#2563eb",
+      700: "#1d4ed8",
     },
-    success: '#10b981',
-    warning: '#f59e0b',
-    error: '#ef4444',
+    success: "#10b981",
+    warning: "#f59e0b",
+    error: "#ef4444",
     mahjong: {
-      table: '#0f5132',    // 雀卓の緑
-      tiles: '#f8f9fa',     // 牌の白
-      reach: '#dc3545'      // リーチの赤
-    }
-  }
-};
+      table: "#0f5132", // 雀卓の緑
+      tiles: "#f8f9fa", // 牌の白
+      reach: "#dc3545", // リーチの赤
+    },
+  },
+}
 ```
 
 ### ダークモード対応
 
 ```typescript
 const useDarkMode = () => {
-  const [isDark, setIsDark] = useState(false);
-  
+  const [isDark, setIsDark] = useState(false)
+
   useEffect(() => {
-    const saved = localStorage.getItem('dark-mode');
-    setIsDark(saved === 'true');
-  }, []);
-  
+    const saved = localStorage.getItem("dark-mode")
+    setIsDark(saved === "true")
+  }, [])
+
   const toggle = () => {
-    setIsDark(!isDark);
-    localStorage.setItem('dark-mode', (!isDark).toString());
-  };
-  
-  return { isDark, toggle };
-};
+    setIsDark(!isDark)
+    localStorage.setItem("dark-mode", (!isDark).toString())
+  }
+
+  return { isDark, toggle }
+}
 ```

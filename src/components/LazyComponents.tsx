@@ -1,13 +1,13 @@
-'use client'
+"use client"
 
-import { lazy, Suspense } from 'react'
-import LoadingSpinner from './LoadingSpinner'
+import { lazy, Suspense } from "react"
+import LoadingSpinner from "./LoadingSpinner"
 
 // Lazy load heavy components to improve initial bundle size
-export const LazyGameResult = lazy(() => import('./GameResult'))
-export const LazyQRCodeModal = lazy(() => import('./QRCodeModal'))
-export const LazyPointAnimation = lazy(() => import('./PointAnimation'))
-export const LazyScoreInputForm = lazy(() => import('./ScoreInputForm'))
+export const LazyGameResult = lazy(() => import("./GameResult"))
+export const LazyQRCodeModal = lazy(() => import("./QRCodeModal"))
+export const LazyPointAnimation = lazy(() => import("./PointAnimation"))
+export const LazyScoreInputForm = lazy(() => import("./ScoreInputForm"))
 
 // HOC for wrapping lazy components with Suspense
 export function withSuspense<T extends object>(

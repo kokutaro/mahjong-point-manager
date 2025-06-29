@@ -1,15 +1,15 @@
 /**
  * 統一バリデーションスキーマ
- * 
+ *
  * DRY原則に基づき、マルチプレイとソロプレイのバリデーションを統一。
  * 共通基底スキーマから派生した型安全な設計。
  */
 
 // ===== 共通基底スキーマ =====
-export * from './common'
+export * from "./common"
 
 // ===== マルチプレイ拡張スキーマ =====
-export * from './multi'
+export * from "./multi"
 
 // ===== ソロプレイ拡張スキーマ =====
 export {
@@ -36,7 +36,7 @@ export {
   PLAYER_POSITIONS,
   SOLO_UMA_SETTINGS,
   // 関数のみエクスポート（型は別途）
-} from './solo'
+} from "./solo"
 
 // 型のエクスポート（isolatedModules対応）
 export type {
@@ -52,27 +52,27 @@ export type {
   UpdateSoloPlayerInput,
   SoloGameStateResponse,
   SoloScoreResultResponse,
-  SoloGameResultResponse
-} from './solo'
+  SoloGameResultResponse,
+} from "./solo"
 
 // ===== 統一バリデーション関数 =====
-import { z } from 'zod'
-import { 
-  GameMode, 
+import { z } from "zod"
+import {
+  GameMode,
   PlayerIdentifier,
   validateHanFu as commonValidateHanFu,
-  validatePlayerPositions as commonValidatePlayerPositions
-} from './common'
-import { 
+  validatePlayerPositions as commonValidatePlayerPositions,
+} from "./common"
+import {
   MultiScoreCalculationSchema,
   MultiRyukyokuSchema,
-  MultiRiichiSchema 
-} from './multi'
-import { 
+  MultiRiichiSchema,
+} from "./multi"
+import {
   SoloScoreCalculationSchema,
   SoloRyukyokuSchema,
-  SoloRiichiSchema 
-} from './solo'
+  SoloRiichiSchema,
+} from "./solo"
 
 // ===== 統一スキーマファクトリー =====
 
@@ -80,8 +80,8 @@ import {
  * ゲームモードに応じた点数計算スキーマを取得
  */
 export function getScoreCalculationSchema(gameMode: GameMode) {
-  return gameMode === 'MULTIPLAYER' 
-    ? MultiScoreCalculationSchema 
+  return gameMode === "MULTIPLAYER"
+    ? MultiScoreCalculationSchema
     : SoloScoreCalculationSchema
 }
 
@@ -89,18 +89,14 @@ export function getScoreCalculationSchema(gameMode: GameMode) {
  * ゲームモードに応じた流局スキーマを取得
  */
 export function getRyukyokuSchema(gameMode: GameMode) {
-  return gameMode === 'MULTIPLAYER'
-    ? MultiRyukyokuSchema
-    : SoloRyukyokuSchema
+  return gameMode === "MULTIPLAYER" ? MultiRyukyokuSchema : SoloRyukyokuSchema
 }
 
 /**
  * ゲームモードに応じたリーチスキーマを取得
  */
 export function getRiichiSchema(gameMode: GameMode) {
-  return gameMode === 'MULTIPLAYER'
-    ? MultiRiichiSchema
-    : SoloRiichiSchema
+  return gameMode === "MULTIPLAYER" ? MultiRiichiSchema : SoloRiichiSchema
 }
 
 // ===== 統一バリデーション関数 =====
@@ -144,22 +140,26 @@ export const validatePlayerPositions = commonValidatePlayerPositions
 /**
  * プレイヤー識別子がマルチプレイ形式（UUID）かチェック
  */
-export function isMultiPlayerIdentifier(identifier: PlayerIdentifier): identifier is string {
-  return typeof identifier === 'string'
+export function isMultiPlayerIdentifier(
+  identifier: PlayerIdentifier
+): identifier is string {
+  return typeof identifier === "string"
 }
 
 /**
  * プレイヤー識別子がソロプレイ形式（位置番号）かチェック
  */
-export function isSoloPlayerIdentifier(identifier: PlayerIdentifier): identifier is number {
-  return typeof identifier === 'number'
+export function isSoloPlayerIdentifier(
+  identifier: PlayerIdentifier
+): identifier is number {
+  return typeof identifier === "number"
 }
 
 /**
  * ゲームモードを判定
  */
 export function determineGameMode(gameData: { gameMode?: string }): GameMode {
-  return gameData.gameMode === 'SOLO' ? 'SOLO' : 'MULTIPLAYER'
+  return gameData.gameMode === "SOLO" ? "SOLO" : "MULTIPLAYER"
 }
 
 // ===== ユーティリティ型 =====
@@ -167,23 +167,23 @@ export function determineGameMode(gameData: { gameMode?: string }): GameMode {
 /**
  * 統一点数計算入力型（モード自動判定）
  */
-export type UnifiedScoreCalculationInput = 
-  | ({ gameMode: 'MULTIPLAYER' } & z.infer<typeof MultiScoreCalculationSchema>)
-  | ({ gameMode: 'SOLO' } & z.infer<typeof SoloScoreCalculationSchema>)
+export type UnifiedScoreCalculationInput =
+  | ({ gameMode: "MULTIPLAYER" } & z.infer<typeof MultiScoreCalculationSchema>)
+  | ({ gameMode: "SOLO" } & z.infer<typeof SoloScoreCalculationSchema>)
 
 /**
  * 統一流局入力型（モード自動判定）
  */
-export type UnifiedRyukyokuInput = 
-  | ({ gameMode: 'MULTIPLAYER' } & z.infer<typeof MultiRyukyokuSchema>)
-  | ({ gameMode: 'SOLO' } & z.infer<typeof SoloRyukyokuSchema>)
+export type UnifiedRyukyokuInput =
+  | ({ gameMode: "MULTIPLAYER" } & z.infer<typeof MultiRyukyokuSchema>)
+  | ({ gameMode: "SOLO" } & z.infer<typeof SoloRyukyokuSchema>)
 
 /**
  * 統一リーチ入力型（モード自動判定）
  */
-export type UnifiedRiichiInput = 
-  | ({ gameMode: 'MULTIPLAYER' } & z.infer<typeof MultiRiichiSchema>)
-  | ({ gameMode: 'SOLO' } & z.infer<typeof SoloRiichiSchema>)
+export type UnifiedRiichiInput =
+  | ({ gameMode: "MULTIPLAYER" } & z.infer<typeof MultiRiichiSchema>)
+  | ({ gameMode: "SOLO" } & z.infer<typeof SoloRiichiSchema>)
 
 // ===== レガシー互換性エイリアス =====
 
@@ -196,14 +196,14 @@ export {
   // ソロプレイ（レガシー）
   SoloScoreCalculationSchema as SoloScoreCalculationSchemaLegacy,
   SoloRyukyokuSchema as SoloRyukyokuSchemaLegacy,
-  SoloRiichiSchema as SoloReachSchemaLegacy
-} from './solo'
+  SoloRiichiSchema as SoloReachSchemaLegacy,
+} from "./solo"
 
 export {
   // 共通（レガシー）
   GameTypeSchema as GameTypeSchemaLegacy,
-  GameStatusSchema as GameStatusSchemaLegacy
-} from './common'
+  GameStatusSchema as GameStatusSchemaLegacy,
+} from "./common"
 
 // ===== 型推論ヘルパー =====
 
@@ -234,39 +234,40 @@ export type SchemaByMode = {
  * 開発時のスキーマ情報表示
  */
 export function getSchemaInfo(gameMode: GameMode) {
-  const schemas = gameMode === 'MULTIPLAYER' 
-    ? {
-        scoreCalculation: MultiScoreCalculationSchema,
-        ryukyoku: MultiRyukyokuSchema,
-        riichi: MultiRiichiSchema
-      }
-    : {
-        scoreCalculation: SoloScoreCalculationSchema,
-        ryukyoku: SoloRyukyokuSchema,
-        riichi: SoloRiichiSchema
-      }
+  const schemas =
+    gameMode === "MULTIPLAYER"
+      ? {
+          scoreCalculation: MultiScoreCalculationSchema,
+          ryukyoku: MultiRyukyokuSchema,
+          riichi: MultiRiichiSchema,
+        }
+      : {
+          scoreCalculation: SoloScoreCalculationSchema,
+          ryukyoku: SoloRyukyokuSchema,
+          riichi: SoloRiichiSchema,
+        }
 
   return {
     gameMode,
     schemas,
     schemaNames: Object.keys(schemas),
     isUnified: true,
-    version: '1.0.0'
+    version: "1.0.0",
   }
 }
 
 // ===== メタデータ =====
 
 export const UNIFIED_SCHEMA_METADATA = {
-  version: '1.0.0',
+  version: "1.0.0",
   createdAt: new Date().toISOString(),
-  description: 'マルチプレイとソロプレイの統一バリデーションスキーマ',
+  description: "マルチプレイとソロプレイの統一バリデーションスキーマ",
   features: [
-    'DRY原則に基づく重複排除',
-    '型安全性の向上',
-    '共通基底スキーマからの派生',
-    'レガシー互換性の維持',
-    '統一エラーハンドリング'
+    "DRY原則に基づく重複排除",
+    "型安全性の向上",
+    "共通基底スキーマからの派生",
+    "レガシー互換性の維持",
+    "統一エラーハンドリング",
   ],
-  supportedGameModes: ['MULTIPLAYER', 'SOLO'] as const
+  supportedGameModes: ["MULTIPLAYER", "SOLO"] as const,
 }

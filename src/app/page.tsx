@@ -1,24 +1,28 @@
-'use client'
+"use client"
 
-import WebSocketDebug, { useWebSocketDebug } from '@/components/WebSocketDebug'
-import { useAuth } from '@/contexts/AuthContext'
-import { useSessionStore, useUIStore, type GameSession } from '@/store/useAppStore'
-import { Button, Paper, Text, TextInput, Title } from '@mantine/core'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { Suspense, useEffect, useState } from 'react'
+import WebSocketDebug, { useWebSocketDebug } from "@/components/WebSocketDebug"
+import { useAuth } from "@/contexts/AuthContext"
+import {
+  useSessionStore,
+  useUIStore,
+  type GameSession,
+} from "@/store/useAppStore"
+import { Button, Paper, Text, TextInput, Title } from "@mantine/core"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Suspense, useEffect, useState } from "react"
 
 function HomePageContent() {
   const { user, isAuthenticated, login, isLoading } = useAuth()
-  const [playerName, setPlayerName] = useState('')
-  const [roomCode, setRoomCode] = useState('')
-  const [error, setError] = useState('')
+  const [playerName, setPlayerName] = useState("")
+  const [roomCode, setRoomCode] = useState("")
+  const [error, setError] = useState("")
   const [isJoining, setIsJoining] = useState(false)
   const [activeSessions, setActiveSessions] = useState<GameSession[]>([])
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirectTo = searchParams.get('redirect')
+  const redirectTo = searchParams.get("redirect")
   const { showDebug } = useWebSocketDebug()
-  
+
   // Zustand ストア
   const { setSessionMode } = useSessionStore()
   const { setError: setGlobalError } = useUIStore()
@@ -39,105 +43,108 @@ function HomePageContent() {
 
   const fetchActiveSessions = async () => {
     try {
-      const response = await fetch('/api/sessions?status=ACTIVE', {
-        credentials: 'include'
+      const response = await fetch("/api/sessions?status=ACTIVE", {
+        credentials: "include",
       })
       const data = await response.json()
       if (data.success) {
         setActiveSessions(data.data.sessions || [])
       }
     } catch (error) {
-      console.error('Failed to fetch active sessions:', error)
+      console.error("Failed to fetch active sessions:", error)
     }
   }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!playerName.trim()) {
-      setError('プレイヤー名を入力してください')
+      setError("プレイヤー名を入力してください")
       return
     }
 
     try {
       await login(playerName.trim())
-      setError('')
+      setError("")
       if (redirectTo) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         router.replace(redirectTo as string as any)
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'ログインに失敗しました')
+      setError(
+        error instanceof Error ? error.message : "ログインに失敗しました"
+      )
     }
   }
 
   const handleCreateRoom = () => {
     // セッションモードを保存してルーム作成画面へ
     setSessionMode(true)
-    router.push('/room/create')
+    router.push("/room/create")
   }
 
   const handleResumeSession = async (sessionId: string) => {
     try {
       const response = await fetch(`/api/sessions/${sessionId}/active-game`, {
-        credentials: 'include'
+        credentials: "include",
       })
       const data = await response.json()
       if (!response.ok || !data.success) {
-        throw new Error(data.error?.message || 'セッション再開に失敗しました')
+        throw new Error(data.error?.message || "セッション再開に失敗しました")
       }
       const { gameId, roomCode, status } = data.data
-      if (status === 'WAITING') {
+      if (status === "WAITING") {
         router.push(`/room/${roomCode}`)
       } else {
         router.push(`/game/${gameId}`)
       }
     } catch (err) {
       setGlobalError(
-        err instanceof Error ? err.message : 'セッション再開に失敗しました'
+        err instanceof Error ? err.message : "セッション再開に失敗しました"
       )
     }
   }
 
-
   const handleCreateSoloGame = () => {
     // 一人プレイモードの画面へ
-    router.push('/solo/create')
+    router.push("/solo/create")
   }
 
   const handleJoinRoom = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!roomCode.trim()) {
-      setError('ルームコードを入力してください')
+      setError("ルームコードを入力してください")
       return
     }
 
     try {
       setIsJoining(true)
-      setError('')
-      
-      const response = await fetch('/api/room/join', {
-        method: 'POST',
+      setError("")
+
+      const response = await fetch("/api/room/join", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           roomCode: roomCode.trim().toUpperCase(),
-          playerName: user?.name
+          playerName: user?.name,
         }),
-        credentials: 'include'
+        credentials: "include",
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error?.message || 'ルーム参加に失敗しました')
+        throw new Error(data.error?.message || "ルーム参加に失敗しました")
       }
 
       if (data.success) {
         router.push(`/room/${roomCode.trim().toUpperCase()}`)
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'ルーム参加に失敗しました')
+      setError(
+        error instanceof Error ? error.message : "ルーム参加に失敗しました"
+      )
     } finally {
       setIsJoining(false)
     }
@@ -173,7 +180,7 @@ function HomePageContent() {
               </Text>
             )}
             <Button type="submit" fullWidth mt="md" loading={isLoading}>
-              {isLoading ? '読み込み中...' : 'ゲームに参加'}
+              {isLoading ? "読み込み中..." : "ゲームに参加"}
             </Button>
           </form>
         </Paper>
@@ -189,9 +196,7 @@ function HomePageContent() {
             <h1 className="text-3xl font-bold text-gray-800 mb-2">
               麻雀点数管理
             </h1>
-            <p className="text-gray-600">
-              ようこそ、{user?.name}さん
-            </p>
+            <p className="text-gray-600">ようこそ、{user?.name}さん</p>
           </div>
 
           {/* アクティブセッション表示 */}
@@ -211,7 +216,8 @@ function HomePageContent() {
                         {session.name || `セッション #${session.sessionCode}`}
                       </h3>
                       <p className="text-sm text-yellow-600">
-                        {session.totalGames}局完了 · ホスト: {session.hostPlayerId}
+                        {session.totalGames}局完了 · ホスト:{" "}
+                        {session.hostPlayerId}
                       </p>
                     </div>
                     <div className="flex gap-2">
@@ -277,7 +283,10 @@ function HomePageContent() {
               </h2>
               <form onSubmit={handleJoinRoom} className="space-y-4">
                 <div>
-                  <label htmlFor="roomCode" className="block text-sm font-medium text-blue-700 mb-2">
+                  <label
+                    htmlFor="roomCode"
+                    className="block text-sm font-medium text-blue-700 mb-2"
+                  >
                     ルームコード
                   </label>
                   <input
@@ -288,7 +297,7 @@ function HomePageContent() {
                     className="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="6文字のコード"
                     maxLength={6}
-                    style={{ textTransform: 'uppercase' }}
+                    style={{ textTransform: "uppercase" }}
                   />
                 </div>
 
@@ -303,7 +312,7 @@ function HomePageContent() {
                   disabled={isJoining}
                   className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {isJoining ? '参加中...' : 'ルーム参加'}
+                  {isJoining ? "参加中..." : "ルーム参加"}
                 </button>
               </form>
             </div>
@@ -320,19 +329,18 @@ function HomePageContent() {
                 連続対局セッションの履歴と統計を確認
               </p>
               <button
-                onClick={() => router.push('/sessions')}
+                onClick={() => router.push("/sessions")}
                 className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors"
               >
                 セッション履歴
               </button>
             </div>
-
           </div>
 
           {/* ログアウト */}
           <div className="mt-8 text-center">
             <button
-              onClick={() => window.location.href = '/api/auth/logout'}
+              onClick={() => (window.location.href = "/api/auth/logout")}
               className="text-gray-500 hover:text-gray-700 text-sm"
             >
               ログアウト
@@ -340,7 +348,7 @@ function HomePageContent() {
           </div>
         </div>
       </div>
-      
+
       {/* WebSocketデバッグ (Ctrl+Shift+W で表示) */}
       <WebSocketDebug show={showDebug} />
     </div>
@@ -349,9 +357,13 @@ function HomePageContent() {
 
 export default function HomePage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
-      <div className="text-xl text-gray-600">読み込み中...</div>
-    </div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
+          <div className="text-xl text-gray-600">読み込み中...</div>
+        </div>
+      }
+    >
       <HomePageContent />
     </Suspense>
   )

@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from "zod"
 import {
   BaseScoreCalculationSchema,
   BaseRyukyokuSchema,
@@ -7,8 +7,8 @@ import {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   GameModeSchema,
   PlayerPositionSchema,
-  validateHanFu
-} from './common'
+  validateHanFu,
+} from "./common"
 
 // ===== マルチプレイ専用スキーマ =====
 
@@ -20,7 +20,7 @@ export type MultiPlayerId = z.infer<typeof MultiPlayerIdSchema>
 export const MultiPlayerStateSchema = BasePlayerStateSchema.extend({
   playerId: MultiPlayerIdSchema,
   name: z.string().min(1),
-  isConnected: z.boolean().default(true)
+  isConnected: z.boolean().default(true),
 })
 export type MultiPlayerState = z.infer<typeof MultiPlayerStateSchema>
 
@@ -28,11 +28,11 @@ export type MultiPlayerState = z.infer<typeof MultiPlayerStateSchema>
 export const MultiGameStateSchema = BaseGameStateSchema.extend({
   gameId: z.string().uuid(),
   roomCode: z.string().min(1),
-  gameMode: z.literal('MULTIPLAYER'),
+  gameMode: z.literal("MULTIPLAYER"),
   players: z.array(MultiPlayerStateSchema).length(4),
-  status: z.enum(['WAITING', 'STARTING', 'PLAYING', 'FINISHED', 'CANCELLED']),
+  status: z.enum(["WAITING", "STARTING", "PLAYING", "FINISHED", "CANCELLED"]),
   sessionId: z.string().uuid().optional().nullable(),
-  hostPlayerId: z.string().uuid()
+  hostPlayerId: z.string().uuid(),
 })
 export type MultiGameState = z.infer<typeof MultiGameStateSchema>
 
@@ -43,76 +43,70 @@ export const MultiScoreCalculationSchema = BaseScoreCalculationSchema.extend({
   winnerId: MultiPlayerIdSchema,
   loserId: MultiPlayerIdSchema.optional(),
   // isOyaは実行時にwinnerId から計算するため除外
-}).refine(
-  (data) => validateHanFu(data.han, data.fu),
-  {
-    message: '無効な翻符の組み合わせです',
-    path: ['han', 'fu']
-  }
-).refine(
-  (data) => !data.isTsumo || data.loserId === undefined,
-  {
-    message: 'ツモの場合は敗者IDを指定できません',
-    path: ['loserId']
-  }
-).refine(
-  (data) => data.isTsumo || data.loserId !== undefined,
-  {
-    message: 'ロンの場合は敗者IDが必要です',
-    path: ['loserId']
-  }
-).refine(
-  (data) => data.isTsumo || data.winnerId !== data.loserId,
-  {
-    message: '勝者と敗者が同じです',
-    path: ['winnerId', 'loserId']
-  }
-)
+})
+  .refine((data) => validateHanFu(data.han, data.fu), {
+    message: "無効な翻符の組み合わせです",
+    path: ["han", "fu"],
+  })
+  .refine((data) => !data.isTsumo || data.loserId === undefined, {
+    message: "ツモの場合は敗者IDを指定できません",
+    path: ["loserId"],
+  })
+  .refine((data) => data.isTsumo || data.loserId !== undefined, {
+    message: "ロンの場合は敗者IDが必要です",
+    path: ["loserId"],
+  })
+  .refine((data) => data.isTsumo || data.winnerId !== data.loserId, {
+    message: "勝者と敗者が同じです",
+    path: ["winnerId", "loserId"],
+  })
 
-export type MultiScoreCalculationInput = z.infer<typeof MultiScoreCalculationSchema>
+export type MultiScoreCalculationInput = z.infer<
+  typeof MultiScoreCalculationSchema
+>
 
 // 流局スキーマ（マルチプレイ）
 export const MultiRyukyokuSchema = BaseRyukyokuSchema.extend({
-  reason: z.string().min(1, '流局理由は必須です'),
-  tenpaiPlayers: z.array(MultiPlayerIdSchema).default([]).refine(
-    (players) => players.length <= 4,
-    {
-      message: 'テンパイ者は4人以下である必要があります'
-    }
-  )
+  reason: z.string().min(1, "流局理由は必須です"),
+  tenpaiPlayers: z
+    .array(MultiPlayerIdSchema)
+    .default([])
+    .refine((players) => players.length <= 4, {
+      message: "テンパイ者は4人以下である必要があります",
+    }),
 })
 export type MultiRyukyokuInput = z.infer<typeof MultiRyukyokuSchema>
 
 // リーチ宣言スキーマ（マルチプレイ）
 export const MultiRiichiSchema = z.object({
-  playerId: MultiPlayerIdSchema
+  playerId: MultiPlayerIdSchema,
 })
 export type MultiRiichiInput = z.infer<typeof MultiRiichiSchema>
 
 // ゲーム開始スキーマ（マルチプレイ）
 export const MultiGameStartSchema = z.object({
-  hostPlayerId: MultiPlayerIdSchema
+  hostPlayerId: MultiPlayerIdSchema,
 })
 export type MultiGameStartInput = z.infer<typeof MultiGameStartSchema>
 
 // ゲーム終了スキーマ（マルチプレイ）
 export const MultiGameEndSchema = z.object({
   hostPlayerId: MultiPlayerIdSchema,
-  reason: z.string().min(1, '終了理由は必須です')
+  reason: z.string().min(1, "終了理由は必須です"),
 })
 export type MultiGameEndInput = z.infer<typeof MultiGameEndSchema>
 
 // 再戦作成スキーマ（マルチプレイ）
 export const MultiRematchSchema = z.object({
   hostPlayerId: MultiPlayerIdSchema,
-  sessionId: z.string().uuid().optional()
+  sessionId: z.string().uuid().optional(),
 })
 export type MultiRematchInput = z.infer<typeof MultiRematchSchema>
 
 // セッション投票スキーマ（マルチプレイ）
 export const MultiSessionVoteSchema = z.object({
   playerId: MultiPlayerIdSchema,
-  voteType: z.enum(['END_SESSION', 'CONTINUE_SESSION'])
+  voteType: z.enum(["END_SESSION", "CONTINUE_SESSION"]),
 })
 export type MultiSessionVoteInput = z.infer<typeof MultiSessionVoteSchema>
 
@@ -121,8 +115,8 @@ export type MultiSessionVoteInput = z.infer<typeof MultiSessionVoteSchema>
 // ルーム作成スキーマ
 export const RoomCreateSchema = z.object({
   hostPlayerId: MultiPlayerIdSchema,
-  gameType: z.enum(['TONPUU', 'HANCHAN']).default('HANCHAN'),
-  sessionId: z.string().uuid().optional()
+  gameType: z.enum(["TONPUU", "HANCHAN"]).default("HANCHAN"),
+  sessionId: z.string().uuid().optional(),
 })
 export type RoomCreateInput = z.infer<typeof RoomCreateSchema>
 
@@ -130,19 +124,19 @@ export type RoomCreateInput = z.infer<typeof RoomCreateSchema>
 export const RoomJoinSchema = z.object({
   roomCode: z.string().min(1),
   playerId: MultiPlayerIdSchema,
-  position: PlayerPositionSchema.optional()
+  position: PlayerPositionSchema.optional(),
 })
 export type RoomJoinInput = z.infer<typeof RoomJoinSchema>
 
 // 座席順変更スキーマ
 export const SeatOrderSchema = z.object({
   hostPlayerId: MultiPlayerIdSchema,
-  playerOrder: z.array(MultiPlayerIdSchema).length(4).refine(
-    (players) => new Set(players).size === 4,
-    {
-      message: '重複するプレイヤーIDがあります'
-    }
-  )
+  playerOrder: z
+    .array(MultiPlayerIdSchema)
+    .length(4)
+    .refine((players) => new Set(players).size === 4, {
+      message: "重複するプレイヤーIDがあります",
+    }),
 })
 export type SeatOrderInput = z.infer<typeof SeatOrderSchema>
 
@@ -151,9 +145,11 @@ export type SeatOrderInput = z.infer<typeof SeatOrderSchema>
 // マルチプレイゲーム状態レスポンス
 export const MultiGameStateResponseSchema = z.object({
   success: z.literal(true),
-  data: MultiGameStateSchema
+  data: MultiGameStateSchema,
 })
-export type MultiGameStateResponse = z.infer<typeof MultiGameStateResponseSchema>
+export type MultiGameStateResponse = z.infer<
+  typeof MultiGameStateResponseSchema
+>
 
 // 点数計算結果レスポンス
 export const MultiScoreResultResponseSchema = z.object({
@@ -164,17 +160,21 @@ export const MultiScoreResultResponseSchema = z.object({
       honbaPoints: z.number(),
       kyotakuPoints: z.number(),
       totalPoints: z.number(),
-      distributions: z.array(z.object({
-        playerId: z.string(),
-        pointChange: z.number()
-      }))
+      distributions: z.array(
+        z.object({
+          playerId: z.string(),
+          pointChange: z.number(),
+        })
+      ),
     }),
     gameState: MultiGameStateSchema,
     gameEnded: z.boolean().optional(),
-    reason: z.string().optional()
-  })
+    reason: z.string().optional(),
+  }),
 })
-export type MultiScoreResultResponse = z.infer<typeof MultiScoreResultResponseSchema>
+export type MultiScoreResultResponse = z.infer<
+  typeof MultiScoreResultResponseSchema
+>
 
 // ===== バリデーション関数 =====
 
@@ -196,18 +196,21 @@ export function validateRoomCode(roomCode: string): boolean {
  * セッション投票の妥当性チェック
  */
 export function validateSessionVote(
-  playerId: string, 
+  playerId: string,
   currentVotes: Record<string, string>,
   requiredPlayers: string[]
 ): { isValid: boolean; reason?: string } {
   if (!requiredPlayers.includes(playerId)) {
-    return { isValid: false, reason: 'プレイヤーがセッションに参加していません' }
+    return {
+      isValid: false,
+      reason: "プレイヤーがセッションに参加していません",
+    }
   }
-  
+
   if (playerId in currentVotes) {
-    return { isValid: false, reason: '既に投票済みです' }
+    return { isValid: false, reason: "既に投票済みです" }
   }
-  
+
   return { isValid: true }
 }
 
@@ -219,14 +222,15 @@ export const SESSION_VOTE_TIMEOUT_MS = 30000 // 30秒
 
 // WebSocket イベント型
 export const WEBSOCKET_EVENTS = {
-  GAME_STATE_UPDATED: 'game_state_updated',
-  SCORE_UPDATED: 'score_updated',
-  RIICHI_DECLARED: 'riichi_declared',
-  RYUKYOKU: 'ryukyoku',
-  GAME_ENDED: 'game_ended',
-  PLAYER_JOINED: 'player_joined',
-  PLAYER_LEFT: 'player_left',
-  SESSION_VOTE_UPDATED: 'session_vote_updated'
+  GAME_STATE_UPDATED: "game_state_updated",
+  SCORE_UPDATED: "score_updated",
+  RIICHI_DECLARED: "riichi_declared",
+  RYUKYOKU: "ryukyoku",
+  GAME_ENDED: "game_ended",
+  PLAYER_JOINED: "player_joined",
+  PLAYER_LEFT: "player_left",
+  SESSION_VOTE_UPDATED: "session_vote_updated",
 } as const
 
-export type WebSocketEvent = typeof WEBSOCKET_EVENTS[keyof typeof WEBSOCKET_EVENTS]
+export type WebSocketEvent =
+  (typeof WEBSOCKET_EVENTS)[keyof typeof WEBSOCKET_EVENTS]

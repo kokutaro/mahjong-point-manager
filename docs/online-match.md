@@ -34,28 +34,28 @@
 
 ```typescript
 interface RoomState {
-  roomCode: string;
-  gameId: string;
-  status: 'WAITING' | 'STARTING' | 'PLAYING' | 'FINISHED';
-  createdAt: Date;
-  createdBy: string;
-  
-  participants: RoomParticipant[];
-  settings: GameSettings;
-  
+  roomCode: string
+  gameId: string
+  status: "WAITING" | "STARTING" | "PLAYING" | "FINISHED"
+  createdAt: Date
+  createdBy: string
+
+  participants: RoomParticipant[]
+  settings: GameSettings
+
   // メタ情報
-  lastActivity: Date;
-  connectionCount: number;
+  lastActivity: Date
+  connectionCount: number
 }
 
 interface RoomParticipant {
-  playerId: string;
-  playerName: string;
-  position?: number;        // 座席位置 (0-3)
-  isConnected: boolean;
-  joinedAt: Date;
-  lastSeen: Date;
-  isHost: boolean;          // ルーム作成者
+  playerId: string
+  playerName: string
+  position?: number // 座席位置 (0-3)
+  isConnected: boolean
+  joinedAt: Date
+  lastSeen: Date
+  isHost: boolean // ルーム作成者
 }
 ```
 
@@ -63,13 +63,13 @@ interface RoomParticipant {
 
 ```typescript
 interface ConnectionSession {
-  socketId: string;
-  playerId: string;
-  roomCode?: string;
-  connectedAt: Date;
-  lastHeartbeat: Date;
-  userAgent: string;
-  ipAddress: string;
+  socketId: string
+  playerId: string
+  roomCode?: string
+  connectedAt: Date
+  lastHeartbeat: Date
+  userAgent: string
+  ipAddress: string
 }
 ```
 
@@ -79,51 +79,52 @@ interface ConnectionSession {
 
 ```typescript
 export class SocketService {
-  private io: Server;
-  private roomManager: RoomManager;
-  private sessionManager: SessionManager;
-  
+  private io: Server
+  private roomManager: RoomManager
+  private sessionManager: SessionManager
+
   initializeSocket(server: http.Server) {
     this.io = new Server(server, {
       cors: { origin: "*" },
-      transports: ['websocket', 'polling']
-    });
-    
-    this.io.use(this.authMiddleware.bind(this));
-    this.io.on('connection', this.handleConnection.bind(this));
+      transports: ["websocket", "polling"],
+    })
+
+    this.io.use(this.authMiddleware.bind(this))
+    this.io.on("connection", this.handleConnection.bind(this))
   }
-  
+
   private async handleConnection(socket: Socket) {
-    const session = await this.sessionManager.createSession(socket);
-    
-    socket.on('join-room', (data) => this.handleJoinRoom(socket, data));
-    socket.on('leave-room', () => this.handleLeaveRoom(socket));
-    socket.on('game-action', (data) => this.handleGameAction(socket, data));
-    socket.on('heartbeat', () => this.handleHeartbeat(socket));
-    socket.on('disconnect', () => this.handleDisconnect(socket));
+    const session = await this.sessionManager.createSession(socket)
+
+    socket.on("join-room", (data) => this.handleJoinRoom(socket, data))
+    socket.on("leave-room", () => this.handleLeaveRoom(socket))
+    socket.on("game-action", (data) => this.handleGameAction(socket, data))
+    socket.on("heartbeat", () => this.handleHeartbeat(socket))
+    socket.on("disconnect", () => this.handleDisconnect(socket))
   }
-  
+
   private async handleJoinRoom(socket: Socket, data: JoinRoomData) {
     try {
-      const room = await this.roomManager.joinRoom(data.roomCode, data.playerId);
-      
-      socket.join(data.roomCode);
-      socket.roomCode = data.roomCode;
-      
+      const room = await this.roomManager.joinRoom(data.roomCode, data.playerId)
+
+      socket.join(data.roomCode)
+      socket.roomCode = data.roomCode
+
       // 参加成功を通知
-      socket.emit('room-joined', {
+      socket.emit("room-joined", {
         room,
-        yourPosition: room.participants.find(p => p.playerId === data.playerId)?.position
-      });
-      
+        yourPosition: room.participants.find(
+          (p) => p.playerId === data.playerId
+        )?.position,
+      })
+
       // 他の参加者に通知
-      socket.to(data.roomCode).emit('room-updated', { room });
-      
+      socket.to(data.roomCode).emit("room-updated", { room })
     } catch (error) {
-      socket.emit('join-error', {
+      socket.emit("join-error", {
         code: error.code,
-        message: error.message
-      });
+        message: error.message,
+      })
     }
   }
 }
@@ -133,50 +134,57 @@ export class SocketService {
 
 ```typescript
 export class RoomManager {
-  private rooms = new Map<string, RoomState>();
-  
-  async createRoom(creatorId: string, settings: GameSettings): Promise<RoomState> {
-    const roomCode = this.generateRoomCode();
-    const game = await this.gameService.createGame(settings, creatorId);
-    
+  private rooms = new Map<string, RoomState>()
+
+  async createRoom(
+    creatorId: string,
+    settings: GameSettings
+  ): Promise<RoomState> {
+    const roomCode = this.generateRoomCode()
+    const game = await this.gameService.createGame(settings, creatorId)
+
     const room: RoomState = {
       roomCode,
       gameId: game.id,
-      status: 'WAITING',
+      status: "WAITING",
       createdAt: new Date(),
       createdBy: creatorId,
-      participants: [{
-        playerId: creatorId,
-        playerName: await this.getPlayerName(creatorId),
-        isConnected: true,
-        joinedAt: new Date(),
-        lastSeen: new Date(),
-        isHost: true
-      }],
+      participants: [
+        {
+          playerId: creatorId,
+          playerName: await this.getPlayerName(creatorId),
+          isConnected: true,
+          joinedAt: new Date(),
+          lastSeen: new Date(),
+          isHost: true,
+        },
+      ],
       settings,
       lastActivity: new Date(),
-      connectionCount: 1
-    };
-    
-    this.rooms.set(roomCode, room);
-    return room;
+      connectionCount: 1,
+    }
+
+    this.rooms.set(roomCode, room)
+    return room
   }
-  
+
   async joinRoom(roomCode: string, playerId: string): Promise<RoomState> {
-    const room = this.rooms.get(roomCode);
+    const room = this.rooms.get(roomCode)
     if (!room) {
-      throw new RoomNotFoundError(roomCode);
+      throw new RoomNotFoundError(roomCode)
     }
-    
+
     if (room.participants.length >= 4) {
-      throw new RoomFullError(roomCode);
+      throw new RoomFullError(roomCode)
     }
-    
+
     // 既存参加者の再接続チェック
-    const existingParticipant = room.participants.find(p => p.playerId === playerId);
+    const existingParticipant = room.participants.find(
+      (p) => p.playerId === playerId
+    )
     if (existingParticipant) {
-      existingParticipant.isConnected = true;
-      existingParticipant.lastSeen = new Date();
+      existingParticipant.isConnected = true
+      existingParticipant.lastSeen = new Date()
     } else {
       // 新規参加
       room.participants.push({
@@ -186,12 +194,12 @@ export class RoomManager {
         isConnected: true,
         joinedAt: new Date(),
         lastSeen: new Date(),
-        isHost: false
-      });
+        isHost: false,
+      })
     }
-    
-    room.lastActivity = new Date();
-    return room;
+
+    room.lastActivity = new Date()
+    return room
   }
 }
 ```
@@ -200,50 +208,53 @@ export class RoomManager {
 
 ```typescript
 export class SocketClient {
-  private socket: Socket | null = null;
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  
+  private socket: Socket | null = null
+  private reconnectAttempts = 0
+  private maxReconnectAttempts = 5
+
   connect(playerId: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.socket = io('/api/socket', {
+      this.socket = io("/api/socket", {
         auth: { playerId },
-        autoConnect: false
-      });
-      
-      this.socket.on('connect', () => {
-        this.reconnectAttempts = 0;
-        this.startHeartbeat();
-        resolve();
-      });
-      
-      this.socket.on('disconnect', this.handleDisconnect.bind(this));
-      this.socket.on('connect_error', this.handleConnectError.bind(this));
-      
-      this.socket.connect();
-    });
+        autoConnect: false,
+      })
+
+      this.socket.on("connect", () => {
+        this.reconnectAttempts = 0
+        this.startHeartbeat()
+        resolve()
+      })
+
+      this.socket.on("disconnect", this.handleDisconnect.bind(this))
+      this.socket.on("connect_error", this.handleConnectError.bind(this))
+
+      this.socket.connect()
+    })
   }
-  
+
   private handleDisconnect(reason: string) {
-    if (reason === 'io server disconnect') {
+    if (reason === "io server disconnect") {
       // サーバー側からの切断 - 再接続不要
-      return;
+      return
     }
-    
+
     // 自動再接続
-    this.attemptReconnect();
+    this.attemptReconnect()
   }
-  
+
   private attemptReconnect() {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      this.emit('max-reconnect-attempts');
-      return;
+      this.emit("max-reconnect-attempts")
+      return
     }
-    
-    setTimeout(() => {
-      this.reconnectAttempts++;
-      this.socket?.connect();
-    }, Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000));
+
+    setTimeout(
+      () => {
+        this.reconnectAttempts++
+        this.socket?.connect()
+      },
+      Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000)
+    )
   }
 }
 ```
@@ -293,11 +304,11 @@ export class SocketClient {
 ```typescript
 async authMiddleware(socket: Socket, next: Function) {
   const { playerId } = socket.handshake.auth;
-  
+
   if (!playerId || !await this.validatePlayer(playerId)) {
     return next(new Error('Authentication failed'));
   }
-  
+
   socket.playerId = playerId;
   next();
 }

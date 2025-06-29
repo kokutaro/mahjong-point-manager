@@ -1,8 +1,8 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
-import { GamePlayer } from '@/hooks/useSocket'
-import { getPositionName } from '@/lib/utils'
+import { useState, useEffect } from "react"
+import { GamePlayer } from "@/hooks/useSocket"
+import { getPositionName } from "@/lib/utils"
 
 interface PointChange {
   playerId: string
@@ -17,16 +17,25 @@ interface PointAnimationProps {
   onComplete: () => void
 }
 
-export default function PointAnimation({ players, pointChanges, dealerPosition, onComplete }: PointAnimationProps) {
-  const [currentPoints, setCurrentPoints] = useState<{ [playerId: string]: number }>({})
-  const [animationPhase, setAnimationPhase] = useState<'fadeIn' | 'counting' | 'fadeOut'>('fadeIn')
+export default function PointAnimation({
+  players,
+  pointChanges,
+  dealerPosition,
+  onComplete,
+}: PointAnimationProps) {
+  const [currentPoints, setCurrentPoints] = useState<{
+    [playerId: string]: number
+  }>({})
+  const [animationPhase, setAnimationPhase] = useState<
+    "fadeIn" | "counting" | "fadeOut"
+  >("fadeIn")
 
   useEffect(() => {
-    console.log('PointAnimation component mounted', { players, pointChanges })
+    console.log("PointAnimation component mounted", { players, pointChanges })
     // 初期点数を設定（変更前の点数）
     const initialPoints: { [playerId: string]: number } = {}
-    players.forEach(player => {
-      const change = pointChanges.find(pc => pc.playerId === player.playerId)
+    players.forEach((player) => {
+      const change = pointChanges.find((pc) => pc.playerId === player.playerId)
       if (change && change.change !== 0) {
         // 変更があった場合は変更前の点数を設定
         initialPoints[player.playerId] = change.newPoints - change.change
@@ -39,14 +48,14 @@ export default function PointAnimation({ players, pointChanges, dealerPosition, 
 
     // アニメーション開始
     const timeline = async () => {
-      console.log('Starting animation timeline')
+      console.log("Starting animation timeline")
       // フェーズ1: フェードイン (200ms)
-      setAnimationPhase('fadeIn')
-      await new Promise(resolve => setTimeout(resolve, 200))
+      setAnimationPhase("fadeIn")
+      await new Promise((resolve) => setTimeout(resolve, 200))
 
       // フェーズ2: カウントアップ/ダウン (800ms)
-      setAnimationPhase('counting')
-      
+      setAnimationPhase("counting")
+
       // カウントアップアニメーション
       const animationDuration = 800
       const frameRate = 60
@@ -58,11 +67,12 @@ export default function PointAnimation({ players, pointChanges, dealerPosition, 
         const progress = currentFrame / totalFrames
 
         const newPoints: { [playerId: string]: number } = {}
-        pointChanges.forEach(change => {
+        pointChanges.forEach((change) => {
           if (change.change !== 0) {
             const startPoints = change.newPoints - change.change
             const targetPoints = change.newPoints
-            const currentValue = startPoints + (targetPoints - startPoints) * progress
+            const currentValue =
+              startPoints + (targetPoints - startPoints) * progress
             newPoints[change.playerId] = Math.floor(currentValue)
           } else {
             // 変化のないプレイヤーは最終点数
@@ -71,7 +81,7 @@ export default function PointAnimation({ players, pointChanges, dealerPosition, 
         })
 
         // pointChangesにないプレイヤーの点数も保持
-        players.forEach(player => {
+        players.forEach((player) => {
           if (!newPoints[player.playerId]) {
             newPoints[player.playerId] = player.points
           }
@@ -81,13 +91,13 @@ export default function PointAnimation({ players, pointChanges, dealerPosition, 
 
         if (currentFrame >= totalFrames) {
           clearInterval(animationInterval)
-          
+
           // 最終的な正確な点数を設定
           const finalPoints: { [playerId: string]: number } = {}
-          pointChanges.forEach(change => {
+          pointChanges.forEach((change) => {
             finalPoints[change.playerId] = change.newPoints
           })
-          players.forEach(player => {
+          players.forEach((player) => {
             if (!finalPoints[player.playerId]) {
               finalPoints[player.playerId] = player.points
             }
@@ -96,9 +106,9 @@ export default function PointAnimation({ players, pointChanges, dealerPosition, 
 
           // フェーズ3: フェードアウト (200ms)
           setTimeout(() => {
-            setAnimationPhase('fadeOut')
+            setAnimationPhase("fadeOut")
             setTimeout(() => {
-                      onComplete()
+              onComplete()
             }, 200)
           }, 0)
         }
@@ -108,30 +118,34 @@ export default function PointAnimation({ players, pointChanges, dealerPosition, 
     timeline()
   }, [players, pointChanges, onComplete])
 
-
   const getChangeOpacity = () => {
     switch (animationPhase) {
-      case 'fadeIn':
-        return 'opacity-100'
-      case 'counting':
-        return 'opacity-100'
-      case 'fadeOut':
-        return 'opacity-0'
+      case "fadeIn":
+        return "opacity-100"
+      case "counting":
+        return "opacity-100"
+      case "fadeOut":
+        return "opacity-0"
       default:
-        return 'opacity-0'
+        return "opacity-0"
     }
   }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-2xl p-8 max-w-2xl w-full mx-4">
-        <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">点数変動</h2>
-        
+        <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">
+          点数変動
+        </h2>
+
         <div className="grid gap-4">
           {players.map((player) => {
-            const change = pointChanges.find(pc => pc.playerId === player.playerId)
-            const displayPoints = currentPoints[player.playerId] || player.points
-            
+            const change = pointChanges.find(
+              (pc) => pc.playerId === player.playerId
+            )
+            const displayPoints =
+              currentPoints[player.playerId] || player.points
+
             return (
               <div
                 key={player.playerId}
@@ -142,24 +156,29 @@ export default function PointAnimation({ players, pointChanges, dealerPosition, 
                     {getPositionName(player.position, dealerPosition)}
                   </div>
                   <div>
-                    <div className="font-medium text-gray-800">{player.name}</div>
+                    <div className="font-medium text-gray-800">
+                      {player.name}
+                    </div>
                     <div className="text-lg font-bold">
                       {displayPoints.toLocaleString()}点
                     </div>
                   </div>
                 </div>
-                
+
                 {/* 点数変動表示 */}
                 {change && change.change !== 0 && (
-                  <div className={`transition-opacity duration-200 ${getChangeOpacity()}`}>
+                  <div
+                    className={`transition-opacity duration-200 ${getChangeOpacity()}`}
+                  >
                     <div
                       className={`text-xl font-bold px-3 py-1 rounded ${
                         change.change > 0
-                          ? 'text-green-600 bg-green-100'
-                          : 'text-red-600 bg-red-100'
+                          ? "text-green-600 bg-green-100"
+                          : "text-red-600 bg-red-100"
                       }`}
                     >
-                      {change.change > 0 ? '+' : ''}{change.change.toLocaleString()}
+                      {change.change > 0 ? "+" : ""}
+                      {change.change.toLocaleString()}
                     </div>
                   </div>
                 )}
@@ -167,15 +186,19 @@ export default function PointAnimation({ players, pointChanges, dealerPosition, 
             )
           })}
         </div>
-        
+
         {/* プログレスバー */}
         <div className="mt-6">
           <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
+            <div
               className="bg-blue-600 h-2 rounded-full transition-all duration-1200 ease-out"
-              style={{ 
-                width: animationPhase === 'fadeIn' ? '10%' : 
-                       animationPhase === 'counting' ? '90%' : '100%' 
+              style={{
+                width:
+                  animationPhase === "fadeIn"
+                    ? "10%"
+                    : animationPhase === "counting"
+                      ? "90%"
+                      : "100%",
               }}
             />
           </div>

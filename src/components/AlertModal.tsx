@@ -1,6 +1,6 @@
-'use client'
+"use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState } from "react"
 
 interface AlertModalProps {
   isOpen: boolean
@@ -14,8 +14,8 @@ export default function AlertModal({
   isOpen,
   message,
   onConfirm,
-  confirmLabel = 'OK',
-  countdownSeconds
+  confirmLabel = "OK",
+  countdownSeconds,
 }: AlertModalProps) {
   const [countdown, setCountdown] = useState(countdownSeconds ?? 0)
 
@@ -23,7 +23,7 @@ export default function AlertModal({
     if (!isOpen || countdownSeconds == null) return
     setCountdown(countdownSeconds)
     const timer = setInterval(() => {
-      setCountdown(prev => {
+      setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer)
           return 0
@@ -50,10 +50,11 @@ export default function AlertModal({
           onClick={onConfirm}
           className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
         >
-          {countdownSeconds != null && countdown > 0 ? `${confirmLabel} (${countdown}秒)` : confirmLabel}
+          {countdownSeconds != null && countdown > 0
+            ? `${confirmLabel} (${countdown}秒)`
+            : confirmLabel}
         </button>
       </div>
     </div>
   )
 }
-

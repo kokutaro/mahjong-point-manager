@@ -1,8 +1,8 @@
-'use client'
+"use client"
 
-import SessionHistoryTable from '@/components/SessionHistoryTable'
-import { useRouter } from 'next/navigation'
-import { use } from 'react'
+import SessionHistoryTable from "@/components/SessionHistoryTable"
+import { useRouter } from "next/navigation"
+import { use } from "react"
 
 interface SessionDetailPageProps {
   params: Promise<{
@@ -20,17 +20,19 @@ export default function SessionDetailPage({ params }: SessionDetailPageProps) {
       <div className="max-w-7xl mx-auto">
         {/* ヘッダー */}
         <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">セッション詳細</h1>
-          
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
+            セッション詳細
+          </h1>
+
           <div className="flex gap-2">
             <button
-              onClick={() => router.push('/sessions')}
+              onClick={() => router.push("/sessions")}
               className="bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600 transition-colors"
             >
               セッション一覧
             </button>
             <button
-              onClick={() => router.push('/')}
+              onClick={() => router.push("/")}
               className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
             >
               ホーム

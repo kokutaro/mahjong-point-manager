@@ -1,19 +1,19 @@
-'use client'
+"use client"
 
-import ErrorDisplay, { ErrorInfo } from '@/components/ErrorDisplay'
-import GameEndScreen from '@/components/GameEndScreen'
-import GameInfo from '@/components/GameInfo'
-import GameResult from '@/components/GameResult'
-import SessionHistoryModal from '@/components/SessionHistoryModal'
-import MenuDrawer from '@/components/MenuDrawer'
-import PlayerStatus from '@/components/PlayerStatus'
-import PointAnimation from '@/components/PointAnimation'
-import RyukyokuForm from '@/components/RyukyokuForm'
-import ScoreInputForm from '@/components/ScoreInputForm'
-import { useAuth } from '@/contexts/AuthContext'
-import { useSocket } from '@/hooks/useSocket'
-import { useParams, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import ErrorDisplay, { ErrorInfo } from "@/components/ErrorDisplay"
+import GameEndScreen from "@/components/GameEndScreen"
+import GameInfo from "@/components/GameInfo"
+import GameResult from "@/components/GameResult"
+import SessionHistoryModal from "@/components/SessionHistoryModal"
+import MenuDrawer from "@/components/MenuDrawer"
+import PlayerStatus from "@/components/PlayerStatus"
+import PointAnimation from "@/components/PointAnimation"
+import RyukyokuForm from "@/components/RyukyokuForm"
+import ScoreInputForm from "@/components/ScoreInputForm"
+import { useAuth } from "@/contexts/AuthContext"
+import { useSocket } from "@/hooks/useSocket"
+import { useParams, useRouter } from "next/navigation"
+import { useCallback, useEffect, useRef, useState } from "react"
 import type {
   GameInfo as GameInfoType,
   ScoreUpdatedData,
@@ -21,8 +21,8 @@ import type {
   RyukyokuData,
   PlayerConnectedData,
   GameEndedData,
-  SocketIOError
-} from '@/types/socket'
+  SocketIOError,
+} from "@/types/socket"
 
 interface GamePlayer {
   playerId: string
@@ -40,29 +40,41 @@ interface GameState {
   currentOya: number
   honba: number
   kyotaku: number
-  gamePhase: 'waiting' | 'playing' | 'finished'
+  gamePhase: "waiting" | "playing" | "finished"
 }
 
 export default function GamePage() {
   const params = useParams()
   const router = useRouter()
   const { user, isAuthenticated } = useAuth()
-  const { socket, isConnected, error: socketError, isReconnecting, reconnectTimeLeft, manualReconnect, joinRoom } = useSocket()
+  const {
+    socket,
+    isConnected,
+    error: socketError,
+    isReconnecting,
+    reconnectTimeLeft,
+    manualReconnect,
+    joinRoom,
+  } = useSocket()
   const [gameState, setGameState] = useState<GameState | null>(null)
   const [gameInfo, setGameInfo] = useState<GameInfoType | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [error, setError] = useState("")
   const [showScoreInput, setShowScoreInput] = useState(false)
-  const [activeAction, setActiveAction] = useState<'tsumo' | 'ron' | null>(null)
+  const [activeAction, setActiveAction] = useState<"tsumo" | "ron" | null>(null)
   const [showRyukyokuForm, setShowRyukyokuForm] = useState(false)
   const [showPointAnimation, setShowPointAnimation] = useState(false)
-  const [pointChanges, setPointChanges] = useState<Array<{ playerId: string; change: number; newPoints: number }>>([])
+  const [pointChanges, setPointChanges] = useState<
+    Array<{ playerId: string; change: number; newPoints: number }>
+  >([])
   const [showResult, setShowResult] = useState(false)
   const [showGameEnd, setShowGameEnd] = useState(false)
-  const [gameEndReason, setGameEndReason] = useState('')
+  const [gameEndReason, setGameEndReason] = useState("")
   const previousGameStateRef = useRef<GameState | null>(null)
   const gameStateRef = useRef<GameState | null>(null)
-  const pointChangesRef = useRef<Array<{ playerId: string; change: number; newPoints: number }>>([])
+  const pointChangesRef = useRef<
+    Array<{ playerId: string; change: number; newPoints: number }>
+  >([])
 
   const [showMenu, setShowMenu] = useState(false)
   const [showHistoryModal, setShowHistoryModal] = useState(false)
@@ -70,110 +82,150 @@ export default function GamePage() {
   const gameId = params.gameId as string
 
   // 点数変動を検出してアニメーションを開始
-  const triggerPointAnimation = useCallback((newGameState: GameState, fromWebSocket = false) => {
-    console.log('=== triggerPointAnimation START ===')
-    console.log('Called with:', { 
-      fromWebSocket,
-      newGameState: {
-        players: newGameState.players.map(p => ({ name: p.name, points: p.points }))
-      },
-      previousGameStateRef: previousGameStateRef.current ? {
-        players: previousGameStateRef.current.players.map(p => ({ name: p.name, points: p.points }))
-      } : null,
-      currentGameStateRef: gameStateRef.current ? {
-        players: gameStateRef.current.players.map(p => ({ name: p.name, points: p.points }))
-      } : null
-    })
+  const triggerPointAnimation = useCallback(
+    (newGameState: GameState, fromWebSocket = false) => {
+      console.log("=== triggerPointAnimation START ===")
+      console.log("Called with:", {
+        fromWebSocket,
+        newGameState: {
+          players: newGameState.players.map((p) => ({
+            name: p.name,
+            points: p.points,
+          })),
+        },
+        previousGameStateRef: previousGameStateRef.current
+          ? {
+              players: previousGameStateRef.current.players.map((p) => ({
+                name: p.name,
+                points: p.points,
+              })),
+            }
+          : null,
+        currentGameStateRef: gameStateRef.current
+          ? {
+              players: gameStateRef.current.players.map((p) => ({
+                name: p.name,
+                points: p.points,
+              })),
+            }
+          : null,
+      })
 
-    // WebSocketの場合は、現在のgameStateRefを基準にする
-    let compareState: GameState | null = null
-    if (fromWebSocket) {
-      // WebSocketイベントの場合は、現在のgameStateRefを使用
-      compareState = gameStateRef.current
-      console.log('Using current gameStateRef for WebSocket comparison:', compareState ? {
-        players: compareState.players.map(p => ({ name: p.name, points: p.points }))
-      } : null)
-    } else {
-      // fetchGameStateの場合はpreviousGameStateRefを使用
-      compareState = previousGameStateRef.current
-      console.log('Using previousGameStateRef for comparison:', compareState ? {
-        players: compareState.players.map(p => ({ name: p.name, points: p.points }))
-      } : null)
-    }
-
-    if (!compareState) {
-      console.log('No comparison state, setting initial state')
-      previousGameStateRef.current = newGameState
-      gameStateRef.current = newGameState
-      setGameState(newGameState)
-      return
-    }
-
-    // 点数変動を検出
-    const changes: Array<{ playerId: string; change: number; newPoints: number }> = []
-    let hasChanges = false
-
-    console.log('Checking for point changes...')
-    newGameState.players.forEach(newPlayer => {
-      const oldPlayer = compareState!.players.find(p => p.playerId === newPlayer.playerId)
-      if (oldPlayer) {
-        const pointsDiff = newPlayer.points - oldPlayer.points
-        if (pointsDiff !== 0) {
-          changes.push({
-            playerId: newPlayer.playerId,
-            change: pointsDiff,
-            newPoints: newPlayer.points
-          })
-          hasChanges = true
-          console.log(`✓ Point change: ${newPlayer.name} ${oldPlayer.points} -> ${newPlayer.points} (${pointsDiff > 0 ? '+' : ''}${pointsDiff})`)
-        } else {
-          console.log(`- No change: ${newPlayer.name} ${newPlayer.points}`)
-        }
+      // WebSocketの場合は、現在のgameStateRefを基準にする
+      let compareState: GameState | null = null
+      if (fromWebSocket) {
+        // WebSocketイベントの場合は、現在のgameStateRefを使用
+        compareState = gameStateRef.current
+        console.log(
+          "Using current gameStateRef for WebSocket comparison:",
+          compareState
+            ? {
+                players: compareState.players.map((p) => ({
+                  name: p.name,
+                  points: p.points,
+                })),
+              }
+            : null
+        )
+      } else {
+        // fetchGameStateの場合はpreviousGameStateRefを使用
+        compareState = previousGameStateRef.current
+        console.log(
+          "Using previousGameStateRef for comparison:",
+          compareState
+            ? {
+                players: compareState.players.map((p) => ({
+                  name: p.name,
+                  points: p.points,
+                })),
+              }
+            : null
+        )
       }
-    })
 
-    if (hasChanges) {
-      console.log('✅ STARTING ANIMATION with changes:', changes)
-      // すべてのプレイヤーを含める（変動なしも含む）
-      newGameState.players.forEach(newPlayer => {
-        if (!changes.find(c => c.playerId === newPlayer.playerId)) {
-          changes.push({
-            playerId: newPlayer.playerId,
-            change: 0,
-            newPoints: newPlayer.points
-          })
+      if (!compareState) {
+        console.log("No comparison state, setting initial state")
+        previousGameStateRef.current = newGameState
+        gameStateRef.current = newGameState
+        setGameState(newGameState)
+        return
+      }
+
+      // 点数変動を検出
+      const changes: Array<{
+        playerId: string
+        change: number
+        newPoints: number
+      }> = []
+      let hasChanges = false
+
+      console.log("Checking for point changes...")
+      newGameState.players.forEach((newPlayer) => {
+        const oldPlayer = compareState!.players.find(
+          (p) => p.playerId === newPlayer.playerId
+        )
+        if (oldPlayer) {
+          const pointsDiff = newPlayer.points - oldPlayer.points
+          if (pointsDiff !== 0) {
+            changes.push({
+              playerId: newPlayer.playerId,
+              change: pointsDiff,
+              newPoints: newPlayer.points,
+            })
+            hasChanges = true
+            console.log(
+              `✓ Point change: ${newPlayer.name} ${oldPlayer.points} -> ${newPlayer.points} (${pointsDiff > 0 ? "+" : ""}${pointsDiff})`
+            )
+          } else {
+            console.log(`- No change: ${newPlayer.name} ${newPlayer.points}`)
+          }
         }
       })
-      
-      pointChangesRef.current = changes
-      setPointChanges(changes)
-      setShowPointAnimation(true)
-      
-      // アニメーション完了後に状態更新するため、新しい状態を保存しておく
-      gameStateRef.current = newGameState
-    } else {
-      console.log('❌ NO CHANGES detected, updating state directly')
-      // 点数変動がない場合は即座に状態更新
-      previousGameStateRef.current = newGameState
-      gameStateRef.current = newGameState
-      setGameState(newGameState)
-    }
-    console.log('=== triggerPointAnimation END ===')
-  }, []) // gameStateを依存配列から削除してrefを使用
+
+      if (hasChanges) {
+        console.log("✅ STARTING ANIMATION with changes:", changes)
+        // すべてのプレイヤーを含める（変動なしも含む）
+        newGameState.players.forEach((newPlayer) => {
+          if (!changes.find((c) => c.playerId === newPlayer.playerId)) {
+            changes.push({
+              playerId: newPlayer.playerId,
+              change: 0,
+              newPoints: newPlayer.points,
+            })
+          }
+        })
+
+        pointChangesRef.current = changes
+        setPointChanges(changes)
+        setShowPointAnimation(true)
+
+        // アニメーション完了後に状態更新するため、新しい状態を保存しておく
+        gameStateRef.current = newGameState
+      } else {
+        console.log("❌ NO CHANGES detected, updating state directly")
+        // 点数変動がない場合は即座に状態更新
+        previousGameStateRef.current = newGameState
+        gameStateRef.current = newGameState
+        setGameState(newGameState)
+      }
+      console.log("=== triggerPointAnimation END ===")
+    },
+    []
+  ) // gameStateを依存配列から削除してrefを使用
 
   const onAnimationComplete = useCallback(() => {
-    console.log('Animation completed, applying final state')
+    console.log("Animation completed, applying final state")
     setShowPointAnimation(false)
     setPointChanges([])
-    
+
     // アニメーション完了後に最新状態を適用
     if (gameStateRef.current) {
-      console.log('Applying final game state:', gameStateRef.current)
+      console.log("Applying final game state:", gameStateRef.current)
       previousGameStateRef.current = gameStateRef.current
       setGameState(gameStateRef.current)
-      
+
       // ゲームが終了している場合は終了画面を表示
-      if (gameStateRef.current.gamePhase === 'finished') {
+      if (gameStateRef.current.gamePhase === "finished") {
         setShowGameEnd(true)
       }
     }
@@ -182,43 +234,49 @@ export default function GamePage() {
   const fetchGameState = useCallback(async () => {
     try {
       setIsLoading(true)
-      setError('')
+      setError("")
 
-      console.log('Fetching game state for gameId:', gameId)
+      console.log("Fetching game state for gameId:", gameId)
 
       const response = await fetch(`/api/game/${gameId}`, {
-        method: 'GET',
-        credentials: 'include'
+        method: "GET",
+        credentials: "include",
       })
 
       const data = await response.json()
-      console.log('Game state response:', { status: response.status, data })
+      console.log("Game state response:", { status: response.status, data })
 
       if (!response.ok) {
         // HTTPステータスコードに基づいてエラータイプを判定
-        let errorType: ErrorInfo['type'] = 'server'
-        let errorMessage = data.error?.message || 'ゲーム状態の取得に失敗しました'
-        
+        let errorType: ErrorInfo["type"] = "server"
+        let errorMessage =
+          data.error?.message || "ゲーム状態の取得に失敗しました"
+
         if (response.status === 404) {
-          errorMessage = 'ゲームが見つかりません'
+          errorMessage = "ゲームが見つかりません"
         } else if (response.status === 403) {
-          errorMessage = 'ゲームへのアクセス権限がありません'
+          errorMessage = "ゲームへのアクセス権限がありません"
         } else if (response.status >= 500) {
-          errorType = 'server'
-          errorMessage = 'サーバーエラーが発生しました'
+          errorType = "server"
+          errorMessage = "サーバーエラーが発生しました"
         } else if (response.status >= 400) {
-          errorType = 'validation'
+          errorType = "validation"
         }
-        
-        throw new Error(JSON.stringify({ type: errorType, message: errorMessage }))
+
+        throw new Error(
+          JSON.stringify({ type: errorType, message: errorMessage })
+        )
       }
 
       if (data.success) {
         setGameInfo(data.data.gameInfo)
-        console.log('Game state fetched:', data.data.gameState)
-        
+        console.log("Game state fetched:", data.data.gameState)
+
         // 初回読み込み時にゲームが既に終了している場合はリザルト画面を直接表示
-        if (data.data.gameState.gamePhase === 'finished' && !previousGameStateRef.current) {
+        if (
+          data.data.gameState.gamePhase === "finished" &&
+          !previousGameStateRef.current
+        ) {
           setShowResult(true)
         }
 
@@ -231,18 +289,33 @@ export default function GamePage() {
         } else {
           triggerPointAnimation(data.data.gameState)
         }
-        
+
         // WebSocketルームへの参加は別のuseEffectで処理
-        console.log('🏠 Game state fetched, will join room via separate effect')
+        console.log("🏠 Game state fetched, will join room via separate effect")
       } else {
-        throw new Error(JSON.stringify({ type: 'server', message: data.error?.message || 'ゲーム状態の取得に失敗しました' }))
+        throw new Error(
+          JSON.stringify({
+            type: "server",
+            message: data.error?.message || "ゲーム状態の取得に失敗しました",
+          })
+        )
       }
     } catch (error) {
-      console.error('fetchGameState error:', error)
-      
+      console.error("fetchGameState error:", error)
+
       // ネットワークエラーかどうかチェック
-      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        setError(JSON.stringify({ type: 'network', message: 'ネットワークエラーです。インターネット接続を確認してください。', isRetryable: true }))
+      if (
+        error instanceof TypeError &&
+        error.message.includes("Failed to fetch")
+      ) {
+        setError(
+          JSON.stringify({
+            type: "network",
+            message:
+              "ネットワークエラーです。インターネット接続を確認してください。",
+            isRetryable: true,
+          })
+        )
       } else if (error instanceof Error) {
         try {
           // JSONエラーメッセージをパース
@@ -253,7 +326,7 @@ export default function GamePage() {
           setError(error.message)
         }
       } else {
-        setError('予期しないエラーが発生しました')
+        setError("予期しないエラーが発生しました")
       }
     } finally {
       setIsLoading(false)
@@ -262,101 +335,128 @@ export default function GamePage() {
 
   useEffect(() => {
     if (socket && user) {
-      console.log('🔧 Setting up WebSocket listeners with socket ID:', socket.id)
-      
+      console.log(
+        "🔧 Setting up WebSocket listeners with socket ID:",
+        socket.id
+      )
+
       // 既存のゲーム状態を取得（関数を直接呼び出し）
       fetchGameState()
 
       // Socket events - 直接ここで処理
-      socket.on('game_state', (state: GameState) => {
-        console.log('🔌 WebSocket: game_state received', state)
-        console.log('🏠 Received game_state after room join:', { gameId: state.gameId, playersCount: state.players?.length })
+      socket.on("game_state", (state: GameState) => {
+        console.log("🔌 WebSocket: game_state received", state)
+        console.log("🏠 Received game_state after room join:", {
+          gameId: state.gameId,
+          playersCount: state.players?.length,
+        })
         triggerPointAnimation(state, true)
       })
 
-      socket.on('score_updated', (data: ScoreUpdatedData) => {
-        console.log('🔌 WebSocket: score_updated received', data)
+      socket.on("score_updated", (data: ScoreUpdatedData) => {
+        console.log("🔌 WebSocket: score_updated received", data)
         if (data.gameState) {
           triggerPointAnimation(data.gameState, true)
         }
         setShowScoreInput(false)
         setActiveAction(null)
-        setError('') // エラーをクリア
+        setError("") // エラーをクリア
       })
 
-      socket.on('riichi_declared', (data: RiichiDeclaredData) => {
-        console.log('🔌 WebSocket: riichi_declared received', data)
-        console.log('🔌 Current user:', user?.playerId, 'Riichi player:', data.playerId)
-        console.log('🔌 Current gameStateRef before trigger:', gameStateRef.current ? {
-          players: gameStateRef.current.players.map(p => ({ name: p.name, points: p.points }))
-        } : null)
-        console.log('🔌 New gameState from WebSocket:', data.gameState ? {
-          players: data.gameState.players.map(p => ({ name: p.name, points: p.points }))
-        } : null)
-        
+      socket.on("riichi_declared", (data: RiichiDeclaredData) => {
+        console.log("🔌 WebSocket: riichi_declared received", data)
+        console.log(
+          "🔌 Current user:",
+          user?.playerId,
+          "Riichi player:",
+          data.playerId
+        )
+        console.log(
+          "🔌 Current gameStateRef before trigger:",
+          gameStateRef.current
+            ? {
+                players: gameStateRef.current.players.map((p) => ({
+                  name: p.name,
+                  points: p.points,
+                })),
+              }
+            : null
+        )
+        console.log(
+          "🔌 New gameState from WebSocket:",
+          data.gameState
+            ? {
+                players: data.gameState.players.map((p) => ({
+                  name: p.name,
+                  points: p.points,
+                })),
+              }
+            : null
+        )
+
         if (data.gameState) {
           triggerPointAnimation(data.gameState, true)
         }
-        setError('') // エラーをクリア
+        setError("") // エラーをクリア
       })
 
-      socket.on('ryukyoku', (data: RyukyokuData) => {
-        console.log('🔌 WebSocket: ryukyoku received', data)
+      socket.on("ryukyoku", (data: RyukyokuData) => {
+        console.log("🔌 WebSocket: ryukyoku received", data)
         if (data.gameState) {
           triggerPointAnimation(data.gameState, true)
         }
-        setError('') // エラーをクリア
+        setError("") // エラーをクリア
       })
 
-      socket.on('player_connected', (data: PlayerConnectedData) => {
-        console.log('🔌 WebSocket: player_connected received', data)
-        if (data.gameState) {
-          triggerPointAnimation(data.gameState, true)
-        }
-      })
-
-      socket.on('player_disconnected', (data: PlayerConnectedData) => {
-        console.log('🔌 WebSocket: player_disconnected received', data)
+      socket.on("player_connected", (data: PlayerConnectedData) => {
+        console.log("🔌 WebSocket: player_connected received", data)
         if (data.gameState) {
           triggerPointAnimation(data.gameState, true)
         }
       })
 
-      socket.on('game_ended', (data: GameEndedData) => {
-        console.log('🔌 WebSocket: game_ended received', data)
-        
+      socket.on("player_disconnected", (data: PlayerConnectedData) => {
+        console.log("🔌 WebSocket: player_disconnected received", data)
+        if (data.gameState) {
+          triggerPointAnimation(data.gameState, true)
+        }
+      })
+
+      socket.on("game_ended", (data: GameEndedData) => {
+        console.log("🔌 WebSocket: game_ended received", data)
+
         // 終了理由を保存
         if (data.reason) {
           setGameEndReason(data.reason)
         }
-        
+
         if (data.gameState) {
           triggerPointAnimation(data.gameState, true)
         }
         // WebSocketでのゲーム終了時は終了画面の表示はonAnimationCompleteで処理
-        setError('') // エラーをクリア
+        setError("") // エラーをクリア
       })
 
-      socket.on('error', (error: SocketIOError) => {
-        console.error('WebSocket error:', error)
+      socket.on("error", (error: SocketIOError) => {
+        console.error("WebSocket error:", error)
         setError(error.message)
       })
 
       // すべてのイベントをキャッチして確認
       socket.onAny((event, ...args) => {
-        console.log('🔍 WebSocket event received:', event, args)
+        console.log("🔍 WebSocket event received:", event, args)
       })
 
       return () => {
-        console.log('🔧 Cleaning up WebSocket listeners')
-        socket.off('game_state')
-        socket.off('score_updated')
-        socket.off('riichi_declared')
-        socket.off('ryukyoku')
-        socket.off('player_connected')
-        socket.off('player_disconnected')
-        socket.off('game_ended')
-        socket.off('error')
+        console.log("🔧 Cleaning up WebSocket listeners")
+        socket.off("game_state")
+        socket.off("score_updated")
+        socket.off("riichi_declared")
+        socket.off("ryukyoku")
+        socket.off("player_connected")
+        socket.off("player_disconnected")
+        socket.off("game_ended")
+        socket.off("error")
         socket.offAny()
       }
     }
@@ -365,37 +465,47 @@ export default function GamePage() {
   // WebSocketルーム参加の専用useEffect
   const roomCodeRef = useRef<string | null>(null)
   const hasJoinedRef = useRef<boolean>(false)
-  
+
   useEffect(() => {
     const roomCode = gameInfo?.roomCode
     const playerId = user?.playerId
-    
+
     if (socket && user && roomCode && isConnected) {
       // 同じルームに既に参加済みの場合はスキップ
       if (roomCodeRef.current === roomCode && hasJoinedRef.current) {
-        console.log('🏠 Already joined room:', roomCode)
+        console.log("🏠 Already joined room:", roomCode)
         return
       }
-      
-      console.log('🏠 All conditions met, joining WebSocket room:', roomCode, 'with player:', playerId)
-      console.log('🏠 Socket connected:', socket.connected, 'Socket ID:', socket.id)
-      
-      if(playerId) {
+
+      console.log(
+        "🏠 All conditions met, joining WebSocket room:",
+        roomCode,
+        "with player:",
+        playerId
+      )
+      console.log(
+        "🏠 Socket connected:",
+        socket.connected,
+        "Socket ID:",
+        socket.id
+      )
+
+      if (playerId) {
         joinRoom(roomCode, playerId)
       }
       roomCodeRef.current = roomCode
       hasJoinedRef.current = true
     } else {
-      console.log('🏠 Waiting for conditions - missing:', {
+      console.log("🏠 Waiting for conditions - missing:", {
         socket: !!socket,
         user: !!user,
         roomCode: !!roomCode,
-        isConnected
+        isConnected,
       })
       hasJoinedRef.current = false
     }
   }, [socket, user, gameInfo?.roomCode, isConnected, joinRoom]) // joinRoomを削除
-  
+
   // Reset join status when socket disconnects
   useEffect(() => {
     if (!isConnected) {
@@ -411,12 +521,12 @@ export default function GamePage() {
   }, [gameState])
 
   const handleTsumo = () => {
-    setActiveAction('tsumo')
+    setActiveAction("tsumo")
     setShowScoreInput(true)
   }
 
   const handleRon = () => {
-    setActiveAction('ron')
+    setActiveAction("ron")
     setShowScoreInput(true)
   }
 
@@ -425,23 +535,25 @@ export default function GamePage() {
 
     try {
       const response = await fetch(`/api/game/${gameId}/riichi`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ playerId }),
-        credentials: 'include'
+        credentials: "include",
       })
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.error?.message || 'リーチ宣言に失敗しました')
+        throw new Error(data.error?.message || "リーチ宣言に失敗しました")
       }
 
       // リーチ宣言成功後、念のため最新状態を再取得
       setTimeout(() => fetchGameState(), 100)
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'リーチ宣言に失敗しました')
+      setError(
+        error instanceof Error ? error.message : "リーチ宣言に失敗しました"
+      )
     }
   }
 
@@ -454,17 +566,17 @@ export default function GamePage() {
 
     try {
       const response = await fetch(`/api/game/${gameId}/ryukyoku`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ reason: '流局', tenpaiPlayers }),
-        credentials: 'include'
+        body: JSON.stringify({ reason: "流局", tenpaiPlayers }),
+        credentials: "include",
       })
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.error?.message || '流局処理に失敗しました')
+        throw new Error(data.error?.message || "流局処理に失敗しました")
       }
 
       setShowRyukyokuForm(false)
@@ -472,7 +584,9 @@ export default function GamePage() {
       // 流局処理成功後、念のため最新状態を再取得
       setTimeout(() => fetchGameState(), 100)
     } catch (error) {
-      setError(error instanceof Error ? error.message : '流局処理に失敗しました')
+      setError(
+        error instanceof Error ? error.message : "流局処理に失敗しました"
+      )
     }
   }
 
@@ -486,50 +600,62 @@ export default function GamePage() {
     try {
       // プレイヤーIDの形式を判別
       const isNumericString = (id: string) => /^[0-3]$/.test(id)
-      
+
       // ソロゲーム（0-3の数値文字列）の場合は数値に変換、それ以外（CUID等）はそのまま送信
-      const requestData = isNumericString(scoreData.winnerId) ? {
-        ...scoreData,
-        winnerId: parseInt(scoreData.winnerId),
-        loserId: scoreData.loserId ? parseInt(scoreData.loserId) : undefined
-      } : scoreData
-      
+      const requestData = isNumericString(scoreData.winnerId)
+        ? {
+            ...scoreData,
+            winnerId: parseInt(scoreData.winnerId),
+            loserId: scoreData.loserId
+              ? parseInt(scoreData.loserId)
+              : undefined,
+          }
+        : scoreData
+
       const response = await fetch(`/api/game/${gameId}/score`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(requestData),
-        credentials: 'include'
+        credentials: "include",
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        let errorType: ErrorInfo['type'] = 'server'
-        let errorMessage = data.error?.message || '点数計算に失敗しました'
+        let errorType: ErrorInfo["type"] = "server"
+        let errorMessage = data.error?.message || "点数計算に失敗しました"
         let errorDetails: string | undefined
-        
+
         if (response.status === 400) {
-          errorType = 'validation'
-          errorMessage = '入力内容に誤りがあります'
-          
+          errorType = "validation"
+          errorMessage = "入力内容に誤りがあります"
+
           // Zodエラーの詳細を文字列化
           if (data.error?.details && Array.isArray(data.error.details)) {
-            const validationErrors = data.error.details.map((err: { path?: string[]; message?: string }) => {
-              if (err.path && err.message) {
-                return `${err.path.join('.')}: ${err.message}`
+            const validationErrors = data.error.details.map(
+              (err: { path?: string[]; message?: string }) => {
+                if (err.path && err.message) {
+                  return `${err.path.join(".")}: ${err.message}`
+                }
+                return err.message || "バリデーションエラー"
               }
-              return err.message || 'バリデーションエラー'
-            })
-            errorDetails = validationErrors.join(', ')
+            )
+            errorDetails = validationErrors.join(", ")
           }
         } else if (response.status >= 500) {
-          errorType = 'server'
-          errorMessage = 'サーバーエラーが発生しました'
+          errorType = "server"
+          errorMessage = "サーバーエラーが発生しました"
         }
-        
-        throw new Error(JSON.stringify({ type: errorType, message: errorMessage, details: errorDetails }))
+
+        throw new Error(
+          JSON.stringify({
+            type: errorType,
+            message: errorMessage,
+            details: errorDetails,
+          })
+        )
       }
 
       // 点数計算成功後、念のため最新状態を再取得
@@ -537,8 +663,18 @@ export default function GamePage() {
       setShowScoreInput(false)
       setActiveAction(null)
     } catch (error) {
-      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        setError(JSON.stringify({ type: 'network', message: 'ネットワークエラーです。インターネット接続を確認してください。', isRetryable: true }))
+      if (
+        error instanceof TypeError &&
+        error.message.includes("Failed to fetch")
+      ) {
+        setError(
+          JSON.stringify({
+            type: "network",
+            message:
+              "ネットワークエラーです。インターネット接続を確認してください。",
+            isRetryable: true,
+          })
+        )
       } else if (error instanceof Error) {
         try {
           const errorData = JSON.parse(error.message)
@@ -547,52 +683,58 @@ export default function GamePage() {
           setError(error.message)
         }
       } else {
-        setError('点数計算に失敗しました')
+        setError("点数計算に失敗しました")
       }
     }
   }
 
   const handleForceEnd = async () => {
-    if (!confirm('ゲームを強制終了しますか？')) return
+    if (!confirm("ゲームを強制終了しますか？")) return
 
     try {
-      console.log('🏁 Frontend: Starting force end game for gameId:', gameId)
-      
+      console.log("🏁 Frontend: Starting force end game for gameId:", gameId)
+
       const response = await fetch(`/api/game/${gameId}/end`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ reason: '強制終了' }),
-        credentials: 'include'
+        body: JSON.stringify({ reason: "強制終了" }),
+        credentials: "include",
       })
 
-      console.log('🏁 Frontend: Force end response status:', response.status)
+      console.log("🏁 Frontend: Force end response status:", response.status)
 
       if (!response.ok) {
         const data = await response.json()
-        console.error('🏁 Frontend: Force end failed:', data)
-        throw new Error(data.error?.message || 'ゲーム終了に失敗しました')
+        console.error("🏁 Frontend: Force end failed:", data)
+        throw new Error(data.error?.message || "ゲーム終了に失敗しました")
       }
 
       const data = await response.json()
-      console.log('🏁 Frontend: Force end successful:', data)
+      console.log("🏁 Frontend: Force end successful:", data)
 
       // 強制終了成功後、終了画面を表示
-      setGameEndReason('強制終了')
+      setGameEndReason("強制終了")
       setShowGameEnd(true)
     } catch (error) {
-      console.error('🏁 Frontend: Force end error:', error)
-      setError(error instanceof Error ? error.message : 'ゲーム終了に失敗しました')
+      console.error("🏁 Frontend: Force end error:", error)
+      setError(
+        error instanceof Error ? error.message : "ゲーム終了に失敗しました"
+      )
     }
   }
 
   const getCurrentPlayer = () => {
-    return gameState?.players.find(p => p.playerId === user?.playerId)
+    return gameState?.players.find((p) => p.playerId === user?.playerId)
   }
 
   const canDeclareReach = (player: GamePlayer) => {
-    return player.points >= 1000 && !player.isReach && gameState?.gamePhase === 'playing'
+    return (
+      player.points >= 1000 &&
+      !player.isReach &&
+      gameState?.gamePhase === "playing"
+    )
   }
 
   if (!isAuthenticated) {
@@ -617,7 +759,7 @@ export default function GamePage() {
         <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
           <div className="text-gray-600 mb-4">ゲームが見つかりません</div>
           <button
-            onClick={() => router.push('/')}
+            onClick={() => router.push("/")}
             className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
           >
             ホームに戻る
@@ -639,11 +781,11 @@ export default function GamePage() {
             <GameInfo
               gameState={gameState}
               isConnected={isConnected}
-              gameType={gameInfo?.settings?.gameType || 'HANCHAN'}
+              gameType={gameInfo?.settings?.gameType || "HANCHAN"}
             />
 
             {/* プレイヤー状態 */}
-            <PlayerStatus 
+            <PlayerStatus
               gameState={gameState}
               currentPlayer={currentPlayer}
               onReach={handleReach}
@@ -651,10 +793,10 @@ export default function GamePage() {
             />
           </div>
         </div>
-        
+
         <GameEndScreen
-          gameType={gameInfo?.settings?.gameType || 'HANCHAN'}
-          endReason={gameEndReason || '規定局数終了'}
+          gameType={gameInfo?.settings?.gameType || "HANCHAN"}
+          endReason={gameEndReason || "規定局数終了"}
           onShowResult={() => {
             setShowGameEnd(false)
             setShowResult(true)
@@ -666,12 +808,7 @@ export default function GamePage() {
 
   // ゲーム終了時はリザルト画面を表示
   if (showResult) {
-    return (
-      <GameResult 
-        gameId={gameId} 
-        onBack={() => setShowResult(false)} 
-      />
-    )
+    return <GameResult gameId={gameId} onBack={() => setShowResult(false)} />
   }
 
   return (
@@ -681,11 +818,11 @@ export default function GamePage() {
         <GameInfo
           gameState={gameState}
           isConnected={isConnected}
-          gameType={gameInfo?.settings?.gameType || 'HANCHAN'}
+          gameType={gameInfo?.settings?.gameType || "HANCHAN"}
         />
-        
+
         {/* プレイヤー状態 */}
-        <PlayerStatus 
+        <PlayerStatus
           gameState={gameState}
           currentPlayer={currentPlayer}
           onReach={handleReach}
@@ -696,12 +833,14 @@ export default function GamePage() {
         {socketError && (
           <ErrorDisplay
             error={{
-              type: 'websocket',
+              type: "websocket",
               message: socketError,
-              isRetryable: true
+              isRetryable: true,
             }}
             onRetry={manualReconnect}
-            onDismiss={() => {/* ソケットエラーは自動で管理 */}}
+            onDismiss={() => {
+              /* ソケットエラーは自動で管理 */
+            }}
             isReconnecting={isReconnecting}
             reconnectTimeLeft={reconnectTimeLeft}
           />
@@ -713,61 +852,77 @@ export default function GamePage() {
             error={(() => {
               try {
                 const parsedError = JSON.parse(error)
-                
+
                 // ErrorInfo型かどうかをチェック
-                if (parsedError && typeof parsedError === 'object') {
+                if (parsedError && typeof parsedError === "object") {
                   // 既にErrorInfo型の場合
-                  if ('type' in parsedError && 'message' in parsedError) {
+                  if ("type" in parsedError && "message" in parsedError) {
                     return parsedError as ErrorInfo
                   }
-                  
+
                   // バリデーションエラーの形式 {validation, code, message, path} の場合
-                  if ('validation' in parsedError || 'code' in parsedError) {
+                  if ("validation" in parsedError || "code" in parsedError) {
                     return {
-                      type: 'validation' as const,
-                      message: parsedError.message || 'バリデーションエラーが発生しました',
-                      details: parsedError.path ? `フィールド: ${parsedError.path}` : undefined,
-                      autoHide: false
+                      type: "validation" as const,
+                      message:
+                        parsedError.message ||
+                        "バリデーションエラーが発生しました",
+                      details: parsedError.path
+                        ? `フィールド: ${parsedError.path}`
+                        : undefined,
+                      autoHide: false,
                     }
                   }
-                  
+
                   // その他のオブジェクト型エラー
                   return {
-                    type: 'server' as const,
-                    message: parsedError.message || 'サーバーエラーが発生しました',
-                    autoHide: false
+                    type: "server" as const,
+                    message:
+                      parsedError.message || "サーバーエラーが発生しました",
+                    autoHide: false,
                   }
                 }
-                
+
                 // プリミティブ値の場合
                 return {
-                  type: 'general' as const,
+                  type: "general" as const,
                   message: String(parsedError),
-                  autoHide: false
+                  autoHide: false,
                 }
               } catch {
                 // JSON解析失敗時は文字列として扱う
-                return { type: 'general' as const, message: error, autoHide: false }
+                return {
+                  type: "general" as const,
+                  message: error,
+                  autoHide: false,
+                }
               }
             })()}
             onRetry={() => {
               try {
                 const parsedError = JSON.parse(error)
-                if (parsedError && typeof parsedError === 'object' && 'isRetryable' in parsedError && parsedError.isRetryable) {
+                if (
+                  parsedError &&
+                  typeof parsedError === "object" &&
+                  "isRetryable" in parsedError &&
+                  parsedError.isRetryable
+                ) {
                   fetchGameState()
                 }
               } catch {
                 // 文字列エラーの場合は再試行しない
               }
             }}
-            onDismiss={() => setError('')}
+            onDismiss={() => setError("")}
           />
         )}
 
         {/* アクションボタン */}
-        {gameState.gamePhase === 'playing' && (
+        {gameState.gamePhase === "playing" && (
           <div className="bg-white rounded-lg shadow-lg p-3 sm:p-6 mb-6">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-3 sm:mb-4">アクション</h2>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-3 sm:mb-4">
+              アクション
+            </h2>
             <div className="grid grid-cols-2 gap-3 mb-4 sm:grid-cols-4 sm:gap-4">
               <button
                 onClick={handleTsumo}
@@ -782,7 +937,9 @@ export default function GamePage() {
                 ロン
               </button>
               <button
-                onClick={() => currentPlayer && handleReach(currentPlayer.playerId)}
+                onClick={() =>
+                  currentPlayer && handleReach(currentPlayer.playerId)
+                }
                 disabled={!currentPlayer || !canDeclareReach(currentPlayer)}
                 className="bg-yellow-600 text-white py-4 px-3 sm:py-3 sm:px-4 rounded-md hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold text-lg sm:text-base"
               >
@@ -795,7 +952,7 @@ export default function GamePage() {
                 流局
               </button>
             </div>
-            
+
             {/* 強制終了ボタン */}
             <div className="border-t pt-3 sm:pt-4">
               <button
@@ -807,7 +964,6 @@ export default function GamePage() {
             </div>
           </div>
         )}
-
 
         {/* 点数入力フォーム */}
         {showScoreInput && activeAction && (
@@ -834,7 +990,7 @@ export default function GamePage() {
 
         {/* 戻るボタン */}
         <div className="text-center space-x-4">
-          {gameState.gamePhase === 'finished' && (
+          {gameState.gamePhase === "finished" && (
             <button
               onClick={() => setShowResult(true)}
               className="bg-blue-600 text-white py-2 px-6 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
@@ -843,7 +999,7 @@ export default function GamePage() {
             </button>
           )}
           <button
-            onClick={() => router.push('/')}
+            onClick={() => router.push("/")}
             className="bg-gray-500 text-white py-2 px-6 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
           >
             ホームに戻る
