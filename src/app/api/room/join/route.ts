@@ -21,7 +21,12 @@ export async function POST(request: NextRequest) {
       },
       include: {
         participants: true,
-        settings: true
+        settings: true,
+        session: {
+          include: {
+            participants: true
+          }
+        }
       }
     })
 
@@ -92,26 +97,72 @@ export async function POST(request: NextRequest) {
       }
 
       // 次の利用可能なポジションを検索
-      let nextPosition = 0
-      const usedPositions = currentParticipants.map(p => p.position).sort((a, b) => a - b)
+      let nextGamePosition = 0
+      const usedGamePositions = currentParticipants.map(p => p.position).sort((a, b) => a - b)
       
       for (let i = 0; i < 4; i++) {
-        if (!usedPositions.includes(i)) {
-          nextPosition = i
+        if (!usedGamePositions.includes(i)) {
+          nextGamePosition = i
           break
         }
       }
 
       // ゲーム参加
-      return await tx.gameParticipant.create({
+      const gameParticipant = await tx.gameParticipant.create({
         data: {
           gameId: game.id,
           playerId: player.id,
-          position: nextPosition,
+          position: nextGamePosition,
           currentPoints: game.settings?.initialPoints || 25000,
           isReach: false
         }
       })
+
+      // セッション参加者として登録（セッションが存在する場合）
+      if (game.session) {
+        // 既にセッション参加者として登録されているかチェック
+        const existingSessionParticipant = await tx.sessionParticipant.findFirst({
+          where: {
+            sessionId: game.session.id,
+            playerId: player.id
+          }
+        })
+
+        if (!existingSessionParticipant) {
+          // セッション内の次の利用可能なポジションを検索
+          const currentSessionParticipants = await tx.sessionParticipant.findMany({
+            where: { sessionId: game.session.id },
+            orderBy: { position: 'asc' }
+          })
+
+          let nextSessionPosition = 0
+          const usedSessionPositions = currentSessionParticipants.map(p => p.position).sort((a, b) => a - b)
+          
+          for (let i = 0; i < 4; i++) {
+            if (!usedSessionPositions.includes(i)) {
+              nextSessionPosition = i
+              break
+            }
+          }
+
+          // セッション参加者を作成
+          await tx.sessionParticipant.create({
+            data: {
+              sessionId: game.session.id,
+              playerId: player.id,
+              position: nextSessionPosition,
+              totalGames: 0,
+              totalSettlement: 0,
+              firstPlace: 0,
+              secondPlace: 0,
+              thirdPlace: 0,
+              fourthPlace: 0
+            }
+          })
+        }
+      }
+
+      return gameParticipant
     })
 
     // 更新されたゲーム状態取得

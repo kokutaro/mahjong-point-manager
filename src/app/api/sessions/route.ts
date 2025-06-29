@@ -1,17 +1,32 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
 import type { Prisma } from '@prisma/client'
+import { getCurrentPlayer } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
+    // 認証チェック
+    const currentPlayer = await getCurrentPlayer()
+    if (!currentPlayer) {
+      return NextResponse.json({
+        success: false,
+        error: { message: '認証が必要です' }
+      }, { status: 401 })
+    }
+
     const { searchParams } = new URL(request.url)
-    const playerId = searchParams.get('playerId')
     const status = searchParams.get('status')
     const limit = parseInt(searchParams.get('limit') || '10')
     const offset = parseInt(searchParams.get('offset') || '0')
 
-    // 基本的なクエリ条件
-    const whereCondition: Prisma.GameSessionWhereInput = {}
+    // 基本的なクエリ条件 - 認証されたプレイヤーが参加しているセッションのみ
+    const whereCondition: Prisma.GameSessionWhereInput = {
+      participants: {
+        some: {
+          playerId: currentPlayer.playerId
+        }
+      }
+    }
 
     // ステータスによるフィルタリング
     if (status) {
@@ -19,15 +34,6 @@ export async function GET(request: NextRequest) {
       const validStatuses = ['ACTIVE', 'PAUSED', 'FINISHED', 'CANCELLED']
       if (validStatuses.includes(status)) {
         whereCondition.status = status as 'ACTIVE' | 'PAUSED' | 'FINISHED' | 'CANCELLED'
-      }
-    }
-
-    // 特定プレイヤーのセッション履歴の場合
-    if (playerId) {
-      whereCondition.participants = {
-        some: {
-          playerId: playerId
-        }
       }
     }
 
