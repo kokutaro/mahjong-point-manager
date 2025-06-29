@@ -1,4 +1,11 @@
-import { getPositionName } from "../utils"
+import {
+  getPositionName,
+  formatPoints,
+  getRoundName,
+  generateRoomCode,
+  calculatePointDifference,
+  cn,
+} from "../utils"
 
 describe("Utils", () => {
   describe("getPositionName", () => {
@@ -77,6 +84,35 @@ describe("Utils", () => {
           expect(wind).toBe(expectedWinds[expectedIndex])
         }
       }
+    })
+  })
+
+  describe("other utility functions", () => {
+    test("formatPoints formats numbers with commas", () => {
+      expect(formatPoints(0)).toBe("0")
+      expect(formatPoints(1234)).toBe("1,234")
+    })
+
+    test("getRoundName returns correct string", () => {
+      expect(getRoundName(1)).toBe("東1局")
+      expect(getRoundName(7)).toBe("南3局")
+    })
+
+    test("generateRoomCode creates four digit codes", () => {
+      const code = generateRoomCode()
+      expect(code).toMatch(/^\d{4}$/)
+      const num = Number(code)
+      expect(num).toBeGreaterThanOrEqual(1000)
+      expect(num).toBeLessThanOrEqual(9999)
+    })
+
+    test("calculatePointDifference computes diff", () => {
+      expect(calculatePointDifference(26000)).toBe(1000)
+      expect(calculatePointDifference(20000, 20000)).toBe(0)
+    })
+
+    test("cn merges class names", () => {
+      expect(cn("a", false && "b", "c")).toBe("a c")
     })
   })
 })

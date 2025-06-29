@@ -399,3 +399,26 @@ describe("GameResult Phase 2: ホスト専用強制終了機能", () => {
     })
   })
 })
+
+describe("GameResult Phase 4: final score display", () => {
+  const mockOnBack = jest.fn()
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockedUseAuth.mockReturnValue({ user: mockUser })
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, data: mockGameResultData }),
+    })
+  })
+
+  test("shows final points table", async () => {
+    await act(async () => {
+      render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
+    })
+
+    await screen.findByText("対局結果")
+    expect(screen.getAllByText("35,000").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("15,000").length).toBeGreaterThan(0)
+  })
+})
