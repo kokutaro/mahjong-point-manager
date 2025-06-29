@@ -1,5 +1,6 @@
 import { GET, POST } from '@/app/api/sessions/route'
 import { prisma } from '@/lib/prisma'
+import { getCurrentPlayer } from '@/lib/auth'
 import { NextRequest } from 'next/server'
 
 // Prismaのモック
@@ -13,7 +14,11 @@ jest.mock('@/lib/prisma', () => ({
   },
 }))
 
+// 認証のモック
+jest.mock('@/lib/auth')
+
 const mockPrisma = prisma as jest.Mocked<typeof prisma>
+const mockGetCurrentPlayer = getCurrentPlayer as jest.MockedFunction<typeof getCurrentPlayer>
 
 describe('/api/sessions', () => {
   beforeEach(() => {
@@ -22,6 +27,12 @@ describe('/api/sessions', () => {
 
   describe('GET', () => {
     it('セッション一覧を正常に取得できる', async () => {
+      // 認証モックを設定
+      mockGetCurrentPlayer.mockResolvedValue({
+        playerId: 'player1',
+        name: 'プレイヤー1'
+      })
+
       const mockSessions = [
         {
           id: 'session1',
@@ -61,6 +72,12 @@ describe('/api/sessions', () => {
     })
 
     it('特定プレイヤーのセッション履歴を取得できる', async () => {
+      // 認証モックを設定
+      mockGetCurrentPlayer.mockResolvedValue({
+        playerId: 'player1',
+        name: 'プレイヤー1'
+      })
+
       mockPrisma.gameSession.findMany.mockResolvedValue([])
       mockPrisma.gameSession.count.mockResolvedValue(0)
 
@@ -84,6 +101,12 @@ describe('/api/sessions', () => {
     })
 
     it('ステータスでセッションをフィルタリングできる', async () => {
+      // 認証モックを設定
+      mockGetCurrentPlayer.mockResolvedValue({
+        playerId: 'player1',
+        name: 'プレイヤー1'
+      })
+
       mockPrisma.gameSession.findMany.mockResolvedValue([])
       mockPrisma.gameSession.count.mockResolvedValue(0)
 

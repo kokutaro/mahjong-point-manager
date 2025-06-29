@@ -47,6 +47,41 @@ jest.mock('@/lib/socket', () => ({
   })),
 }))
 
+// NextRequestとNextResponseのモック
+jest.mock('next/server', () => {
+  return {
+    NextRequest: jest.fn().mockImplementation((url, options) => {
+      let requestBody = {}
+      if (options?.body) {
+        try {
+          requestBody = JSON.parse(options.body)
+        } catch {
+          requestBody = {}
+        }
+      }
+
+      return {
+        url,
+        method: options?.method || 'GET',
+        json: jest.fn(() => Promise.resolve(requestBody)),
+        headers: new Map(),
+      }
+    }),
+    NextResponse: {
+      json: jest.fn((data, options) => {
+        const response = {
+          json: jest.fn(() => Promise.resolve(data)),
+          status: options?.status || 200,
+          cookies: {
+            set: jest.fn(),
+          },
+        }
+        return response
+      }),
+    },
+  }
+})
+
 const mockPrisma = prisma as jest.Mocked<typeof prisma>
 
 describe('ルーム参加時のセッション参加者登録', () => {
@@ -93,15 +128,15 @@ describe('ルーム参加時のセッション参加者登録', () => {
     mockPrisma.game.findUnique.mockResolvedValue({
       ...mockGame,
       participants: [
-        { 
-          playerId: 'host-player', 
-          position: 0, 
-          player: { name: 'ホストプレイヤー' } 
+        {
+          playerId: 'host-player',
+          position: 0,
+          player: { name: 'ホストプレイヤー' }
         },
-        { 
-          playerId: 'test-player-id', 
-          position: 1, 
-          player: { name: 'テストプレイヤー' } 
+        {
+          playerId: 'test-player-id',
+          position: 1,
+          player: { name: 'テストプレイヤー' }
         }
       ]
     } as any)
@@ -150,7 +185,7 @@ describe('ルーム参加時のセッション参加者登録', () => {
 
     expect(response.status).toBe(200)
     expect(data.success).toBe(true)
-    
+
     // GameParticipantが作成されることを確認
     expect(mockTxGameParticipantCreate).toHaveBeenCalledWith({
       data: {
@@ -225,15 +260,15 @@ describe('ルーム参加時のセッション参加者登録', () => {
     mockPrisma.game.findUnique.mockResolvedValue({
       ...mockGame,
       participants: [
-        { 
-          playerId: 'host-player', 
-          position: 0, 
-          player: { name: 'ホストプレイヤー' } 
+        {
+          playerId: 'host-player',
+          position: 0,
+          player: { name: 'ホストプレイヤー' }
         },
-        { 
-          playerId: 'test-player-id', 
-          position: 1, 
-          player: { name: 'テストプレイヤー' } 
+        {
+          playerId: 'test-player-id',
+          position: 1,
+          player: { name: 'テストプレイヤー' }
         }
       ]
     } as any)
@@ -273,7 +308,7 @@ describe('ルーム参加時のセッション参加者登録', () => {
 
     expect(response.status).toBe(200)
     expect(data.success).toBe(true)
-    
+
     // GameParticipantは作成される
     expect(mockTxGameParticipantCreate).toHaveBeenCalled()
 
@@ -315,15 +350,15 @@ describe('ルーム参加時のセッション参加者登録', () => {
     mockPrisma.game.findUnique.mockResolvedValue({
       ...mockGame,
       participants: [
-        { 
-          playerId: 'host-player', 
-          position: 0, 
-          player: { name: 'ホストプレイヤー' } 
+        {
+          playerId: 'host-player',
+          position: 0,
+          player: { name: 'ホストプレイヤー' }
         },
-        { 
-          playerId: 'test-player-id', 
-          position: 1, 
-          player: { name: 'テストプレイヤー' } 
+        {
+          playerId: 'test-player-id',
+          position: 1,
+          player: { name: 'テストプレイヤー' }
         }
       ]
     } as any)
@@ -361,7 +396,7 @@ describe('ルーム参加時のセッション参加者登録', () => {
 
     expect(response.status).toBe(200)
     expect(data.success).toBe(true)
-    
+
     // GameParticipantは作成される
     expect(mockTxGameParticipantCreate).toHaveBeenCalled()
 

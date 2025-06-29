@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import GameResult from '../GameResult'
 
 // AuthContextのモック
@@ -40,6 +40,8 @@ const mockSocket = {
 jest.mock('socket.io-client', () => ({
   io: jest.fn(() => mockSocket)
 }))
+
+// タイマーのモック（各テストでセットアップ）
 
 // モックデータ
 const mockGameResultData = {
@@ -106,11 +108,19 @@ describe('GameResult ホスト表示機能', () => {
     })
   })
 
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
   test('ホストプレイヤーにホストバッジが表示される', async () => {
-    render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
+    await act(async () => {
+      render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
+    })
 
     // APIレスポンスが処理されるまで待機
-    await screen.findByText('対局結果')
+    await waitFor(async () => {
+      await screen.findByText('対局結果')
+    })
 
     // ホストプレイヤー（player1）にホストバッジが表示される
     const hostBadges = screen.getAllByText('👑 ホスト')
@@ -122,10 +132,14 @@ describe('GameResult ホスト表示機能', () => {
   })
 
   test('非ホストプレイヤーにはホストバッジが表示されない', async () => {
-    render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
+    await act(async () => {
+      render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
+    })
 
     // APIレスポンスが処理されるまで待機
-    await screen.findByText('対局結果')
+    await waitFor(async () => {
+      await screen.findByText('対局結果')
+    })
 
     // 非ホストプレイヤーの名前の隣にはホストバッジがない
     const player2Elements = screen.getAllByText('テストプレイヤー2')
@@ -155,10 +169,14 @@ describe('GameResult ホスト表示機能', () => {
       })
     })
 
-    render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
+    await act(async () => {
+      render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
+    })
 
     // APIレスポンスが処理されるまで待機
-    await screen.findByText('対局結果')
+    await waitFor(async () => {
+      await screen.findByText('対局結果')
+    })
 
     // ホストバッジが表示されていない
     const hostBadges = screen.queryAllByText('👑 ホスト')
@@ -179,10 +197,14 @@ describe('GameResult ホスト表示機能', () => {
       })
     })
 
-    render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
+    await act(async () => {
+      render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
+    })
 
     // APIレスポンスが処理されるまで待機
-    await screen.findByText('対局結果')
+    await waitFor(async () => {
+      await screen.findByText('対局結果')
+    })
 
     // ホストバッジが表示される
     const hostBadges = screen.getAllByText('👑 ホスト')
