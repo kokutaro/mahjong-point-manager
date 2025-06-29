@@ -26,3 +26,10 @@ With overall coverage hovering around 36%, we need a bolder push to approach the
 - **Week 15**: Add comprehensive E2E scenarios and refine mocks.
 
 Coverage reports will be reviewed after each milestone to ensure momentum toward 80% and beyond.
+
+## Implementation Notes
+
+- Added integration tests for the room creation page using mocked auth context
+- Covered solo game force-end API logic with Prisma mocks
+- Tested AlertModal countdown behavior and LoadingSpinner rendering
+- Introduced a simple Playwright test to verify the home page loads
