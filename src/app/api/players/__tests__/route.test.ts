@@ -70,7 +70,9 @@ describe("/api/players", () => {
     })
 
     it("データベースエラーの処理", async () => {
-      mockPrisma.player.findMany.mockRejectedValue(new Error("DB connection failed"))
+      mockPrisma.player.findMany.mockRejectedValue(
+        new Error("DB connection failed")
+      )
 
       const response = await GET()
       const responseData = await response.json()
@@ -259,7 +261,9 @@ describe("/api/players", () => {
 
     describe("サーバーエラー", () => {
       it("データベース作成エラー", async () => {
-        mockPrisma.player.create.mockRejectedValue(new Error("DB constraint violation"))
+        mockPrisma.player.create.mockRejectedValue(
+          new Error("DB constraint violation")
+        )
 
         const requestBody = {
           name: "Valid Player",

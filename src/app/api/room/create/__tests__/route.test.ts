@@ -405,7 +405,9 @@ describe("POST /api/room/create", () => {
 
       expect(response.status).toBe(404)
       expect(responseData.success).toBe(false)
-      expect(responseData.error.message).toBe("指定されたセッションが見つかりません")
+      expect(responseData.error.message).toBe(
+        "指定されたセッションが見つかりません"
+      )
     })
   })
 
@@ -526,7 +528,9 @@ describe("POST /api/room/create", () => {
     })
 
     it("データベース接続エラー", async () => {
-      mockPrisma.game.findFirst.mockRejectedValue(new Error("DB connection failed"))
+      mockPrisma.game.findFirst.mockRejectedValue(
+        new Error("DB connection failed")
+      )
 
       const requestBody = {
         hostPlayerName: "Test Player",

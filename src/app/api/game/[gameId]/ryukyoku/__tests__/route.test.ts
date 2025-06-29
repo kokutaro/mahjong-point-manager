@@ -39,14 +39,6 @@ const mockSocketIO = {
   }),
 }
 
-declare global {
-  namespace NodeJS {
-    interface Process {
-      __socketio?: typeof mockSocketIO
-    }
-  }
-}
-
 describe("POST /api/game/[gameId]/ryukyoku", () => {
   const mockPrisma = prisma as jest.Mocked<typeof prisma>
   const mockGameId = "test-game-id"
@@ -82,6 +74,7 @@ describe("POST /api/game/[gameId]/ryukyoku", () => {
     }
 
     beforeEach(() => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const PointManager = require("@/lib/point-manager").PointManager
 
       mockPrisma.game.findUnique.mockResolvedValue(mockGameData)
@@ -119,6 +112,7 @@ describe("POST /api/game/[gameId]/ryukyoku", () => {
       expect(responseData.data.message).toContain("2人テンパイ流局")
 
       // PointManagerのメソッドが正しく呼ばれることを確認
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const PointManager = require("@/lib/point-manager").PointManager
       const mockPointManager = new PointManager()
       expect(mockPointManager.handleRyukyoku).toHaveBeenCalledWith(
@@ -149,6 +143,7 @@ describe("POST /api/game/[gameId]/ryukyoku", () => {
       expect(response.status).toBe(200)
       expect(responseData.data.message).toContain("九種九牌")
 
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const PointManager = require("@/lib/point-manager").PointManager
       const mockPointManager = new PointManager()
       expect(mockPointManager.handleRyukyoku).toHaveBeenCalledWith(
@@ -200,6 +195,7 @@ describe("POST /api/game/[gameId]/ryukyoku", () => {
     })
 
     it("ゲーム終了時のWebSocket通知テスト", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const PointManager = require("@/lib/point-manager").PointManager
       const mockPointManager = new PointManager()
       mockPointManager.handleRyukyoku.mockResolvedValue({
@@ -319,7 +315,10 @@ describe("POST /api/game/[gameId]/ryukyoku", () => {
     }
 
     beforeEach(() => {
-      const SoloPointManager = require("@/lib/solo/solo-point-manager").SoloPointManager
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const SoloPointManager =
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require("@/lib/solo/solo-point-manager").SoloPointManager
 
       mockPrisma.game.findUnique.mockResolvedValue(null)
       mockPrisma.soloGame.findUnique.mockResolvedValue(mockSoloGameData)
@@ -357,7 +356,10 @@ describe("POST /api/game/[gameId]/ryukyoku", () => {
       expect(responseData.data.message).toContain("2人テンパイ流局")
 
       // SoloPointManagerのメソッドが正しく呼ばれることを確認
-      const SoloPointManager = require("@/lib/solo/solo-point-manager").SoloPointManager
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const SoloPointManager =
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require("@/lib/solo/solo-point-manager").SoloPointManager
       const mockSoloPointManager = new SoloPointManager()
       expect(mockSoloPointManager.handleRyukyoku).toHaveBeenCalledWith(
         "2人テンパイ流局",
@@ -408,7 +410,10 @@ describe("POST /api/game/[gameId]/ryukyoku", () => {
       expect(response.status).toBe(200)
       expect(responseData.data.message).toBe("四風連打")
 
-      const SoloPointManager = require("@/lib/solo/solo-point-manager").SoloPointManager
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const SoloPointManager =
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require("@/lib/solo/solo-point-manager").SoloPointManager
       const mockSoloPointManager = new SoloPointManager()
       expect(mockSoloPointManager.handleRyukyoku).toHaveBeenCalledWith(
         "四風連打",
@@ -583,6 +588,7 @@ describe("POST /api/game/[gameId]/ryukyoku", () => {
 
   describe("流局理由の自動生成テスト", () => {
     beforeEach(() => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const PointManager = require("@/lib/point-manager").PointManager
 
       mockPrisma.game.findUnique.mockResolvedValue({

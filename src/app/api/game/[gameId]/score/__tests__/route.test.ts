@@ -163,6 +163,7 @@ describe("POST /api/game/[gameId]/score", () => {
 
     it("ゲーム終了時のWebSocket通知テスト", async () => {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const PointManager = require("@/lib/point-manager").PointManager
       const mockPointManager = new PointManager()
       mockPointManager.distributeWinPoints.mockResolvedValue({
@@ -262,6 +263,7 @@ describe("POST /api/game/[gameId]/score", () => {
     })
 
     it("ゲーム状態エラー: ゲームが非アクティブ", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const PointManager = require("@/lib/point-manager").PointManager
       const mockPointManager = new PointManager()
       mockPointManager.getGameState.mockResolvedValue({
@@ -316,7 +318,11 @@ describe("POST /api/game/[gameId]/score", () => {
     }
 
     beforeEach(() => {
-      const SoloPointManager = require("@/lib/solo/solo-point-manager").SoloPointManager
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const SoloPointManager =
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require("@/lib/solo/solo-point-manager").SoloPointManager
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const calculateScore = require("@/lib/score").calculateScore
 
       mockPrisma.game.findUnique.mockResolvedValue(null)

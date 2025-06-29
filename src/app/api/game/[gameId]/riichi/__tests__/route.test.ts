@@ -36,14 +36,6 @@ const mockSocketIO = {
   }),
 }
 
-declare global {
-  namespace NodeJS {
-    interface Process {
-      __socketio?: typeof mockSocketIO
-    }
-  }
-}
-
 describe("POST /api/game/[gameId]/riichi", () => {
   const mockPrisma = prisma as jest.Mocked<typeof prisma>
   const mockGameId = "test-game-id"
@@ -79,6 +71,7 @@ describe("POST /api/game/[gameId]/riichi", () => {
     }
 
     beforeEach(() => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const PointManager = require("@/lib/point-manager").PointManager
 
       mockPrisma.game.findUnique.mockResolvedValue(mockGameData)
@@ -120,6 +113,7 @@ describe("POST /api/game/[gameId]/riichi", () => {
       expect(responseData.data.message).toContain("player1 がリーチしました")
 
       // PointManagerのメソッドが正しく呼ばれることを確認
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const PointManager = require("@/lib/point-manager").PointManager
       const mockPointManager = new PointManager()
       expect(mockPointManager.declareReach).toHaveBeenCalledWith("player1")
@@ -217,7 +211,10 @@ describe("POST /api/game/[gameId]/riichi", () => {
     }
 
     beforeEach(() => {
-      const declareSoloReach = require("@/lib/solo/score-manager").declareSoloReach
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const declareSoloReach =
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require("@/lib/solo/score-manager").declareSoloReach
 
       mockPrisma.game.findUnique.mockResolvedValue(null)
       mockPrisma.soloGame.findUnique.mockResolvedValue(mockSoloGameData)
@@ -248,7 +245,10 @@ describe("POST /api/game/[gameId]/riichi", () => {
       expect(responseData.data.message).toContain("Player 1がリーチしました")
 
       // declareSoloReachが正しい引数で呼ばれることを確認
-      const declareSoloReach = require("@/lib/solo/score-manager").declareSoloReach
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const declareSoloReach =
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require("@/lib/solo/score-manager").declareSoloReach
       expect(declareSoloReach).toHaveBeenCalledWith(mockSoloGameId, 0, 1)
     })
 
@@ -292,7 +292,10 @@ describe("POST /api/game/[gameId]/riichi", () => {
         params: Promise.resolve(mockParams),
       })
 
-      const declareSoloReach = require("@/lib/solo/score-manager").declareSoloReach
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const declareSoloReach =
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require("@/lib/solo/score-manager").declareSoloReach
       expect(declareSoloReach).toHaveBeenCalledWith(mockSoloGameId, 2, 5)
     })
 
