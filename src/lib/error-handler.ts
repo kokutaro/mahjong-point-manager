@@ -125,14 +125,14 @@ export function createErrorResponse(
     apiError = {
       code: error.code,
       message: error.message,
-      details: error.details,
+      details: { code: error.code, ...(error.details ?? {}) },
     }
     statusCode = error.statusCode
   } else if (error instanceof z.ZodError) {
     apiError = {
       code: "VALIDATION_ERROR",
       message: "入力データが無効です",
-      details: error.errors,
+      details: { code: "VALIDATION_ERROR", errors: error.errors },
     }
     statusCode = 400
   } else if (error instanceof Error) {

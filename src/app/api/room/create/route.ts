@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
       success: true,
       data: {
         gameId: game.id,
-        roomCode,
+        roomCode: game.roomCode,
         sessionId: session.id,
         sessionCode: session.sessionCode,
         hostPlayerId: hostPlayer.id,
@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
     })
 
     // ホストプレイヤーの認証情報をCookieに設定
-    response.cookies.set("player_id", hostPlayer.id, {
+    cookieStore.set("player_id", hostPlayer.id, {
       httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
