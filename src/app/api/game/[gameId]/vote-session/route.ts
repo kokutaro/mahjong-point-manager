@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth"
 import { PointManager } from "@/lib/point-manager"
 import { analyzeVotes } from "@/lib/vote-analysis"
 import { getIO, initializeVoteGlobals } from "@/lib/vote-globals"
+import { createRematch } from "@/lib/rematch-service"
 
 // 投票グローバル変数を初期化
 initializeVoteGlobals()
@@ -137,33 +138,56 @@ export async function POST(
         })
 
         try {
-          const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"
-          const res = await fetch(`${baseUrl}/api/game/${gameId}/rematch`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ continueSession: true }),
-          })
-          const data = await res.json()
+          console.log(`🔄 === CALLING REMATCH SERVICE DIRECTLY ===`)
+          console.log(`🔄 Environment: ${process.env.NODE_ENV}`)
+          console.log(`🔄 GameId: ${gameId}`)
+          console.log(`🔄 Service call data:`, { continueSession: true })
 
-          if (res.ok && data.success) {
+          const serviceStartTime = Date.now()
+          const result = await createRematch(gameId, { continueSession: true })
+          const serviceDuration = Date.now() - serviceStartTime
+
+          console.log(`🔄 === REMATCH SERVICE RESPONSE ===`)
+          console.log(`🔄 Service duration: ${serviceDuration}ms`)
+          console.log(`🔄 Service result:`, JSON.stringify(result, null, 2))
+
+          if (result.success) {
             io.to(gameInfo.roomCode).emit("new-room-ready", {
-              roomCode: data.data.roomCode,
-              gameId: data.data.gameId,
-              sessionId: data.data.sessionId,
+              roomCode: result.data.roomCode,
+              gameId: result.data.gameId,
+              sessionId: result.data.sessionId,
             })
             console.log(
-              `🔄 Successfully created new room ${data.data.roomCode} for continuation`
+              `🔄 Successfully created new room ${result.data.roomCode} for continuation via direct service call`
             )
           } else {
-            console.error("Failed to create new room:", data.error?.message)
-            io.to(gameInfo.roomCode).emit("error", {
-              message: "新しいルーム作成に失敗しました",
+            console.error(
+              "🔄 === REMATCH SERVICE ERROR ===",
+              result.error.message
+            )
+            io.to(gameInfo.roomCode).emit("session_continue_failed", {
+              message: result.error.message,
+              details: result.error.details || "不明なエラー",
             })
           }
         } catch (err) {
-          console.error("Error creating new room:", err)
-          io.to(gameInfo.roomCode).emit("error", {
-            message: "新しいルーム作成に失敗しました",
+          console.error("🔄 Error creating new room:", err)
+
+          let errorMessage = "新しいルーム作成に失敗しました"
+          let errorDetails = "不明なエラー"
+
+          if (err instanceof Error) {
+            if (err.name === "AbortError") {
+              errorMessage = "新しいルーム作成がタイムアウトしました"
+              errorDetails = "10秒以内に処理が完了しませんでした"
+            } else {
+              errorDetails = err.message
+            }
+          }
+
+          io.to(gameInfo.roomCode).emit("session_continue_failed", {
+            message: errorMessage,
+            details: errorDetails,
           })
         }
 
