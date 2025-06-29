@@ -1,6 +1,6 @@
 # Test Coverage Improvement Plan
 
-Current overall coverage is now around **36%**. To reach 80%+, we will incrementally target the most critical modules first.
+Current overall coverage is now around **39%**. To reach 80%+, we will incrementally target the most critical modules first.
 
 ## Priorities
 
@@ -39,3 +39,4 @@ Each phase should include updating existing tests, writing new ones, and refacto
 3. Expand coverage of vote-session and solo API routes, plus additional UI components.
 4. Monitor coverage reports on every PR until the 80% goal is met.
 5. Begin Phase 5 with full system tests using Playwright to accelerate toward 90% coverage.
+6. Plan Phase 6 to push coverage past 45% with remaining solo routes and component tests.
