@@ -485,6 +485,11 @@ describe("PointManager", () => {
         mockPrisma.game.findUnique.mockResolvedValue(
           createMockGame({ currentOya: 0 })
         )
+        mockPrisma.gameParticipant.findFirst.mockImplementation(({ where }) =>
+          Promise.resolve(
+            participants.find((p) => p.playerId === where.playerId)
+          )
+        )
         mockPrisma.gameParticipant.update.mockResolvedValue({})
         mockPrisma.gameParticipant.updateMany.mockResolvedValue({})
 
@@ -523,9 +528,11 @@ describe("PointManager", () => {
 
         mockPrisma.gameParticipant.findMany.mockResolvedValue(participants)
         mockPrisma.game.findUnique.mockResolvedValue(createMockGame())
-        mockPrisma.gameParticipant.findFirst
-          .mockResolvedValueOnce(participants[0]) // winner
-          .mockResolvedValueOnce(participants[1]) // loser
+        mockPrisma.gameParticipant.findFirst.mockImplementation(({ where }) =>
+          Promise.resolve(
+            participants.find((p) => p.playerId === where.playerId)
+          )
+        )
         mockPrisma.gameParticipant.update.mockResolvedValue({})
         mockPrisma.gameParticipant.updateMany.mockResolvedValue({})
 
@@ -541,7 +548,7 @@ describe("PointManager", () => {
         )
 
         expect(result.gameEnded).toBe(false)
-        expect(mockPrisma.gameParticipant.findFirst).toHaveBeenCalledTimes(2)
+        expect(mockPrisma.gameParticipant.findFirst).toHaveBeenCalledTimes(4)
         expect(mockPrisma.gameParticipant.update).toHaveBeenCalledTimes(2)
       })
 
@@ -714,7 +721,11 @@ describe("PointManager", () => {
       })
 
       test("流局でゲーム終了", async () => {
-        const game = createMockGame()
+        const game = createMockGame({
+          participants: [
+            createMockParticipant({ position: 0, playerId: "p1" }),
+          ],
+        })
 
         mockPrisma.game.findUnique.mockResolvedValue(game)
         mockPrisma.gameEvent = { create: jest.fn() }

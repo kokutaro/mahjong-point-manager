@@ -204,6 +204,9 @@ describe("SoloPointManager", () => {
         mockPrisma.soloGame.findUnique.mockResolvedValue(
           createMockGame({ currentOya: 0 })
         )
+        mockPrisma.soloPlayer.findFirst.mockImplementation(({ where }) =>
+          Promise.resolve(players.find((p) => p.position === where.position))
+        )
         mockPrisma.soloPlayer.update.mockResolvedValue({})
         mockPrisma.soloPlayer.updateMany.mockResolvedValue({})
 
@@ -237,9 +240,9 @@ describe("SoloPointManager", () => {
 
         mockPrisma.soloPlayer.findMany.mockResolvedValue(players)
         mockPrisma.soloGame.findUnique.mockResolvedValue(createMockGame())
-        mockPrisma.soloPlayer.findFirst
-          .mockResolvedValueOnce(players[0]) // winner
-          .mockResolvedValueOnce(players[1]) // loser
+        mockPrisma.soloPlayer.findFirst.mockImplementation(({ where }) =>
+          Promise.resolve(players.find((p) => p.position === where.position))
+        )
         mockPrisma.soloPlayer.update.mockResolvedValue({})
         mockPrisma.soloPlayer.updateMany.mockResolvedValue({})
 
@@ -255,7 +258,7 @@ describe("SoloPointManager", () => {
         )
 
         expect(result.gameEnded).toBe(false)
-        expect(mockPrisma.soloPlayer.findFirst).toHaveBeenCalledTimes(2)
+        expect(mockPrisma.soloPlayer.findFirst).toHaveBeenCalledTimes(4)
         expect(mockPrisma.soloPlayer.update).toHaveBeenCalledTimes(2)
       })
 

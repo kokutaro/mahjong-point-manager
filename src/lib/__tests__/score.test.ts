@@ -71,7 +71,7 @@ describe("Score Calculation", () => {
 
         const result = await calculateScore(input)
 
-        expect(result.baseScore).toBe(240) // 30 * 2^(3+2)
+        expect(result.baseScore).toBe(960) // 30 * 2^(3+2)
         expect(result.totalScore).toBe(8000)
         expect(result.payments.fromLoser).toBe(8000)
         expect(result.honbaPayment).toBe(0)
@@ -159,7 +159,8 @@ describe("Score Calculation", () => {
         expect(result.honbaPayment).toBe(600) // 2 * 300
         expect(result.kyotakuPayment).toBe(1000) // 1 * 1000
         expect(result.totalScore).toBe(9600) // 8000 + 600 + 1000
-        expect(result.payments.fromLoser).toBe(9600)
+        // fromLoserには供託分を含まない
+        expect(result.payments.fromLoser).toBe(8600)
       })
 
       test("ツモ時の本場計算", async () => {
