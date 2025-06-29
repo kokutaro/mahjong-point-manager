@@ -18,6 +18,8 @@
     "test:e2e:debug": "playwright test --debug",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "npx prisma db push --force-reset && npm run db:seed",
+    "db:fix-session-stats": "tsx scripts/fix-session-statistics.ts",
+    "db:fix-session-stats:dry-run": "tsx scripts/fix-session-statistics.ts --dry-run",
     "debug": "NODE_OPTIONS='--inspect' node server.js"
   },
   "prisma": {
