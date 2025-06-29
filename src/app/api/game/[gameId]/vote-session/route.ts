@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth"
 import { PointManager } from "@/lib/point-manager"
 import { analyzeVotes } from "@/lib/vote-analysis"
 import { getIO, initializeVoteGlobals } from "@/lib/vote-globals"
+import { createRematch } from "@/lib/rematch-service"
 
 // 投票グローバル変数を初期化
 initializeVoteGlobals()
@@ -137,57 +138,36 @@ export async function POST(
         })
 
         try {
-          const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"
-          console.log(
-            `🔄 Calling rematch API: ${baseUrl}/api/game/${gameId}/rematch`
-          )
+          console.log(`🔄 === CALLING REMATCH SERVICE DIRECTLY ===`)
+          console.log(`🔄 Environment: ${process.env.NODE_ENV}`)
+          console.log(`🔄 GameId: ${gameId}`)
+          console.log(`🔄 Service call data:`, { continueSession: true })
 
-          const controller = new AbortController()
-          const timeoutId = setTimeout(() => controller.abort(), 10000) // 10秒タイムアウト
+          const serviceStartTime = Date.now()
+          const result = await createRematch(gameId, { continueSession: true })
+          const serviceDuration = Date.now() - serviceStartTime
 
-          const res = await fetch(`${baseUrl}/api/game/${gameId}/rematch`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ continueSession: true }),
-            signal: controller.signal,
-          })
+          console.log(`🔄 === REMATCH SERVICE RESPONSE ===`)
+          console.log(`🔄 Service duration: ${serviceDuration}ms`)
+          console.log(`🔄 Service result:`, JSON.stringify(result, null, 2))
 
-          clearTimeout(timeoutId)
-
-          console.log(`🔄 Rematch API response status: ${res.status}`)
-
-          if (!res.ok) {
-            const errorText = await res.text()
-            console.error(
-              `🔄 Rematch API failed with status ${res.status}: ${errorText}`
-            )
-            io.to(gameInfo.roomCode).emit("session_continue_failed", {
-              message: `新しいルーム作成に失敗しました (HTTP ${res.status})`,
-              details: errorText,
-            })
-            return
-          }
-
-          const data = await res.json()
-          console.log(`🔄 Rematch API response data:`, data)
-
-          if (data.success) {
+          if (result.success) {
             io.to(gameInfo.roomCode).emit("new-room-ready", {
-              roomCode: data.data.roomCode,
-              gameId: data.data.gameId,
-              sessionId: data.data.sessionId,
+              roomCode: result.data.roomCode,
+              gameId: result.data.gameId,
+              sessionId: result.data.sessionId,
             })
             console.log(
-              `🔄 Successfully created new room ${data.data.roomCode} for continuation`
+              `🔄 Successfully created new room ${result.data.roomCode} for continuation via direct service call`
             )
           } else {
             console.error(
-              "🔄 Rematch API returned success:false:",
-              data.error?.message
+              "🔄 === REMATCH SERVICE ERROR ===",
+              result.error.message
             )
             io.to(gameInfo.roomCode).emit("session_continue_failed", {
-              message: "新しいルーム作成に失敗しました",
-              details: data.error?.message || "不明なエラー",
+              message: result.error.message,
+              details: result.error.details || "不明なエラー",
             })
           }
         } catch (err) {

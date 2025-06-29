@@ -1,4 +1,3 @@
-import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 
@@ -15,23 +14,40 @@ const rematchSchema = z.object({
   newSessionName: z.string().optional(),
 })
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ gameId: string }> }
-) {
-  try {
-    const { gameId } = await params
-    const body = await request.json()
-    const validatedData = rematchSchema.parse(body)
+export interface RematchResult {
+  success: true
+  data: {
+    gameId: string
+    roomCode: string
+    sessionId: string
+    sessionCode: string
+  }
+}
 
-    console.log(`🔄 === REMATCH API START ===`)
+export interface RematchError {
+  success: false
+  error: {
+    message: string
+    details: string
+    errorType?: string
+  }
+}
+
+/**
+ * rematch処理を実行する関数
+ * 内部API呼び出しの代わりに直接呼び出し可能
+ */
+export async function createRematch(
+  gameId: string,
+  requestData: unknown
+): Promise<RematchResult | RematchError> {
+  try {
+    const validatedData = rematchSchema.parse(requestData)
+
+    console.log(`🔄 === REMATCH SERVICE START ===`)
     console.log(`🔄 Environment: ${process.env.NODE_ENV}`)
     console.log(`🔄 GameId: ${gameId}`)
-    console.log(`🔄 Request body:`, validatedData)
-    console.log(
-      `🔄 Request headers:`,
-      Object.fromEntries(request.headers.entries())
-    )
+    console.log(`🔄 Request data:`, validatedData)
 
     console.log(`🔄 Fetching game data for gameId: ${gameId}`)
     const game = await prisma.game.findUnique({
@@ -49,10 +65,13 @@ export async function POST(
       console.error(`🔄 GameId searched: ${gameId}`)
       console.error(`🔄 Type of gameId: ${typeof gameId}`)
       console.error(`🔄 GameId length: ${gameId.length}`)
-      return NextResponse.json(
-        { success: false, error: { message: "ゲームが見つかりません" } },
-        { status: 404 }
-      )
+      return {
+        success: false,
+        error: {
+          message: "ゲームが見つかりません",
+          details: `gameId: ${gameId}`,
+        },
+      }
     }
 
     console.log(
@@ -211,7 +230,8 @@ export async function POST(
       `🔄 Participant IDs: ${participantResults.map((p) => p.id).join(", ")}`
     )
 
-    return NextResponse.json({
+    console.log(`🔄 === REMATCH SERVICE SUCCESS ===`)
+    return {
       success: true,
       data: {
         gameId: newGame.id,
@@ -219,9 +239,9 @@ export async function POST(
         sessionId: session.id,
         sessionCode: session.sessionCode,
       },
-    })
+    }
   } catch (err) {
-    console.error(`🔄 === REMATCH CREATION FAILED ===`)
+    console.error(`🔄 === REMATCH SERVICE FAILED ===`)
     console.error(
       `🔄 Error type: ${err instanceof Error ? err.constructor.name : typeof err}`
     )
@@ -236,30 +256,25 @@ export async function POST(
     }
 
     let errorMessage = "再戦作成に失敗しました"
-    let statusCode = 500
 
     if (err instanceof Error) {
       if (err.message.includes("ゲーム設定が見つかりません")) {
         errorMessage = "ゲーム設定が見つかりません"
-        statusCode = 400
         console.error(`🔄 Settings error detected`)
       } else if (err.message.includes("ルームコード生成に失敗")) {
         errorMessage = "ルームコード生成に失敗しました"
-        statusCode = 500
         console.error(`🔄 Room code generation error detected`)
       } else if (
         err.message.includes("Unique constraint") ||
         err.message.includes("unique")
       ) {
         errorMessage = "データベース制約違反が発生しました"
-        statusCode = 409
         console.error(`🔄 Database constraint error detected`)
       } else if (
         err.message.includes("connect") ||
         err.message.includes("timeout")
       ) {
         errorMessage = "データベース接続エラーが発生しました"
-        statusCode = 503
         console.error(`🔄 Database connection error detected`)
       } else {
         errorMessage = `再戦作成に失敗しました: ${err.message}`
@@ -267,20 +282,15 @@ export async function POST(
       }
     }
 
-    console.error(
-      `🔄 Final response: status=${statusCode}, message="${errorMessage}"`
-    )
+    console.error(`🔄 Final error response: message="${errorMessage}"`)
 
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          message: errorMessage,
-          details: err instanceof Error ? err.message : String(err),
-          errorType: err instanceof Error ? err.constructor.name : typeof err,
-        },
+    return {
+      success: false,
+      error: {
+        message: errorMessage,
+        details: err instanceof Error ? err.message : String(err),
+        errorType: err instanceof Error ? err.constructor.name : typeof err,
       },
-      { status: statusCode }
-    )
+    }
   }
 }
