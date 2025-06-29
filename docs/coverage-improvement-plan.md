@@ -28,6 +28,7 @@ Current overall coverage is now around **36%**. To reach 80%+, we will increment
 | 2     | 65%             | Remaining API routes            |
 | 3     | 75%             | UI components & contexts        |
 | 4     | 80%+            | Regression tests and edge cases |
+| 5     | 90%             | Full system & E2E coverage      |
 
 Each phase should include updating existing tests, writing new ones, and refactoring for testability when needed.
 
@@ -37,3 +38,4 @@ Each phase should include updating existing tests, writing new ones, and refacto
 2. Establish mocks for Prisma and Socket.io.
 3. Expand coverage of vote-session and solo API routes, plus additional UI components.
 4. Monitor coverage reports on every PR until the 80% goal is met.
+5. Begin Phase 5 with full system tests using Playwright to accelerate toward 90% coverage.
