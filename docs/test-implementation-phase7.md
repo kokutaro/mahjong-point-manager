@@ -28,3 +28,10 @@ With coverage expected to exceed 45% after Phase 6, this phase accelerates towar
 - **Week 21**: Polish tests, monitor coverage, and prepare for Phase 8.
 
 Coverage reports will be reviewed after each step to maintain progress toward the ultimate 80% goal.
+
+## Implementation Notes
+
+- Added reconnection E2E test verifying room page reload
+- Extended useSocket tests for delayed joinRoom and connected calls
+- Created useAppStore unit tests covering state actions
+- Added SessionHistoryModal regression tests

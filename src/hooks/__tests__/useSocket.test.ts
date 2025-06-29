@@ -103,4 +103,35 @@ describe("useSocket", () => {
 
     expect(socketClientMock.connect.mock.calls.length).toBeGreaterThanOrEqual(2)
   })
+
+  test("joinRoom waits for connection", () => {
+    jest.useFakeTimers()
+    const { result } = renderHook(() => useSocket())
+
+    act(() => {
+      result.current.joinRoom("ROOM1", "P1")
+    })
+
+    expect(socketClientMock.joinRoom).not.toHaveBeenCalled()
+
+    act(() => {
+      jest.advanceTimersByTime(1000)
+    })
+
+    expect(socketClientMock.joinRoom).toHaveBeenCalledWith("ROOM1", "P1")
+    jest.useRealTimers()
+  })
+
+  test("joinRoom sends immediately when connected", () => {
+    const { result } = renderHook(() => useSocket())
+    act(() => {
+      eventBus.emit("connect")
+    })
+
+    act(() => {
+      result.current.joinRoom("ROOM2", "P2")
+    })
+
+    expect(socketClientMock.joinRoom).toHaveBeenCalledWith("ROOM2", "P2")
+  })
 })
