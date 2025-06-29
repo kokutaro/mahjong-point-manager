@@ -1,5 +1,10 @@
 import "@testing-library/jest-dom"
 
+// Ensure required env vars for Prisma client
+process.env.DATABASE_URL =
+  process.env.DATABASE_URL ||
+  "postgresql://user:password@localhost:5432/test_db"
+
 // Mock Next.js router
 jest.mock("next/navigation", () => ({
   useRouter() {
