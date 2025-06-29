@@ -2,6 +2,18 @@ import { POST } from "@/app/api/game/[gameId]/score/route"
 import { prisma } from "@/lib/prisma"
 import { NextRequest } from "next/server"
 import { createMocks } from "node-mocks-http"
+import { calculateScore } from "@/lib/score"
+
+const mockPointManager = {
+  getGameState: jest.fn(),
+  distributeWinPoints: jest.fn(),
+  getGameInfo: jest.fn(),
+}
+
+const mockSoloPointManager = {
+  getGameState: jest.fn(),
+  distributeWinPoints: jest.fn(),
+}
 
 // Prismaのモック
 jest.mock("@/lib/prisma", () => ({
@@ -17,19 +29,12 @@ jest.mock("@/lib/prisma", () => ({
 
 // PointManagerのモック
 jest.mock("@/lib/point-manager", () => ({
-  PointManager: jest.fn().mockImplementation(() => ({
-    getGameState: jest.fn(),
-    distributeWinPoints: jest.fn(),
-    getGameInfo: jest.fn(),
-  })),
+  PointManager: jest.fn(() => mockPointManager),
 }))
 
 // SoloPointManagerのモック
 jest.mock("@/lib/solo/solo-point-manager", () => ({
-  SoloPointManager: jest.fn().mockImplementation(() => ({
-    getGameState: jest.fn(),
-    distributeWinPoints: jest.fn(),
-  })),
+  SoloPointManager: jest.fn(() => mockSoloPointManager),
 }))
 
 // scoreライブラリのモック
@@ -53,6 +58,13 @@ describe("POST /api/game/[gameId]/score", () => {
     jest.clearAllMocks()
     // WebSocketのモック設定
     process.__socketio = mockSocketIO
+    Object.values(mockPointManager).forEach((fn) =>
+      (fn as jest.Mock).mockReset()
+    )
+    Object.values(mockSoloPointManager).forEach((fn) =>
+      (fn as jest.Mock).mockReset()
+    )
+    ;(calculateScore as jest.Mock).mockReset()
   })
 
   afterEach(() => {
@@ -86,15 +98,9 @@ describe("POST /api/game/[gameId]/score", () => {
     }
 
     beforeEach(() => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const PointManager = require("@/lib/point-manager").PointManager
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const calculateScore = require("@/lib/score").calculateScore
-
       mockPrisma.game.findUnique.mockResolvedValue(mockGameData)
       mockPrisma.soloGame.findUnique.mockResolvedValue(null)
 
-      const mockPointManager = new PointManager()
       mockPointManager.getGameState.mockResolvedValue(mockGameState)
       mockPointManager.distributeWinPoints.mockResolvedValue({
         gameEnded: false,
@@ -162,9 +168,6 @@ describe("POST /api/game/[gameId]/score", () => {
     })
 
     it("ゲーム終了時のWebSocket通知テスト", async () => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const PointManager = require("@/lib/point-manager").PointManager
-      const mockPointManager = new PointManager()
       mockPointManager.distributeWinPoints.mockResolvedValue({
         gameEnded: true,
         reason: "オーラス終了",
@@ -262,8 +265,6 @@ describe("POST /api/game/[gameId]/score", () => {
     })
 
     it("ゲーム状態エラー: ゲームが非アクティブ", async () => {
-      const PointManager = require("@/lib/point-manager").PointManager
-      const mockPointManager = new PointManager()
       mockPointManager.getGameState.mockResolvedValue({
         ...mockGameState,
         gamePhase: "ended",
@@ -316,13 +317,9 @@ describe("POST /api/game/[gameId]/score", () => {
     }
 
     beforeEach(() => {
-      const SoloPointManager = require("@/lib/solo/solo-point-manager").SoloPointManager
-      const calculateScore = require("@/lib/score").calculateScore
-
       mockPrisma.game.findUnique.mockResolvedValue(null)
       mockPrisma.soloGame.findUnique.mockResolvedValue(mockSoloGameData)
 
-      const mockSoloPointManager = new SoloPointManager()
       mockSoloPointManager.getGameState.mockResolvedValue(mockSoloGameState)
       mockSoloPointManager.distributeWinPoints.mockResolvedValue({
         gameEnded: false,

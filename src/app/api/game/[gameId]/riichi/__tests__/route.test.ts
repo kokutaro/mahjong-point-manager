@@ -2,6 +2,13 @@ import { POST } from "@/app/api/game/[gameId]/riichi/route"
 import { prisma } from "@/lib/prisma"
 import { NextRequest } from "next/server"
 import { createMocks } from "node-mocks-http"
+import { declareSoloReach } from "@/lib/solo/score-manager"
+
+const mockPointManager = {
+  declareReach: jest.fn(),
+  getGameState: jest.fn(),
+  getGameInfo: jest.fn(),
+}
 
 // Prismaのモック
 jest.mock("@/lib/prisma", () => ({
@@ -17,11 +24,7 @@ jest.mock("@/lib/prisma", () => ({
 
 // PointManagerのモック
 jest.mock("@/lib/point-manager", () => ({
-  PointManager: jest.fn().mockImplementation(() => ({
-    declareReach: jest.fn(),
-    getGameState: jest.fn(),
-    getGameInfo: jest.fn(),
-  })),
+  PointManager: jest.fn(() => mockPointManager),
 }))
 
 // Solo score managerのモック
@@ -37,6 +40,7 @@ const mockSocketIO = {
 }
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace NodeJS {
     interface Process {
       __socketio?: typeof mockSocketIO
@@ -53,6 +57,10 @@ describe("POST /api/game/[gameId]/riichi", () => {
     jest.clearAllMocks()
     // WebSocketのモック設定
     process.__socketio = mockSocketIO
+    Object.values(mockPointManager).forEach((fn) =>
+      (fn as jest.Mock).mockReset()
+    )
+    ;(declareSoloReach as jest.Mock).mockReset()
   })
 
   afterEach(() => {
@@ -79,12 +87,9 @@ describe("POST /api/game/[gameId]/riichi", () => {
     }
 
     beforeEach(() => {
-      const PointManager = require("@/lib/point-manager").PointManager
-
       mockPrisma.game.findUnique.mockResolvedValue(mockGameData)
       mockPrisma.soloGame.findUnique.mockResolvedValue(null)
 
-      const mockPointManager = new PointManager()
       mockPointManager.declareReach.mockResolvedValue(undefined)
       mockPointManager.getGameState.mockResolvedValue({
         ...mockGameState,
@@ -120,8 +125,6 @@ describe("POST /api/game/[gameId]/riichi", () => {
       expect(responseData.data.message).toContain("player1 がリーチしました")
 
       // PointManagerのメソッドが正しく呼ばれることを確認
-      const PointManager = require("@/lib/point-manager").PointManager
-      const mockPointManager = new PointManager()
       expect(mockPointManager.declareReach).toHaveBeenCalledWith("player1")
     })
 
@@ -217,8 +220,6 @@ describe("POST /api/game/[gameId]/riichi", () => {
     }
 
     beforeEach(() => {
-      const declareSoloReach = require("@/lib/solo/score-manager").declareSoloReach
-
       mockPrisma.game.findUnique.mockResolvedValue(null)
       mockPrisma.soloGame.findUnique.mockResolvedValue(mockSoloGameData)
 
@@ -248,7 +249,6 @@ describe("POST /api/game/[gameId]/riichi", () => {
       expect(responseData.data.message).toContain("Player 1がリーチしました")
 
       // declareSoloReachが正しい引数で呼ばれることを確認
-      const declareSoloReach = require("@/lib/solo/score-manager").declareSoloReach
       expect(declareSoloReach).toHaveBeenCalledWith(mockSoloGameId, 0, 1)
     })
 
@@ -292,7 +292,6 @@ describe("POST /api/game/[gameId]/riichi", () => {
         params: Promise.resolve(mockParams),
       })
 
-      const declareSoloReach = require("@/lib/solo/score-manager").declareSoloReach
       expect(declareSoloReach).toHaveBeenCalledWith(mockSoloGameId, 2, 5)
     })
 
