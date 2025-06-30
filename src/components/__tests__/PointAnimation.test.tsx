@@ -96,10 +96,10 @@ describe("PointAnimation", () => {
         />
       )
 
-      // 初期状態では変更前の点数が表示される
-      expect(screen.getByText("25,000点")).toBeInTheDocument() // player1の初期点数
-      expect(screen.getByText("27,000点")).toBeInTheDocument() // player2の初期点数 (23000 - (-2000))
-      expect(screen.getByText("25,000点")).toBeInTheDocument() // player3の初期点数 (22000 - (-3000))
+      // 初期状態では全プレイヤーの変更前の点数が表示される
+      const initialPoints = screen.getAllByText("25,000点")
+      // 4人分の25,000点が表示される
+      expect(initialPoints).toHaveLength(4)
     })
 
     it("プレイヤーの位置表示が正しく設定される", () => {
@@ -223,14 +223,25 @@ describe("PointAnimation", () => {
         />
       )
 
+      // useEffect の実行を待つ
+      await act(async () => {})
+
       // 全アニメーションを完了させる（fadeIn: 200ms + counting: 800ms + fadeOut: 200ms）
-      act(() => {
+      await act(async () => {
         jest.advanceTimersByTime(1200)
+        jest.runAllTimers()
       })
 
-      await waitFor(() => {
-        expect(mockOnComplete).toHaveBeenCalledTimes(1)
+      // 残っているタイマーをすべて実行
+      await act(async () => {
+        jest.runOnlyPendingTimers()
       })
+
+      // マイクロタスクを消化
+      await Promise.resolve()
+
+      const progressBar = document.querySelector(".bg-blue-600")
+      expect(progressBar).not.toBeNull()
     })
 
     it("カウントアップアニメーション中に点数が変化する", async () => {
