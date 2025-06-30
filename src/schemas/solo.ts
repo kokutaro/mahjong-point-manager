@@ -94,7 +94,6 @@ export type CreateSoloGameInput = z.infer<typeof CreateSoloGameSchema>
 // 点数計算スキーマ（ソロプレイ）
 export const SoloScoreCalculationSchema = BaseScoreCalculationSchema.extend({
   winnerId: PlayerPositionSchema,
-  isOya: z.boolean(),
   loserId: PlayerPositionSchema.optional(),
 })
   .refine((data) => validateHanFu(data.han, data.fu), {

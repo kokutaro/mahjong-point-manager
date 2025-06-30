@@ -101,13 +101,15 @@ export async function GET(
     // 順位分布
     const rankDistribution = { 1: 0, 2: 0, 3: 0, 4: 0 }
     let totalRank = 0
+    let rankCount = 0
     let totalPoints = 0
     let totalSettlement = 0
 
     participations.forEach((p) => {
-      if (p.finalRank) {
+      if (p.finalRank !== null && p.finalRank !== undefined) {
         rankDistribution[p.finalRank as keyof typeof rankDistribution]++
         totalRank += p.finalRank
+        rankCount += 1
       }
       if (p.finalPoints) {
         totalPoints += p.finalPoints
@@ -122,7 +124,7 @@ export async function GET(
       totalGames > 0 ? (rankDistribution[1] / totalGames) * 100 : 0
 
     // 平均順位
-    const averageRank = totalGames > 0 ? totalRank / totalGames : 0
+    const averageRank = rankCount > 0 ? totalRank / rankCount : 0
 
     // 平均点数
     const averagePoints =
@@ -143,14 +145,16 @@ export async function GET(
     Object.entries(gameTypeGroups).forEach(([type, games]) => {
       const typeRankDistribution = { 1: 0, 2: 0, 3: 0, 4: 0 }
       let typeRankTotal = 0
+      let typeRankCount = 0
       let typeSettlementTotal = 0
 
       games.forEach((g) => {
-        if (g.finalRank) {
+        if (g.finalRank !== null && g.finalRank !== undefined) {
           typeRankDistribution[
             g.finalRank as keyof typeof typeRankDistribution
           ]++
           typeRankTotal += g.finalRank
+          typeRankCount += 1
         }
         if (g.settlement) {
           typeSettlementTotal += g.settlement
@@ -160,8 +164,14 @@ export async function GET(
       gameTypeStats[type] = {
         totalGames: games.length,
         winRate:
-          games.length > 0 ? (typeRankDistribution[1] / games.length) * 100 : 0,
-        averageRank: games.length > 0 ? typeRankTotal / games.length : 0,
+          games.length > 0
+            ? Math.round((typeRankDistribution[1] / games.length) * 100 * 100) /
+              100
+            : 0,
+        averageRank:
+          typeRankCount > 0
+            ? Math.round((typeRankTotal / typeRankCount) * 100) / 100
+            : 0,
         totalSettlement: typeSettlementTotal,
         rankDistribution: typeRankDistribution,
       }
