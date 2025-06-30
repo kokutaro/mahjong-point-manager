@@ -47,6 +47,11 @@ export interface GameEvent {
 
 let io: SocketIOServer | null = null
 
+// テスト用にソケットインスタンスをリセット
+export function resetIO() {
+  io = null
+}
+
 // Node.jsのprocessオブジェクトを使用してグローバル共有
 export function initSocket(server: HTTPServer) {
   // 既存のインスタンスがあれば再利用
@@ -139,7 +144,7 @@ export function initSocket(server: HTTPServer) {
           const game = await prisma.game.findUnique({ where: { id: gameId } })
 
           if (game) {
-            io?.to(game.roomCode).emit("game_state", gameState)
+            socket.to(game.roomCode).emit("game_state", gameState)
 
             // 全員準備完了でゲーム開始
             if (
@@ -151,7 +156,7 @@ export function initSocket(server: HTTPServer) {
                 data: { status: "PLAYING" },
               })
 
-              io?.to(game.roomCode).emit("game_start", gameState)
+              socket.to(game.roomCode).emit("game_start", gameState)
             }
           }
         } catch (error: unknown) {

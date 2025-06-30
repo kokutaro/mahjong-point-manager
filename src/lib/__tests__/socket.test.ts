@@ -2,7 +2,7 @@ import { Server as HTTPServer } from "http"
 import { Server as SocketIOServer, Socket } from "socket.io"
 import { prisma } from "@/lib/prisma"
 import { calculateScore } from "@/lib/score"
-import { initSocket, getIO } from "../socket"
+import { initSocket, getIO, resetIO } from "../socket"
 
 // モック設定
 jest.mock("@/lib/prisma", () => ({
@@ -82,11 +82,13 @@ describe("Socket Module", () => {
 
     // プロセスオブジェクトをクリア
     delete process.__socketio
+    resetIO()
   })
 
   afterEach(() => {
     // プロセスオブジェクトをクリア
     delete process.__socketio
+    resetIO()
   })
 
   describe("initSocket", () => {
@@ -283,13 +285,40 @@ describe("Socket Module", () => {
     describe("player_ready event", () => {
       it("プレイヤー準備状態を正常に処理できる", async () => {
         const mockGameState = {
-          gameId: "game-123",
-          players: [
-            { playerId: "player-1", isReady: false }, // 実装では常にfalse
-            { playerId: "player-2", isReady: false },
-            { playerId: "player-3", isReady: false },
-            { playerId: "player-4", isReady: false },
+          id: "game-123",
+          roomCode: "TEST123",
+          currentRound: 1,
+          currentOya: 0,
+          honba: 0,
+          kyotaku: 0,
+          status: "WAITING",
+          participants: [
+            {
+              playerId: "player-1",
+              player: { name: "Player 1" },
+              position: 0,
+              currentPoints: 25000,
+            },
+            {
+              playerId: "player-2",
+              player: { name: "Player 2" },
+              position: 1,
+              currentPoints: 25000,
+            },
+            {
+              playerId: "player-3",
+              player: { name: "Player 3" },
+              position: 2,
+              currentPoints: 25000,
+            },
+            {
+              playerId: "player-4",
+              player: { name: "Player 4" },
+              position: 3,
+              currentPoints: 25000,
+            },
           ],
+          session: null,
         }
         const mockGame = {
           id: "game-123",

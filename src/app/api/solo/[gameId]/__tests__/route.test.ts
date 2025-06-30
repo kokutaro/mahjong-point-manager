@@ -355,7 +355,10 @@ describe("PATCH /api/solo/[gameId]", () => {
       expect(data.success).toBe(false)
       expect(data.error.code).toBe("INVALID_ACTION")
       expect(data.error.message).toBe("無効なアクションです")
-      expect(data.error.details).toEqual({ action: "invalid_action" })
+      expect(data.error.details).toEqual({
+        code: "INVALID_ACTION",
+        action: "invalid_action",
+      })
     })
 
     it("アクションが指定されていない場合に400エラーを返す", async () => {

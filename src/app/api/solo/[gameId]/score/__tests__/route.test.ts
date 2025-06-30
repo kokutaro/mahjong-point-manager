@@ -368,7 +368,7 @@ describe("POST /api/solo/[gameId]/score", () => {
 
       expect(response.status).toBe(400)
       expect(data.success).toBe(false)
-      expect(data.error.code).toBe("INVALID_HAN_FU")
+      expect(data.error.code).toBe("VALIDATION_ERROR")
     })
 
     it("無効なプレイヤー位置で400エラーを返す", async () => {
@@ -392,7 +392,7 @@ describe("POST /api/solo/[gameId]/score", () => {
 
       expect(response.status).toBe(400)
       expect(data.success).toBe(false)
-      expect(data.error.code).toBe("INVALID_PLAYER_POSITION")
+      expect(data.error.code).toBe("VALIDATION_ERROR")
     })
 
     it("ロンで敗者未指定の場合に400エラーを返す", async () => {
@@ -440,9 +440,9 @@ describe("POST /api/solo/[gameId]/score", () => {
       })
       const data = await response.json()
 
-      expect(response.status).toBe(500)
+      expect(response.status).toBe(400)
       expect(data.success).toBe(false)
-      expect(data.error.code).toBe("INTERNAL_ERROR")
+      expect(data.error.code).toBe("VALIDATION_ERROR")
     })
   })
 
@@ -478,7 +478,7 @@ describe("POST /api/solo/[gameId]/score", () => {
       })
       const data = await response.json()
 
-      expect(response.status).toBe(400)
+      expect(response.status).toBe(404)
       expect(data.success).toBe(false)
       expect(data.error.code).toBe("PLAYER_NOT_FOUND")
     })

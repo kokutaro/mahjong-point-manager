@@ -51,10 +51,11 @@ export async function updateSoloGameScore(
   }
 
   // 既存の点数計算ロジックを利用
+  const isOya = scoreInput.winnerId === game.currentOya
   const calculationInput: ScoreCalculationInput = {
     han: scoreInput.han,
     fu: scoreInput.fu,
-    isOya: scoreInput.isOya,
+    isOya,
     isTsumo: scoreInput.isTsumo,
     honba: game.honba,
     kyotaku: game.kyotaku,
@@ -66,11 +67,18 @@ export async function updateSoloGameScore(
   const pointChanges = calculateSoloPointChanges(
     game.players,
     scoreInput,
-    scoreResult
+    scoreResult,
+    isOya
   )
 
   // データベースを更新
-  await updateSoloGameState(gameId, scoreInput, pointChanges, scoreResult)
+  await updateSoloGameState(
+    gameId,
+    scoreInput,
+    pointChanges,
+    scoreResult,
+    isOya
+  )
 
   // 更新後のゲーム状態を取得
   const updatedGameState = await getSoloGameState(gameId)
@@ -91,13 +99,14 @@ function calculateSoloPointChanges(
     currentPoints: number
   }>,
   scoreInput: SoloScoreCalculationInput,
-  scoreResult: ScoreCalculationResult
+  scoreResult: ScoreCalculationResult,
+  isOya: boolean
 ): { position: number; change: number }[] {
   const changes: { position: number; change: number }[] = []
 
   if (scoreInput.isTsumo) {
     // ツモの場合
-    if (scoreInput.isOya) {
+    if (isOya) {
       // 親ツモ: 子3人が同額支払い
       const perKoPayment = scoreResult.payments.fromKo || 0
 
@@ -180,7 +189,8 @@ async function updateSoloGameState(
   gameId: string,
   scoreInput: SoloScoreCalculationInput,
   pointChanges: { position: number; change: number }[],
-  scoreResult: ScoreCalculationResult
+  scoreResult: ScoreCalculationResult,
+  isOya: boolean
 ) {
   await prisma.$transaction(async (tx) => {
     // プレイヤーの点数を更新
@@ -205,7 +215,7 @@ async function updateSoloGameState(
     let newOya = game.currentOya
     let newHonba = game.honba
 
-    if (scoreInput.isOya) {
+    if (isOya) {
       // 親の和了：連荘
       newHonba += 1
     } else {
