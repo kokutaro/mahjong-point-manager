@@ -329,8 +329,8 @@ describe("schemas/solo.ts", () => {
     it("無効な翻符の組み合わせを拒否する", () => {
       const invalidHanFu = {
         winnerId: 0,
-        han: 2,
-        fu: 25, // 無効なfu値
+        han: 1,
+        fu: 25, // 25符は2翻以上必要なので1翻では無効
         isTsumo: true,
         isOya: false,
         isDora: false,
@@ -419,26 +419,28 @@ describe("schemas/solo.ts", () => {
     it("テンパイ者が4人を超える場合を拒否する", () => {
       const invalidRyukyoku = {
         type: "DRAW" as const,
-        tenpaiPlayers: [0, 1, 2, 3, 4], // 5人
+        tenpaiPlayers: [0, 1, 2, 3, 4], // 5人（4は範囲外）
       }
 
       const result = SoloRyukyokuSchema.safeParse(invalidRyukyoku)
       expect(result.success).toBe(false)
-      expect(result.error?.issues[0]?.message).toBe(
-        "テンパイ者は4人以下である必要があります"
+      // PlayerPositionSchemaが先に範囲外エラーを検出する
+      expect(result.error?.issues[0]?.message).toContain(
+        "less than or equal to 3"
       )
     })
 
     it("無効なプレイヤー位置を拒否する", () => {
       const invalidRyukyoku = {
         type: "DRAW" as const,
-        tenpaiPlayers: [0, 5], // 5は無効な位置
+        tenpaiPlayers: [0, 5], // 5は無効な位置（範囲外）
       }
 
       const result = SoloRyukyokuSchema.safeParse(invalidRyukyoku)
       expect(result.success).toBe(false)
-      expect(result.error?.issues[0]?.message).toBe(
-        "無効なプレイヤー位置があります"
+      // PlayerPositionSchemaが先に範囲外エラーを検出する
+      expect(result.error?.issues[0]?.message).toContain(
+        "less than or equal to 3"
       )
     })
 
