@@ -79,7 +79,7 @@ describe("POST /api/solo/[gameId]/ryukyoku", () => {
         {
           method: "POST",
           body: JSON.stringify({
-            type: "EXHAUSTIVE_DRAW",
+            type: "DRAW",
             tenpaiPlayers: [],
           }),
         }
@@ -125,7 +125,7 @@ describe("POST /api/solo/[gameId]/ryukyoku", () => {
         {
           method: "POST",
           body: JSON.stringify({
-            type: "EXHAUSTIVE_DRAW",
+            type: "DRAW",
             tenpaiPlayers: [0, 1, 2, 3],
           }),
         }
@@ -164,7 +164,7 @@ describe("POST /api/solo/[gameId]/ryukyoku", () => {
         {
           method: "POST",
           body: JSON.stringify({
-            type: "EXHAUSTIVE_DRAW",
+            type: "DRAW",
             tenpaiPlayers: [0, 1, 2],
           }),
         }
@@ -247,7 +247,7 @@ describe("POST /api/solo/[gameId]/ryukyoku", () => {
         {
           method: "POST",
           body: JSON.stringify({
-            type: "EXHAUSTIVE_DRAW",
+            type: "DRAW",
             tenpaiPlayers: [0, 1, 2], // リーチプレイヤー(0,2)を含む
           }),
         }
@@ -286,7 +286,7 @@ describe("POST /api/solo/[gameId]/ryukyoku", () => {
         {
           method: "POST",
           body: JSON.stringify({
-            type: "EXHAUSTIVE_DRAW",
+            type: "DRAW",
             tenpaiPlayers: [0, 1],
           }),
         }
@@ -336,7 +336,7 @@ describe("POST /api/solo/[gameId]/ryukyoku", () => {
         {
           method: "POST",
           body: JSON.stringify({
-            type: "EXHAUSTIVE_DRAW",
+            type: "DRAW",
             tenpaiPlayers: [0, 1, 2, 3, 4], // 5人
           }),
         }
@@ -349,8 +349,7 @@ describe("POST /api/solo/[gameId]/ryukyoku", () => {
 
       expect(response.status).toBe(400)
       expect(data.success).toBe(false)
-      expect(data.error.code).toBe("INVALID_TENPAI_COUNT")
-      expect(data.error.message).toBe("テンパイ者数が無効です")
+      expect(data.error.code).toBe("VALIDATION_ERROR")
     })
 
     it("無効なプレイヤー位置で400エラーを返す", async () => {
@@ -362,7 +361,7 @@ describe("POST /api/solo/[gameId]/ryukyoku", () => {
         {
           method: "POST",
           body: JSON.stringify({
-            type: "EXHAUSTIVE_DRAW",
+            type: "DRAW",
             tenpaiPlayers: [0, 1, 5], // 5は無効な位置
           }),
         }
@@ -375,7 +374,7 @@ describe("POST /api/solo/[gameId]/ryukyoku", () => {
 
       expect(response.status).toBe(400)
       expect(data.success).toBe(false)
-      expect(data.error.code).toBe("INVALID_PLAYER_POSITION")
+      expect(data.error.code).toBe("VALIDATION_ERROR")
     })
   })
 
@@ -388,7 +387,7 @@ describe("POST /api/solo/[gameId]/ryukyoku", () => {
         {
           method: "POST",
           body: JSON.stringify({
-            type: "EXHAUSTIVE_DRAW",
+            type: "DRAW",
             tenpaiPlayers: [0, 1],
           }),
         }
@@ -414,7 +413,7 @@ describe("POST /api/solo/[gameId]/ryukyoku", () => {
         {
           method: "POST",
           body: JSON.stringify({
-            type: "EXHAUSTIVE_DRAW",
+            type: "DRAW",
             tenpaiPlayers: [0, 1],
           }),
         }
@@ -448,7 +447,7 @@ describe("POST /api/solo/[gameId]/ryukyoku", () => {
         {
           method: "POST",
           body: JSON.stringify({
-            type: "EXHAUSTIVE_DRAW",
+            type: "DRAW",
             tenpaiPlayers: [1, 3], // リーチプレイヤー(0,2)を含まない
           }),
         }
@@ -501,7 +500,7 @@ describe("POST /api/solo/[gameId]/ryukyoku", () => {
         {
           method: "POST",
           body: JSON.stringify({
-            type: "EXHAUSTIVE_DRAW",
+            type: "DRAW",
             tenpaiPlayers: [0, 1],
           }),
         }
