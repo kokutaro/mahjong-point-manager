@@ -70,11 +70,15 @@ describe("Prisma Configuration", () => {
     })
 
     it("should not set global prisma in production", () => {
-      process.env.NODE_ENV = "production"
+      const originalEnv = process.env.NODE_ENV
 
+      // グローバル変数を事前にクリア
       const globalForPrisma = globalThis as unknown as {
         prisma: PrismaClient | undefined
       }
+      globalForPrisma.prisma = undefined
+
+      process.env.NODE_ENV = "production"
 
       const prismaClient = new PrismaClient({
         log: ["warn"],
@@ -87,6 +91,9 @@ describe("Prisma Configuration", () => {
       }
 
       expect(globalForPrisma.prisma).toBeUndefined()
+
+      // 環境変数を復元
+      process.env.NODE_ENV = originalEnv
     })
 
     it("should set global prisma in development", () => {
