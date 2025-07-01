@@ -1,5 +1,10 @@
-import { act } from "@testing-library/react"
-import { useAppStore } from "../useAppStore"
+import { renderHook, act } from "@testing-library/react"
+import {
+  useAppStore,
+  useSessionStore,
+  useGameStore,
+  useUIStore,
+} from "../useAppStore"
 
 afterEach(() => {
   act(() => {
@@ -62,4 +67,44 @@ describe("useAppStore", () => {
     expect(state.currentSession).toBeNull()
     expect(state.currentGame).toBeNull()
   })
+})
+
+test("selectors work", () => {
+  const { result: sess } = renderHook(() => useSessionStore())
+  const { result: game } = renderHook(() => useGameStore())
+  const { result: ui } = renderHook(() => useUIStore())
+
+  act(() => {
+    sess.current.setSession({
+      id: "s2",
+      sessionCode: "XYZ",
+      hostPlayerId: "p2",
+      totalGames: 1,
+      createdAt: "2024-01-02",
+      status: "ACTIVE",
+    })
+    sess.current.setSessionMode(true)
+    game.current.setCurrentGame({
+      gameId: "g2",
+      roomCode: "R",
+      status: "WAITING",
+      players: [],
+    })
+    ui.current.setLoading(true)
+    ui.current.setError("e")
+  })
+
+  expect(sess.current.currentSession?.id).toBe("s2")
+  expect(sess.current.sessionMode).toBe(true)
+  expect(game.current.currentGame?.gameId).toBe("g2")
+  expect(ui.current.isLoading).toBe(true)
+  expect(ui.current.error).toBe("e")
+
+  act(() => {
+    sess.current.clearSession()
+    ui.current.clearError()
+  })
+
+  expect(sess.current.currentSession).toBeNull()
+  expect(ui.current.error).toBeNull()
 })
