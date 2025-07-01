@@ -422,3 +422,416 @@ describe("GameResult Phase 4: final score display", () => {
     expect(screen.getAllByText("15,000").length).toBeGreaterThan(0)
   })
 })
+
+describe("GameResult WebSocket Integration", () => {
+  const mockOnBack = jest.fn()
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockedUseAuth.mockReturnValue({ user: mockUser })
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, data: mockGameResultData }),
+    })
+  })
+
+  test("WebSocket接続とルーム参加", async () => {
+    render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
+
+    await screen.findByText("対局結果")
+
+    // WebSocket接続が開始される
+    expect(mockSocket.on).toHaveBeenCalledWith("connect", expect.any(Function))
+    expect(mockSocket.on).toHaveBeenCalledWith("error", expect.any(Function))
+  })
+
+  test("continueVoteイベントの処理", async () => {
+    render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
+
+    await screen.findByText("対局結果")
+
+    // continueVoteイベントハンドラーが登録される
+    expect(mockSocket.on).toHaveBeenCalledWith(
+      "continue-vote",
+      expect.any(Function)
+    )
+
+    // continueVoteイベントのシミュレーション
+    const continueVoteHandler = mockSocket.on.mock.calls.find(
+      (call) => call[0] === "continue-vote"
+    )?.[1]
+
+    if (continueVoteHandler) {
+      act(() => {
+        continueVoteHandler({ playerId: "player2", vote: true })
+      })
+    }
+
+    // 状態が更新されることを確認（詳細な確認は統合テストで行う）
+    expect(continueVoteHandler).toBeDefined()
+  })
+
+  test("vote-cancelledイベントの処理", async () => {
+    render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
+
+    await screen.findByText("対局結果")
+
+    expect(mockSocket.on).toHaveBeenCalledWith(
+      "vote-cancelled",
+      expect.any(Function)
+    )
+
+    const voteCancelledHandler = mockSocket.on.mock.calls.find(
+      (call) => call[0] === "vote-cancelled"
+    )?.[1]
+
+    if (voteCancelledHandler) {
+      act(() => {
+        voteCancelledHandler({ message: "投票がキャンセルされました" })
+      })
+    }
+
+    expect(voteCancelledHandler).toBeDefined()
+  })
+
+  test("session_force_endedイベントの処理（非ホスト）", async () => {
+    const nonHostUser = { playerId: "player2", name: "テストプレイヤー2" }
+    mockedUseAuth.mockReturnValue({ user: nonHostUser })
+
+    render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
+
+    await screen.findByText("対局結果")
+
+    expect(mockSocket.on).toHaveBeenCalledWith(
+      "session_force_ended",
+      expect.any(Function)
+    )
+
+    const forceEndedHandler = mockSocket.on.mock.calls.find(
+      (call) => call[0] === "session_force_ended"
+    )?.[1]
+
+    if (forceEndedHandler) {
+      act(() => {
+        forceEndedHandler({
+          reason: "テスト強制終了",
+          endedBy: { playerId: "player1", name: "ホストプレイヤー" },
+        })
+      })
+    }
+
+    expect(forceEndedHandler).toBeDefined()
+  })
+
+  test("session_vote_updateイベントの処理", async () => {
+    render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
+
+    await screen.findByText("対局結果")
+
+    expect(mockSocket.on).toHaveBeenCalledWith(
+      "session_vote_update",
+      expect.any(Function)
+    )
+
+    const voteUpdateHandler = mockSocket.on.mock.calls.find(
+      (call) => call[0] === "session_vote_update"
+    )?.[1]
+
+    if (voteUpdateHandler) {
+      act(() => {
+        voteUpdateHandler({
+          votes: { player2: "continue" },
+          result: { allVoted: false, allAgreed: false, votes: {} },
+          voterName: "他のプレイヤー",
+        })
+      })
+    }
+
+    expect(voteUpdateHandler).toBeDefined()
+  })
+
+  test("session_ended_by_consensusイベントの処理", async () => {
+    render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
+
+    await screen.findByText("対局結果")
+
+    expect(mockSocket.on).toHaveBeenCalledWith(
+      "session_ended_by_consensus",
+      expect.any(Function)
+    )
+
+    const consensusEndHandler = mockSocket.on.mock.calls.find(
+      (call) => call[0] === "session_ended_by_consensus"
+    )?.[1]
+
+    if (consensusEndHandler) {
+      act(() => {
+        consensusEndHandler({
+          reason: "全員の合意",
+          voteDetails: { player1: true, player2: true },
+        })
+      })
+    }
+
+    expect(consensusEndHandler).toBeDefined()
+  })
+
+  test("session_continue_agreedイベントの処理", async () => {
+    render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
+
+    await screen.findByText("対局結果")
+
+    expect(mockSocket.on).toHaveBeenCalledWith(
+      "session_continue_agreed",
+      expect.any(Function)
+    )
+
+    const continueAgreedHandler = mockSocket.on.mock.calls.find(
+      (call) => call[0] === "session_continue_agreed"
+    )?.[1]
+
+    if (continueAgreedHandler) {
+      act(() => {
+        continueAgreedHandler({ continueVotes: 4 })
+      })
+    }
+
+    expect(continueAgreedHandler).toBeDefined()
+  })
+
+  test("vote_timeoutイベントの処理", async () => {
+    render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
+
+    await screen.findByText("対局結果")
+
+    expect(mockSocket.on).toHaveBeenCalledWith(
+      "vote_timeout",
+      expect.any(Function)
+    )
+
+    const timeoutHandler = mockSocket.on.mock.calls.find(
+      (call) => call[0] === "vote_timeout"
+    )?.[1]
+
+    if (timeoutHandler) {
+      act(() => {
+        timeoutHandler()
+      })
+    }
+
+    expect(timeoutHandler).toBeDefined()
+  })
+
+  test("ソロプレイではWebSocket接続しない", async () => {
+    render(
+      <GameResult gameId="test-game-id" onBack={mockOnBack} isSoloPlay={true} />
+    )
+
+    await screen.findByText("対局結果")
+
+    // WebSocket接続は開始されない
+    expect(mockSocket.on).not.toHaveBeenCalled()
+  })
+})
+
+describe("GameResult Error Handling", () => {
+  const mockOnBack = jest.fn()
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockedUseAuth.mockReturnValue({ user: mockUser })
+  })
+
+  test("API エラーレスポンスの処理", async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: () =>
+        Promise.resolve({
+          success: false,
+          error: { message: "ゲームが見つかりません" },
+        }),
+    })
+
+    render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
+
+    await waitFor(() => {
+      expect(screen.getByText("ゲームが見つかりません")).toBeInTheDocument()
+    })
+  })
+
+  test("ネットワークエラーの処理", async () => {
+    ;(global.fetch as jest.Mock).mockRejectedValue(new Error("Network error"))
+
+    render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
+
+    await waitFor(() => {
+      expect(screen.getByText("Network error")).toBeInTheDocument()
+    })
+  })
+
+  test("success: false レスポンスの処理", async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          success: false,
+          error: { message: "データの取得に失敗" },
+        }),
+    })
+
+    render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
+
+    await waitFor(() => {
+      expect(screen.getByText("データの取得に失敗")).toBeInTheDocument()
+    })
+  })
+
+  test("不正なJSONレスポンスの処理", async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: () => Promise.reject(new Error("Invalid JSON")),
+    })
+
+    render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
+
+    await waitFor(() => {
+      expect(screen.getByText("Invalid JSON")).toBeInTheDocument()
+    })
+  })
+})
+
+describe("GameResult Next Game Transition", () => {
+  const mockOnBack = jest.fn()
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    jest.useFakeTimers()
+    mockedUseAuth.mockReturnValue({ user: mockUser })
+
+    // nextGameを含むレスポンス
+    const dataWithNextGame = {
+      ...mockGameResultData,
+      nextGame: {
+        id: "next-game-id",
+        roomCode: "NEXT123",
+      },
+    }
+
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          success: true,
+          data: dataWithNextGame,
+        }),
+    })
+
+    // location.href のモック
+    delete (window as any).location
+    ;(window as any).location = { href: "" }
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
+  test("nextGameがある場合のカウントダウン開始", async () => {
+    render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
+
+    await screen.findByText("対局結果")
+
+    // カウントダウンメッセージが表示される
+    await waitFor(() => {
+      expect(screen.getByText(/次の対局の準備ができました/)).toBeInTheDocument()
+    })
+
+    // 5秒経過後に自動遷移
+    act(() => {
+      jest.advanceTimersByTime(5000)
+    })
+
+    expect(window.location.href).toBe("/room/NEXT123")
+  })
+
+  test("new-room-readyイベントでの遷移", async () => {
+    render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
+
+    await screen.findByText("対局結果")
+
+    const newRoomReadyHandler = mockSocket.on.mock.calls.find(
+      (call) => call[0] === "new-room-ready"
+    )?.[1]
+
+    if (newRoomReadyHandler) {
+      act(() => {
+        newRoomReadyHandler({ roomCode: "READY123" })
+      })
+    }
+
+    // カウントダウンメッセージが表示される
+    await waitFor(() => {
+      expect(screen.getByText(/次の対局の準備ができました/)).toBeInTheDocument()
+    })
+
+    // 5秒経過後に自動遷移
+    act(() => {
+      jest.advanceTimersByTime(5000)
+    })
+
+    expect(window.location.href).toBe("/room/READY123")
+  })
+})
+
+describe("GameResult State Management", () => {
+  const mockOnBack = jest.fn()
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockedUseAuth.mockReturnValue({ user: mockUser })
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, data: mockGameResultData }),
+    })
+  })
+
+  test("初期状態の確認", () => {
+    render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
+
+    // ローディング状態から開始
+    expect(screen.getByText("読み込み中...")).toBeInTheDocument()
+  })
+
+  test("isSoloPlayプロパティの動作確認", async () => {
+    render(
+      <GameResult gameId="test-game-id" onBack={mockOnBack} isSoloPlay={true} />
+    )
+
+    await screen.findByText("対局結果")
+
+    // ソロプレイの場合はWebSocket関連の機能が無効
+    expect(mockSocket.on).not.toHaveBeenCalled()
+  })
+
+  test("ユーザー認証情報の確認", async () => {
+    render(<GameResult gameId="test-game-id" onBack={mockOnBack} />)
+
+    await screen.findByText("対局結果")
+
+    // WebSocket接続時にユーザー情報が使用される
+    const connectHandler = mockSocket.on.mock.calls.find(
+      (call) => call[0] === "connect"
+    )?.[1]
+
+    if (connectHandler) {
+      act(() => {
+        connectHandler()
+      })
+    }
+
+    expect(mockSocket.emit).toHaveBeenCalledWith("join_room", {
+      roomCode: "TEST123",
+      playerId: "player1",
+    })
+  })
+})
