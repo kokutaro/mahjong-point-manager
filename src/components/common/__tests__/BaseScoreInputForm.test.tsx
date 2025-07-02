@@ -452,13 +452,24 @@ describe("BaseScoreInputForm", () => {
         />
       )
 
-      // トビ状態のプレイヤーを選択
-      await user.click(screen.getByText(expect.stringContaining("プレイヤー2")))
+      // プレイヤー2のボタンを探して選択（点数が0のプレイヤー）
+      // プレイヤー選択ボタンの中でプレイヤー2を含む要素を探す
+      const player2Button = screen.getByRole("button", {
+        name: /南 プレイヤー2/,
+      })
+      expect(player2Button).toBeInTheDocument()
+
+      await user.click(player2Button)
+
+      // プレイヤー選択後、状態更新を待機
+      await waitFor(() => {
+        expect(screen.getByText("満貫")).toBeInTheDocument()
+      })
 
       // 満貫選択
       await user.click(screen.getByText("満貫"))
 
-      // フォーム送信
+      // 確認ステップに進む
       await waitFor(() => {
         const submitButton = screen.getByText("支払い")
         expect(submitButton).toBeInTheDocument()
@@ -467,7 +478,7 @@ describe("BaseScoreInputForm", () => {
       const submitButton = screen.getByText("支払い")
       await user.click(submitButton)
 
-      // エラーメッセージは表示されないが、送信は行われない
+      // トビ状態のプレイヤーは和了できないため、送信は行われない
       expect(mockOnSubmit).not.toHaveBeenCalled()
     })
   })

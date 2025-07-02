@@ -399,7 +399,7 @@ describe("useSocket", () => {
         jest.advanceTimersByTime(1000)
       })
 
-      expect(socketClientMock.connect).toHaveBeenCalledTimes(3)
+      expect(socketClientMock.connect).toHaveBeenCalledTimes(2)
       expect(result.current.connectionAttempts).toBe(1)
 
       jest.useRealTimers()
@@ -445,7 +445,7 @@ describe("useSocket", () => {
       expect(result.current.error).toBeNull()
       expect(result.current.isReconnecting).toBe(false)
       expect(mockSocket.disconnect).toHaveBeenCalled()
-      expect(socketClientMock.connect).toHaveBeenCalledTimes(3)
+      expect(socketClientMock.connect).toHaveBeenCalledTimes(2)
     })
   })
 

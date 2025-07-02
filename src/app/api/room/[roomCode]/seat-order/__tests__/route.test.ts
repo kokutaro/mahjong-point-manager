@@ -1,6 +1,5 @@
 import { POST } from "@/app/api/room/[roomCode]/seat-order/route"
 import { prisma } from "@/lib/prisma"
-import { NextRequest } from "next/server"
 import { createMocks } from "node-mocks-http"
 
 // Prismaのモック
@@ -121,10 +120,13 @@ describe("POST /api/room/[roomCode]/seat-order", () => {
 
       const { req } = createMocks({
         method: "POST",
-        json: () => requestBody,
+        body: requestBody,
       })
 
-      const response = await POST(req as unknown as NextRequest, {
+      // NextRequestのjson()メソッドをモック
+      ;(req as any).json = jest.fn().mockResolvedValue(requestBody)
+
+      const response = await POST(req, {
         params: Promise.resolve({ roomCode: "abcd12" }),
       })
       const responseData = await response.json()
@@ -143,9 +145,23 @@ describe("POST /api/room/[roomCode]/seat-order", () => {
     })
 
     it("WebSocketで席順更新通知が送信される", async () => {
+      // このテスト専用のWebSocketモック設定
       const mockEmit = jest.fn()
       const mockTo = jest.fn(() => ({ emit: mockEmit }))
       mockGetIO.mockReturnValue({ to: mockTo })
+
+      // 適切なゲーム情報を設定
+      const twoPlayerGame = {
+        ...mockGame,
+        participants: [
+          { playerId: "player-1", position: 0 },
+          { playerId: "player-2", position: 1 },
+        ],
+      }
+      mockPrisma.game.findFirst.mockResolvedValueOnce(twoPlayerGame)
+
+      // 更新されたゲーム情報のモック設定を追加
+      mockPrisma.game.findUnique.mockResolvedValueOnce(mockUpdatedGame)
 
       const requestBody = {
         positions: [
@@ -156,10 +172,13 @@ describe("POST /api/room/[roomCode]/seat-order", () => {
 
       const { req } = createMocks({
         method: "POST",
-        json: () => requestBody,
+        body: requestBody,
       })
 
-      await POST(req as unknown as NextRequest, {
+      // NextRequestのjson()メソッドをモック
+      ;(req as any).json = jest.fn().mockResolvedValue(requestBody)
+
+      await POST(req, {
         params: Promise.resolve({ roomCode: "ABCD12" }),
       })
 
@@ -223,10 +242,13 @@ describe("POST /api/room/[roomCode]/seat-order", () => {
 
       const { req } = createMocks({
         method: "POST",
-        json: () => requestBody,
+        body: requestBody,
       })
 
-      const response = await POST(req as unknown as NextRequest, {
+      // NextRequestのjson()メソッドをモック
+      ;(req as any).json = jest.fn().mockResolvedValue(requestBody)
+
+      const response = await POST(req, {
         params: Promise.resolve({ roomCode: "ABCD12" }),
       })
 
@@ -235,6 +257,16 @@ describe("POST /api/room/[roomCode]/seat-order", () => {
 
     it("Socket.IOが利用できない場合でも処理は継続される", async () => {
       mockGetIO.mockReturnValue(null)
+
+      // gameの設定を追加
+      const twoPlayerGame = {
+        ...mockGame,
+        participants: [
+          { playerId: "player-1", position: 0 },
+          { playerId: "player-2", position: 1 },
+        ],
+      }
+      mockPrisma.game.findFirst.mockResolvedValueOnce(twoPlayerGame)
 
       const requestBody = {
         positions: [
@@ -245,10 +277,13 @@ describe("POST /api/room/[roomCode]/seat-order", () => {
 
       const { req } = createMocks({
         method: "POST",
-        json: () => requestBody,
+        body: requestBody,
       })
 
-      const response = await POST(req as unknown as NextRequest, {
+      // NextRequestのjson()メソッドをモック
+      ;(req as any).json = jest.fn().mockResolvedValue(requestBody)
+
+      const response = await POST(req, {
         params: Promise.resolve({ roomCode: "ABCD12" }),
       })
 
@@ -266,10 +301,13 @@ describe("POST /api/room/[roomCode]/seat-order", () => {
 
       const { req } = createMocks({
         method: "POST",
-        json: () => requestBody,
+        body: requestBody,
       })
 
-      const response = await POST(req as unknown as NextRequest, {
+      // NextRequestのjson()メソッドをモック
+      ;(req as any).json = jest.fn().mockResolvedValue(requestBody)
+
+      const response = await POST(req, {
         params: Promise.resolve({ roomCode: "NOTFOUND" }),
       })
       const responseData = await response.json()
@@ -299,10 +337,13 @@ describe("POST /api/room/[roomCode]/seat-order", () => {
 
       const { req } = createMocks({
         method: "POST",
-        json: () => requestBody,
+        body: requestBody,
       })
 
-      const response = await POST(req as unknown as NextRequest, {
+      // NextRequestのjson()メソッドをモック
+      ;(req as any).json = jest.fn().mockResolvedValue(requestBody)
+
+      const response = await POST(req, {
         params: Promise.resolve({ roomCode: "ABCD12" }),
       })
       const responseData = await response.json()
@@ -325,10 +366,13 @@ describe("POST /api/room/[roomCode]/seat-order", () => {
 
       const { req } = createMocks({
         method: "POST",
-        json: () => requestBody,
+        body: requestBody,
       })
 
-      const response = await POST(req as unknown as NextRequest, {
+      // NextRequestのjson()メソッドをモック
+      ;(req as any).json = jest.fn().mockResolvedValue(requestBody)
+
+      const response = await POST(req, {
         params: Promise.resolve({ roomCode: "ABCD12" }),
       })
       const responseData = await response.json()
@@ -344,10 +388,13 @@ describe("POST /api/room/[roomCode]/seat-order", () => {
 
       const { req } = createMocks({
         method: "POST",
-        json: () => requestBody,
+        body: requestBody,
       })
 
-      const response = await POST(req as unknown as NextRequest, {
+      // NextRequestのjson()メソッドをモック
+      ;(req as any).json = jest.fn().mockResolvedValue(requestBody)
+
+      const response = await POST(req, {
         params: Promise.resolve({ roomCode: "ABCD12" }),
       })
       const responseData = await response.json()
@@ -366,10 +413,13 @@ describe("POST /api/room/[roomCode]/seat-order", () => {
 
       const { req } = createMocks({
         method: "POST",
-        json: () => requestBody,
+        body: requestBody,
       })
 
-      const response = await POST(req as unknown as NextRequest, {
+      // NextRequestのjson()メソッドをモック
+      ;(req as any).json = jest.fn().mockResolvedValue(requestBody)
+
+      const response = await POST(req, {
         params: Promise.resolve({ roomCode: "ABCD12" }),
       })
 
@@ -389,10 +439,13 @@ describe("POST /api/room/[roomCode]/seat-order", () => {
 
       const { req } = createMocks({
         method: "POST",
-        json: () => requestBody,
+        body: requestBody,
       })
 
-      const response = await POST(req as unknown as NextRequest, {
+      // NextRequestのjson()メソッドをモック
+      ;(req as any).json = jest.fn().mockResolvedValue(requestBody)
+
+      const response = await POST(req, {
         params: Promise.resolve({ roomCode: "ABCD12" }),
       })
 
@@ -408,10 +461,13 @@ describe("POST /api/room/[roomCode]/seat-order", () => {
 
       const { req } = createMocks({
         method: "POST",
-        json: () => requestBody,
+        body: requestBody,
       })
 
-      const response = await POST(req as unknown as NextRequest, {
+      // NextRequestのjson()メソッドをモック
+      ;(req as any).json = jest.fn().mockResolvedValue(requestBody)
+
+      const response = await POST(req, {
         params: Promise.resolve({ roomCode: "ABCD12" }),
       })
       const responseData = await response.json()
@@ -421,7 +477,15 @@ describe("POST /api/room/[roomCode]/seat-order", () => {
     })
 
     it("トランザクションエラーで500エラー", async () => {
-      mockPrisma.game.findFirst.mockResolvedValue(mockGame)
+      // 適切なゲーム情報を設定
+      const twoPlayerGame = {
+        ...mockGame,
+        participants: [
+          { playerId: "player-1", position: 0 },
+          { playerId: "player-2", position: 1 },
+        ],
+      }
+      mockPrisma.game.findFirst.mockResolvedValueOnce(twoPlayerGame)
       mockPrisma.$transaction.mockRejectedValue(new Error("Transaction failed"))
 
       const requestBody = {
@@ -433,10 +497,13 @@ describe("POST /api/room/[roomCode]/seat-order", () => {
 
       const { req } = createMocks({
         method: "POST",
-        json: () => requestBody,
+        body: requestBody,
       })
 
-      const response = await POST(req as unknown as NextRequest, {
+      // NextRequestのjson()メソッドをモック
+      ;(req as any).json = jest.fn().mockResolvedValue(requestBody)
+
+      const response = await POST(req, {
         params: Promise.resolve({ roomCode: "ABCD12" }),
       })
 
@@ -458,6 +525,16 @@ describe("POST /api/room/[roomCode]/seat-order", () => {
     })
 
     it("同じ位置のままでも更新処理は実行される", async () => {
+      // ゲーム情報を設定
+      const twoPlayerGame = {
+        ...mockGame,
+        participants: [
+          { playerId: "player-1", position: 0 },
+          { playerId: "player-2", position: 1 },
+        ],
+      }
+      mockPrisma.game.findFirst.mockResolvedValueOnce(twoPlayerGame)
+
       const requestBody = {
         positions: [
           { playerId: "player-1", position: 0 }, // 変更なし
@@ -467,10 +544,13 @@ describe("POST /api/room/[roomCode]/seat-order", () => {
 
       const { req } = createMocks({
         method: "POST",
-        json: () => requestBody,
+        body: requestBody,
       })
 
-      const response = await POST(req as unknown as NextRequest, {
+      // NextRequestのjson()メソッドをモック
+      ;(req as any).json = jest.fn().mockResolvedValue(requestBody)
+
+      const response = await POST(req, {
         params: Promise.resolve({ roomCode: "ABCD12" }),
       })
 
@@ -479,7 +559,14 @@ describe("POST /api/room/[roomCode]/seat-order", () => {
     })
 
     it("更新後のゲーム取得に失敗してもWebSocket通知はスキップされる", async () => {
-      mockPrisma.game.findUnique.mockResolvedValue(null)
+      // 初期ゲーム情報を設定
+      const singlePlayerGame = {
+        ...mockGame,
+        participants: [{ playerId: "player-1", position: 0 }],
+      }
+      mockPrisma.game.findFirst.mockResolvedValueOnce(singlePlayerGame)
+      // 更新後の取得は失敗
+      mockPrisma.game.findUnique.mockResolvedValueOnce(null)
 
       const requestBody = {
         positions: [{ playerId: "player-1", position: 0 }],
@@ -487,10 +574,13 @@ describe("POST /api/room/[roomCode]/seat-order", () => {
 
       const { req } = createMocks({
         method: "POST",
-        json: () => requestBody,
+        body: requestBody,
       })
 
-      const response = await POST(req as unknown as NextRequest, {
+      // NextRequestのjson()メソッドをモック
+      ;(req as any).json = jest.fn().mockResolvedValue(requestBody)
+
+      const response = await POST(req, {
         params: Promise.resolve({ roomCode: "ABCD12" }),
       })
 
@@ -511,10 +601,13 @@ describe("POST /api/room/[roomCode]/seat-order", () => {
 
       const { req } = createMocks({
         method: "POST",
-        json: () => requestBody,
+        body: requestBody,
       })
 
-      const response = await POST(req as unknown as NextRequest, {
+      // NextRequestのjson()メソッドをモック
+      ;(req as any).json = jest.fn().mockResolvedValue(requestBody)
+
+      const response = await POST(req, {
         params: Promise.resolve({ roomCode: "ABCD12" }),
       })
 
