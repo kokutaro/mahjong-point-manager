@@ -38,15 +38,50 @@ jest.mock("@/lib/socket", () => ({
   })),
 }))
 
+// NextResponseのモック
+jest.mock("next/server", () => {
+  const originalModule = jest.requireActual("next/server")
+  return {
+    ...originalModule,
+    NextResponse: {
+      ...originalModule.NextResponse,
+      json: jest.fn((data, init) => {
+        const mockResponse = {
+          json: jest.fn(() => Promise.resolve(data)),
+          status: init?.status || 200,
+          cookies: {
+            set: jest.fn(),
+          },
+        }
+        return mockResponse
+      }),
+    },
+  }
+})
+
 describe("POST /api/room/[roomCode]/rejoin", () => {
   const mockPrisma = prisma as jest.Mocked<typeof prisma>
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const mockCookies = require("next/headers").cookies
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const mockGetIO = require("@/lib/socket").getIO
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const mockNextResponse = require("next/server").NextResponse
 
   beforeEach(() => {
     jest.clearAllMocks()
+
+    // NextResponse.jsonのモックをリセット
+    mockNextResponse.json.mockImplementation((data, init) => {
+      const mockResponse = {
+        json: jest.fn(() => Promise.resolve(data)),
+        status: init?.status || 200,
+        cookies: {
+          set: jest.fn(),
+        },
+      }
+      return mockResponse
+    })
   })
 
   const mockGame = {
@@ -232,19 +267,6 @@ describe("POST /api/room/[roomCode]/rejoin", () => {
     })
 
     it("Cookieが再設定される", async () => {
-      const mockSetCookie = jest.fn()
-      const mockResponseWithCookies = {
-        json: jest.fn(() => Promise.resolve({})),
-        cookies: { set: mockSetCookie },
-      }
-
-      // NextResponseのモック（簡易版）
-      const originalNextResponse =
-        jest.requireActual("next/server").NextResponse
-      jest
-        .spyOn(originalNextResponse, "json")
-        .mockReturnValue(mockResponseWithCookies)
-
       const requestBody = {
         playerName: "テストプレイヤー",
       }
@@ -254,11 +276,15 @@ describe("POST /api/room/[roomCode]/rejoin", () => {
         json: () => requestBody,
       })
 
-      await POST(req as unknown as NextRequest, {
+      const response = await POST(req as unknown as NextRequest, {
         params: Promise.resolve({ roomCode: "ABCD12" }),
       })
 
-      expect(mockSetCookie).toHaveBeenCalledWith(
+      // レスポンスが成功することを確認
+      expect(response.status).toBe(200)
+
+      // モックされたNextResponseのcookies.setが呼ばれることを確認
+      expect(response.cookies.set).toHaveBeenCalledWith(
         "player_id",
         "current-player-id",
         {
@@ -304,6 +330,9 @@ describe("POST /api/room/[roomCode]/rejoin", () => {
     })
 
     it("認証情報がない場合は401エラー", async () => {
+      // ゲームが存在することを確保（認証チェックまで到達させるため）
+      mockPrisma.game.findFirst.mockResolvedValue(mockGame)
+
       mockCookies.mockReturnValue({
         get: jest.fn().mockReturnValue(undefined),
         set: jest.fn(),

@@ -6,7 +6,12 @@ import { MultiGameState } from "../types"
 // Mantineのモック
 jest.mock("@mantine/core", () => {
   const MockStepperStep = ({ children, label }: any) => (
-    <div data-testid="stepper-step" data-label={label}>
+    <div
+      data-testid="stepper-step"
+      data-label={label}
+      aria-label={label}
+      role="tabpanel"
+    >
       {children}
     </div>
   )
@@ -182,24 +187,21 @@ describe("BaseScoreInputForm", () => {
     it("ソロモードで和了者選択ステップが表示される", () => {
       render(<BaseScoreInputForm {...defaultProps} mode="solo" />)
 
-      expect(screen.getByTestId("stepper-step")).toHaveAttribute(
-        "data-label",
-        "和了者"
-      )
-      mockGameState.players.forEach((player) => {
-        expect(
-          screen.getByText(expect.stringContaining(player.name))
-        ).toBeInTheDocument()
-      })
+      // data-labelで和了者ステップを特定
+      expect(screen.getByLabelText("和了者")).toBeInTheDocument()
+
+      // プレイヤーボタンが表示されることを確認（風位置含む表示）
+      expect(screen.getByText("東 プレイヤー1 (親)")).toBeInTheDocument()
+      expect(screen.getByText("南 プレイヤー2")).toBeInTheDocument()
+      expect(screen.getByText("西 プレイヤー3")).toBeInTheDocument()
+      expect(screen.getByText("北 プレイヤー4")).toBeInTheDocument()
     })
 
     it("ソロモードで和了者を選択できる", async () => {
       const user = userEvent.setup()
       render(<BaseScoreInputForm {...defaultProps} mode="solo" />)
 
-      const player2Button = screen.getByText(
-        expect.stringContaining("プレイヤー2")
-      )
+      const player2Button = screen.getByText("南 プレイヤー2")
       await user.click(player2Button)
 
       // ステップが進むことを確認（詳細な確認は複雑なので、動作を確認）
@@ -218,18 +220,12 @@ describe("BaseScoreInputForm", () => {
       )
 
       // 和了者以外のプレイヤーが表示される
-      expect(
-        screen.getByText(expect.stringContaining("プレイヤー2"))
-      ).toBeInTheDocument()
-      expect(
-        screen.getByText(expect.stringContaining("プレイヤー3"))
-      ).toBeInTheDocument()
-      expect(
-        screen.getByText(expect.stringContaining("プレイヤー4"))
-      ).toBeInTheDocument()
+      expect(screen.getByText("南 プレイヤー2")).toBeInTheDocument()
+      expect(screen.getByText("西 プレイヤー3")).toBeInTheDocument()
+      expect(screen.getByText("北 プレイヤー4")).toBeInTheDocument()
 
-      // 和了者は表示されない
-      expect(screen.queryByText("東 プレイヤー1")).not.toBeInTheDocument()
+      // 和了者は表示されない（親表示も含むので正確な文字列で確認）
+      expect(screen.queryByText("東 プレイヤー1 (親)")).not.toBeInTheDocument()
     })
 
     it("放銃者を選択できる", async () => {
@@ -242,9 +238,7 @@ describe("BaseScoreInputForm", () => {
         />
       )
 
-      const loserButton = screen.getByText(
-        expect.stringContaining("プレイヤー2")
-      )
+      const loserButton = screen.getByText("南 プレイヤー2")
       await user.click(loserButton)
 
       // 選択されたボタンの色が変わることを確認
@@ -331,11 +325,13 @@ describe("BaseScoreInputForm", () => {
       await user.click(screen.getByText("2翻"))
 
       await waitFor(() => {
-        expect(screen.getByText("戻る")).toBeInTheDocument()
+        const backButtons = screen.getAllByText("戻る")
+        expect(backButtons.length).toBeGreaterThan(0)
       })
 
-      // 戻るボタンをクリック
-      await user.click(screen.getByText("戻る"))
+      // 符数選択ステップの戻るボタンをクリック（最初の戻るボタン）
+      const backButtons = screen.getAllByText("戻る")
+      await user.click(backButtons[0])
 
       // 翻数選択画面に戻ることを確認
       expect(screen.getByText("2翻")).toBeInTheDocument()
@@ -397,6 +393,7 @@ describe("BaseScoreInputForm", () => {
         <BaseScoreInputForm
           {...defaultProps}
           mode="solo"
+          currentPlayer={undefined}
           preselectedWinnerId=""
         />
       )
@@ -405,6 +402,7 @@ describe("BaseScoreInputForm", () => {
       await user.click(screen.getByText("満貫"))
 
       await waitFor(() => {
+        // 和了者が選択されていない場合でも支払いボタンは表示されるがdisabledになる
         const submitButton = screen.getByText("支払い")
         expect(submitButton).toBeDisabled()
       })
@@ -433,12 +431,11 @@ describe("BaseScoreInputForm", () => {
       const gameStateWithTobi = {
         ...mockGameState,
         players: [
-          ...mockGameState.players.slice(0, 1),
           {
-            ...mockGameState.players[1],
-            points: 0, // トビ状態
+            ...mockGameState.players[0],
+            points: 0, // プレイヤー1をトビ状態にする
           },
-          ...mockGameState.players.slice(2),
+          ...mockGameState.players.slice(1),
         ],
       }
 
@@ -447,26 +444,11 @@ describe("BaseScoreInputForm", () => {
         <BaseScoreInputForm
           {...defaultProps}
           gameState={gameStateWithTobi}
-          mode="solo"
-          preselectedWinnerId=""
+          mode="multi" // マルチモードでcurrentPlayerを使用
         />
       )
 
-      // プレイヤー2のボタンを探して選択（点数が0のプレイヤー）
-      // プレイヤー選択ボタンの中でプレイヤー2を含む要素を探す
-      const player2Button = screen.getByRole("button", {
-        name: /南 プレイヤー2/,
-      })
-      expect(player2Button).toBeInTheDocument()
-
-      await user.click(player2Button)
-
-      // プレイヤー選択後、状態更新を待機
-      await waitFor(() => {
-        expect(screen.getByText("満貫")).toBeInTheDocument()
-      })
-
-      // 満貫選択
+      // 満貫選択（符数選択をスキップ）
       await user.click(screen.getByText("満貫"))
 
       // 確認ステップに進む

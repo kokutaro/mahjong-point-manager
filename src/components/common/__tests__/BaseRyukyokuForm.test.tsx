@@ -4,49 +4,55 @@ import BaseRyukyokuForm from "../BaseRyukyokuForm"
 import { BasePlayerState } from "../types"
 
 // Mantineのモック
-jest.mock("@mantine/core", () => ({
-  Modal: ({ children, opened, onClose }: any) =>
-    opened ? (
-      <div data-testid="modal">
-        <button onClick={onClose} data-testid="close-modal">
-          Close
-        </button>
-        {children}
-      </div>
-    ) : null,
-  Stepper: ({ children, active }: any) => (
-    <div data-testid="stepper" data-active={active}>
+jest.mock("@mantine/core", () => {
+  const MockStepperStep = ({ children, label }: any) => (
+    <div data-testid="stepper-step" data-label={label}>
       {children}
     </div>
-  ),
-  Button: ({ children, onClick, disabled, color, variant, fullWidth }: any) => (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      data-testid="mantine-button"
-      data-color={color}
-      data-variant={variant}
-      data-full-width={fullWidth}
-    >
-      {children}
-    </button>
-  ),
-}))
+  )
+  MockStepperStep.displayName = "StepperStep"
 
-// Stepperのモック
-const MockStepperStep = ({ children, label }: any) => (
-  <div data-testid="stepper-step" data-label={label}>
-    {children}
-  </div>
-)
-MockStepperStep.displayName = "StepperStep"
-jest.doMock("@mantine/core", () => ({
-  ...jest.requireActual("@mantine/core"),
-  Stepper: {
-    Step: MockStepperStep,
-    ...jest.requireActual("@mantine/core").Stepper,
-  },
-}))
+  return {
+    Modal: ({ children, opened, onClose }: any) =>
+      opened ? (
+        <div data-testid="modal">
+          <button onClick={onClose} data-testid="close-modal">
+            Close
+          </button>
+          {children}
+        </div>
+      ) : null,
+    Stepper: Object.assign(
+      ({ children, active }: any) => (
+        <div data-testid="stepper" data-active={active}>
+          {children}
+        </div>
+      ),
+      {
+        Step: MockStepperStep,
+      }
+    ),
+    Button: ({
+      children,
+      onClick,
+      disabled,
+      color,
+      variant,
+      fullWidth,
+    }: any) => (
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        data-testid="mantine-button"
+        data-color={color}
+        data-variant={variant}
+        data-full-width={fullWidth}
+      >
+        {children}
+      </button>
+    ),
+  }
+})
 
 describe("BaseRyukyokuForm", () => {
   const mockOnSubmit = jest.fn()
@@ -112,10 +118,10 @@ describe("BaseRyukyokuForm", () => {
     it("聴牌入力ステップが表示される", () => {
       render(<BaseRyukyokuForm {...defaultProps} />)
 
-      expect(screen.getByTestId("stepper-step")).toHaveAttribute(
-        "data-label",
-        "聴牌入力"
-      )
+      const tenpaiStep = screen
+        .getAllByTestId("stepper-step")
+        .find((step) => step.getAttribute("data-label") === "聴牌入力")
+      expect(tenpaiStep).toBeInTheDocument()
     })
 
     it("全プレイヤーが表示される", () => {
