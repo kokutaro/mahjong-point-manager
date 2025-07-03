@@ -1,6 +1,6 @@
 import { renderHook, act } from "@testing-library/react"
 import { AuthProvider, useAuth } from "../AuthContext"
-import { fetchWithAuth } from "@/lib/auth-fallback"
+import { fetchWithAuth, AuthFallback } from "@/lib/auth-fallback"
 
 jest.mock("@/lib/auth-fallback", () => ({
   fetchWithAuth: jest.fn(),
@@ -66,5 +66,73 @@ describe("AuthContext", () => {
     })
 
     expect(result.current.isLoading).toBe(false)
+  })
+
+  it("sets user when existing session is valid", async () => {
+    const session = {
+      playerId: "p1",
+      name: "A",
+      deviceId: "d1",
+      sessionToken: "t1",
+    }
+
+    ;(fetchWithAuth as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ success: true, data: session }),
+    })
+
+    const { result } = renderHook(() => useAuth(), { wrapper })
+
+    await act(async () => {
+      await result.current.refreshAuth()
+    })
+
+    expect(result.current.user).toMatchObject(session)
+    expect(result.current.isAuthenticated).toBe(true)
+    expect(AuthFallback.setSession).not.toHaveBeenCalled()
+  })
+
+  it("stores fallback session when cookies are unsupported", async () => {
+    const session = {
+      playerId: "p1",
+      name: "A",
+      deviceId: "d1",
+      sessionToken: "t1",
+    }
+
+    const { result } = renderHook(() => useAuth(), { wrapper })
+
+    ;(fetchWithAuth as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ success: true, data: session }),
+    })
+    ;(AuthFallback.getBrowserInfo as jest.Mock).mockReturnValueOnce({
+      cookieSupported: false,
+      isSafari: false,
+      isMobile: false,
+    })
+
+    await act(async () => {
+      await result.current.refreshAuth()
+    })
+
+    expect(AuthFallback.setSession).toHaveBeenCalledWith({
+      playerId: session.playerId,
+      sessionToken: session.sessionToken,
+      expiresAt: expect.any(Number),
+    })
+    expect(result.current.user).toMatchObject(session)
+  })
+
+  it("clears session on failed response", async () => {
+    ;(fetchWithAuth as jest.Mock).mockResolvedValueOnce({ ok: false })
+    const { result } = renderHook(() => useAuth(), { wrapper })
+
+    await act(async () => {
+      await result.current.refreshAuth()
+    })
+
+    expect(AuthFallback.clearSession).toHaveBeenCalled()
+    expect(result.current.user).toBeNull()
   })
 })
