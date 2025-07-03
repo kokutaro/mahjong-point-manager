@@ -135,4 +135,56 @@ describe("AuthContext", () => {
     expect(AuthFallback.clearSession).toHaveBeenCalled()
     expect(result.current.user).toBeNull()
   })
+
+  it("leaves user null when response lacks success", async () => {
+    ;(fetchWithAuth as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ success: false }),
+    })
+
+    const { result } = renderHook(() => useAuth(), { wrapper })
+
+    await act(async () => {
+      await result.current.refreshAuth()
+    })
+
+    expect(result.current.user).toBeNull()
+    expect(result.current.isAuthenticated).toBe(false)
+    expect(AuthFallback.setSession).not.toHaveBeenCalled()
+    expect(AuthFallback.clearSession).not.toHaveBeenCalled()
+  })
+
+  it("uses fallback token when sessionToken is missing", async () => {
+    const fallbackSession = { playerId: "p1", sessionToken: "fs1" }
+    ;(AuthFallback.getSession as jest.Mock).mockReturnValueOnce(fallbackSession)
+    ;(AuthFallback.getBrowserInfo as jest.Mock).mockReturnValueOnce({
+      cookieSupported: false,
+      isSafari: false,
+      isMobile: false,
+    })
+    ;(fetchWithAuth as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: { playerId: "p1", name: "A", deviceId: "d1" },
+      }),
+    })
+
+    const { result } = renderHook(() => useAuth(), { wrapper })
+
+    await act(async () => {
+      await result.current.refreshAuth()
+    })
+
+    expect(AuthFallback.setSession).toHaveBeenCalledWith({
+      playerId: "p1",
+      sessionToken: fallbackSession.sessionToken,
+      expiresAt: expect.any(Number),
+    })
+    expect(result.current.user).toMatchObject({
+      playerId: "p1",
+      name: "A",
+      deviceId: "d1",
+    })
+  })
 })
