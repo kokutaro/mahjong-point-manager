@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
+
 import SoloGamePage from "@/app/solo/game/[gameId]/page"
 import { useRouter } from "next/navigation"
 
