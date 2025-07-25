@@ -8,6 +8,7 @@ import type {
   RyukyokuData,
   SeatOrderUpdatedData,
   GameStateData,
+  UndoCompletedData,
 } from "@/types/socket"
 
 export class SocketClient {
@@ -171,6 +172,10 @@ export class SocketClient {
     this.socket?.on("seat_order_updated", callback)
   }
 
+  onUndoCompleted(callback: (data: UndoCompletedData) => void) {
+    this.socket?.on("undo_completed", callback)
+  }
+
   onError(callback: (error: SocketError) => void) {
     this.socket?.on("error", callback)
   }
@@ -207,6 +212,10 @@ export class SocketClient {
 
   offSeatOrderUpdated(callback?: (data: SeatOrderUpdatedData) => void) {
     this.socket?.off("seat_order_updated", callback)
+  }
+
+  offUndoCompleted(callback?: (data: UndoCompletedData) => void) {
+    this.socket?.off("undo_completed", callback)
   }
 
   offError(callback?: (error: SocketError) => void) {

@@ -1,7 +1,9 @@
 "use client"
 
-import { memo, useMemo, useCallback } from "react"
+import { memo, useMemo, useCallback, useState } from "react"
 import { getPositionName } from "@/lib/utils"
+import UndoButton from "./UndoButton"
+import UndoConfirmModal from "./UndoConfirmModal"
 
 interface GameState {
   gameId: string
@@ -24,13 +26,22 @@ interface GameInfoProps {
   gameState: GameState
   isConnected: boolean
   gameType: "TONPUU" | "HANCHAN"
+  hostPlayerId?: string
+  currentPlayerId?: string
+  onUndoComplete?: (gameState: GameState) => void
 }
 
 const GameInfo = memo(function GameInfo({
   gameState,
   isConnected,
   gameType,
+  hostPlayerId,
+  currentPlayerId,
+  onUndoComplete,
 }: GameInfoProps) {
+  const [showUndoModal, setShowUndoModal] = useState(false)
+  const [isUndoLoading, setIsUndoLoading] = useState(false)
+  const [undoError, setUndoError] = useState<string | null>(null)
   // Memoized round name calculation
   const roundName = useMemo(() => {
     const round = gameState.currentRound
@@ -102,6 +113,80 @@ const GameInfo = memo(function GameInfo({
     }
   }, [])
 
+  // Undo関連のハンドラ
+  const handleUndoClick = useCallback(() => {
+    setUndoError(null)
+    setShowUndoModal(true)
+  }, [])
+
+  const handleUndoConfirm = useCallback(async () => {
+    if (!hostPlayerId || !currentPlayerId) {
+      setUndoError("プレイヤー情報が不足しています")
+      return
+    }
+
+    try {
+      setIsUndoLoading(true)
+      setUndoError(null)
+
+      console.log("Executing undo operation for gameId:", gameState.gameId)
+
+      const response = await fetch(`/api/game/${gameState.gameId}/undo`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          hostPlayerId,
+        }),
+        credentials: "include",
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        let errorMessage = data.error?.message || "Undo操作に失敗しました"
+
+        if (response.status === 403) {
+          errorMessage = "Undo操作はホストプレイヤーのみ実行できます"
+        } else if (
+          response.status === 400 &&
+          data.error?.code === "INVALID_GAME_STATE"
+        ) {
+          errorMessage = "現在の状態ではUndo操作を実行できません"
+        }
+
+        throw new Error(errorMessage)
+      }
+
+      if (data.success && data.data.gameState) {
+        console.log("Undo operation successful, updating game state")
+
+        // 成功時はモーダルを閉じてゲーム状態を更新
+        setShowUndoModal(false)
+
+        // 親コンポーネントに更新されたゲーム状態を通知
+        if (onUndoComplete) {
+          onUndoComplete(data.data.gameState)
+        }
+      } else {
+        throw new Error("Undo操作のレスポンスが無効です")
+      }
+    } catch (error) {
+      console.error("Undo operation failed:", error)
+      setUndoError(
+        error instanceof Error ? error.message : "Undo操作に失敗しました"
+      )
+    } finally {
+      setIsUndoLoading(false)
+    }
+  }, [gameState.gameId, hostPlayerId, currentPlayerId, onUndoComplete])
+
+  const handleUndoCancel = useCallback(() => {
+    setShowUndoModal(false)
+    setUndoError(null)
+  }, [])
+
   return (
     <div className="bg-white rounded-lg shadow-lg p-3 sm:p-6 mb-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-4">
@@ -130,6 +215,17 @@ const GameInfo = memo(function GameInfo({
         </div>
 
         <div className="flex items-center space-x-2 sm:space-x-3 mt-3 sm:mt-0 w-full sm:w-auto justify-end">
+          {/* Undoボタン */}
+          {hostPlayerId && currentPlayerId && (
+            <UndoButton
+              gameState={gameState}
+              hostPlayerId={hostPlayerId}
+              currentPlayerId={currentPlayerId}
+              onUndoClick={handleUndoClick}
+              isLoading={isUndoLoading}
+            />
+          )}
+
           {/* 接続状態 */}
           <div
             className={`inline-flex items-center px-2 py-1 rounded-full text-xs sm:text-sm font-medium ${
@@ -247,6 +343,17 @@ const GameInfo = memo(function GameInfo({
           </div>
         </div>
       )}
+
+      {/* Undo確認モーダル */}
+      <UndoConfirmModal
+        opened={showUndoModal}
+        gameState={gameState}
+        gameType={gameType}
+        onConfirm={handleUndoConfirm}
+        onCancel={handleUndoCancel}
+        isLoading={isUndoLoading}
+        error={undoError}
+      />
     </div>
   )
 })

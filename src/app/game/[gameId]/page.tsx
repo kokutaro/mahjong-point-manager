@@ -21,6 +21,7 @@ import type {
   RyukyokuData,
   PlayerConnectedData,
   GameEndedData,
+  UndoCompletedData,
   SocketIOError,
 } from "@/types/socket"
 
@@ -437,6 +438,14 @@ export default function GamePage() {
         setError("") // エラーをクリア
       })
 
+      socket.on("undo_completed", (data: UndoCompletedData) => {
+        console.log("🔌 WebSocket: undo_completed received", data)
+        if (data.gameState) {
+          triggerPointAnimation(data.gameState, true)
+        }
+        setError("") // エラーをクリア
+      })
+
       socket.on("error", (error: SocketIOError) => {
         console.error("WebSocket error:", error)
         setError(error.message)
@@ -456,6 +465,7 @@ export default function GamePage() {
         socket.off("player_connected")
         socket.off("player_disconnected")
         socket.off("game_ended")
+        socket.off("undo_completed")
         socket.off("error")
         socket.offAny()
       }
@@ -729,6 +739,14 @@ export default function GamePage() {
     return gameState?.players.find((p) => p.playerId === user?.playerId)
   }
 
+  const handleUndoComplete = useCallback(
+    (updatedGameState: GameState) => {
+      console.log("Undo completed, updating game state:", updatedGameState)
+      triggerPointAnimation(updatedGameState, true)
+    },
+    [triggerPointAnimation]
+  )
+
   const canDeclareReach = (player: GamePlayer) => {
     return (
       player.points >= 1000 &&
@@ -782,6 +800,9 @@ export default function GamePage() {
               gameState={gameState}
               isConnected={isConnected}
               gameType={gameInfo?.settings?.gameType || "HANCHAN"}
+              hostPlayerId={gameInfo?.hostPlayerId}
+              currentPlayerId={user?.playerId}
+              onUndoComplete={handleUndoComplete}
             />
 
             {/* プレイヤー状態 */}
@@ -819,6 +840,9 @@ export default function GamePage() {
           gameState={gameState}
           isConnected={isConnected}
           gameType={gameInfo?.settings?.gameType || "HANCHAN"}
+          hostPlayerId={gameInfo?.hostPlayerId}
+          currentPlayerId={user?.playerId}
+          onUndoComplete={handleUndoComplete}
         />
 
         {/* プレイヤー状態 */}

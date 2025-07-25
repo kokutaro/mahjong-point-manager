@@ -66,6 +66,16 @@ export interface GameStartedData {
   gameState: GameStateData
 }
 
+export interface UndoCompletedData {
+  gameId: string
+  gameState: GameStateData
+  undoResult: {
+    removedEventId: string
+    previousRound: number
+    previousHonba: number
+  }
+}
+
 export interface RoomPlayer {
   playerId: string
   name: string
@@ -121,6 +131,7 @@ export interface GameInfo {
   gameId: string
   roomCode: string
   sessionId?: string
+  hostPlayerId?: string
   settings?: {
     gameType: "TONPUU" | "HANCHAN"
     startingPoints: number
