@@ -2,6 +2,20 @@ import { prisma } from "@/lib/prisma"
 import { ScoreCalculationResult } from "@/lib/score"
 
 // 型定義
+type GameEventData = Record<string, unknown>
+
+interface GameEventWithData {
+  id: string
+  gameId: string
+  playerId: string | null
+  eventType: string
+  round: number
+  honba: number
+  eventData: GameEventData
+  createdAt: Date
+}
+
+// 型定義
 interface GameSettings {
   initialPoints: number
   basePoints?: number
@@ -59,19 +73,6 @@ export interface PlayerPointState {
   currentPoints: number
   isReach: boolean
   reachRound?: number
-}
-
-interface GameEventData {
-  [key: string]: unknown
-}
-
-interface GameEventWithData {
-  id: string
-  eventType: string
-  eventData: GameEventData
-  round: number
-  honba: number
-  createdAt: Date
 }
 
 interface GameStateData {
@@ -1220,7 +1221,10 @@ export class PointManager {
     }
 
     // 1つ前の状態を復元するためのデータを計算
-    const previousState = await this.calculatePreviousState(lastEvent)
+    const previousState = await this.calculatePreviousState({
+      ...lastEvent,
+      eventData: lastEvent.eventData as GameEventData,
+    })
 
     // トランザクション内でUndo処理を実行
     await prisma.$transaction(async (tx) => {
@@ -1262,8 +1266,8 @@ export class PointManager {
             undoneEventId: lastEvent.id,
             undoneEventType: lastEvent.eventType,
             undoneEventData: lastEvent.eventData,
-            previousState,
-            timestamp: new Date(),
+            previousState: JSON.parse(JSON.stringify(previousState)),
+            timestamp: new Date().toISOString(),
           },
           round: previousState.game.currentRound,
           honba: previousState.game.honba,
@@ -1277,7 +1281,7 @@ export class PointManager {
       undoneEvent: {
         id: lastEvent.id,
         eventType: lastEvent.eventType,
-        eventData: lastEvent.eventData,
+        eventData: lastEvent.eventData as Record<string, unknown>,
       },
       previousState,
       success: true,
@@ -1334,16 +1338,25 @@ export class PointManager {
       currentOya: game.startingOya,
     }
 
-    let participantStates = game.participants.map((p) => ({
-      playerId: p.playerId,
-      currentPoints: game.settings?.initialPoints || 25000,
-      isReach: false,
-      reachRound: null,
-    }))
+    let participantStates: ParticipantStateData[] = game.participants.map(
+      (p) => ({
+        playerId: p.playerId,
+        currentPoints: game.settings?.initialPoints || 25000,
+        isReach: false,
+        reachRound: null as number | null,
+      })
+    )
 
     // イベントを順番に適用して1つ前の状態を計算
     for (const event of eventsBeforeTarget) {
-      const result = this.applyEventToState(event, gameState, participantStates)
+      const result = this.applyEventToState(
+        {
+          ...event,
+          eventData: event.eventData as GameEventData,
+        },
+        gameState,
+        participantStates
+      )
       gameState = result.gameState
       participantStates = result.participantStates
     }

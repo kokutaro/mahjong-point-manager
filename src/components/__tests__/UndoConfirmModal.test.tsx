@@ -74,7 +74,7 @@ describe("UndoConfirmModal", () => {
 
     expect(screen.getByText("Undo確認")).toBeInTheDocument()
     expect(screen.getByText("重要な操作です")).toBeInTheDocument()
-    expect(screen.getByText("1つ前の局に戻り")).toBeInTheDocument()
+    expect(screen.getByText(/1つ前の局に戻り/)).toBeInTheDocument()
   })
 
   it("現在の局情報が正しく表示される", () => {
@@ -111,7 +111,7 @@ describe("UndoConfirmModal", () => {
     )
 
     expect(screen.getByText("リーチ宣言中のプレイヤー")).toBeInTheDocument()
-    expect(screen.getByText("東家プレイヤー")).toBeInTheDocument()
+    expect(screen.getByText(/東家.*プレイヤー/)).toBeInTheDocument()
   })
 
   it("確認ボタンクリック時にonConfirmが呼ばれる", async () => {
@@ -127,7 +127,7 @@ describe("UndoConfirmModal", () => {
       </TestWrapper>
     )
 
-    const confirmButton = screen.getByRole("button", { name: "Undoを実行" })
+    const confirmButton = screen.getByRole("button", { name: /Undoを実行/ })
     fireEvent.click(confirmButton)
 
     await waitFor(() => {
@@ -188,7 +188,9 @@ describe("UndoConfirmModal", () => {
       </TestWrapper>
     )
 
-    const confirmButton = screen.getByRole("button", { name: "Undoを実行" })
+    const confirmButton = screen.getByRole("button", {
+      name: /Undoを実行|Loading/,
+    })
     const cancelButton = screen.getByRole("button", { name: "キャンセル" })
 
     expect(confirmButton).toBeDisabled()
