@@ -110,6 +110,12 @@ export const MultiSessionVoteSchema = z.object({
 })
 export type MultiSessionVoteInput = z.infer<typeof MultiSessionVoteSchema>
 
+// Undo操作スキーマ（マルチプレイ）
+export const MultiUndoSchema = z.object({
+  hostPlayerId: MultiPlayerIdSchema,
+})
+export type MultiUndoInput = z.infer<typeof MultiUndoSchema>
+
 // ===== ルーム関連スキーマ =====
 
 // ルーム作成スキーマ

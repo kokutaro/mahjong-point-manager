@@ -21,6 +21,7 @@ export const EventTypeSchema = z.enum([
   "RYUKYOKU",
   "GAME_START",
   "GAME_END",
+  "UNDO",
 ])
 export type EventType = z.infer<typeof EventTypeSchema>
 
@@ -179,6 +180,8 @@ export const ErrorCodeSchema = z.enum([
   "REACH_PLAYER_NOT_TENPAI",
   "INVALID_TENPAI_COUNT",
   "SCORE_PATTERN_NOT_FOUND",
+  "UNAUTHORIZED",
+  "INVALID_GAME_STATE",
   "INTERNAL_ERROR",
 ])
 export type ErrorCode = z.infer<typeof ErrorCodeSchema>

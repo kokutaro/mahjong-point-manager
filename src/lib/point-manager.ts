@@ -61,6 +61,46 @@ export interface PlayerPointState {
   reachRound?: number
 }
 
+interface GameEventData {
+  [key: string]: unknown
+}
+
+interface GameEventWithData {
+  id: string
+  eventType: string
+  eventData: GameEventData
+  round: number
+  honba: number
+  createdAt: Date
+}
+
+interface GameStateData {
+  currentRound: number
+  honba: number
+  kyotaku: number
+  currentOya: number
+}
+
+interface ParticipantStateData {
+  playerId: string
+  currentPoints: number
+  isReach: boolean
+  reachRound: number | null
+}
+
+interface UndoResult {
+  undoneEvent: {
+    id: string
+    eventType: string
+    eventData: GameEventData
+  }
+  previousState: {
+    game: GameStateData
+    participants: ParticipantStateData[]
+  }
+  success: boolean
+}
+
 export class PointManager {
   private gameId: string
 
@@ -1138,6 +1178,345 @@ export class PointManager {
         | "waiting"
         | "playing"
         | "finished",
+    }
+  }
+
+  /**
+   * Undo操作 - 最後のゲームイベントを取り消し、1つ前の状態に戻す
+   */
+  async undoLastEvent(): Promise<UndoResult> {
+    console.log("Starting undo operation for gameId:", this.gameId)
+
+    // 最後のイベントを取得（UNDOイベント以外）
+    const lastEvent = await prisma.gameEvent.findFirst({
+      where: {
+        gameId: this.gameId,
+        eventType: {
+          not: "UNDO",
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    })
+
+    if (!lastEvent) {
+      throw new Error("Undo可能なイベントが見つかりません")
+    }
+
+    console.log("Found last event to undo:", {
+      id: lastEvent.id,
+      eventType: lastEvent.eventType,
+      round: lastEvent.round,
+      honba: lastEvent.honba,
+    })
+
+    // Undo可能なイベントタイプかチェック
+    const undoableEvents = ["TSUMO", "RON", "REACH", "RYUKYOKU"]
+    if (!undoableEvents.includes(lastEvent.eventType)) {
+      throw new Error(
+        `イベントタイプ '${lastEvent.eventType}' はUndo対象外です`
+      )
+    }
+
+    // 1つ前の状態を復元するためのデータを計算
+    const previousState = await this.calculatePreviousState(lastEvent)
+
+    // トランザクション内でUndo処理を実行
+    await prisma.$transaction(async (tx) => {
+      // 1. ゲーム状態を1つ前に戻す
+      await tx.game.update({
+        where: { id: this.gameId },
+        data: {
+          currentRound: previousState.game.currentRound,
+          honba: previousState.game.honba,
+          kyotaku: previousState.game.kyotaku,
+          currentOya: previousState.game.currentOya,
+          updatedAt: new Date(),
+        },
+      })
+
+      // 2. プレイヤー状態を復元
+      for (const playerState of previousState.participants) {
+        await tx.gameParticipant.update({
+          where: {
+            gameId_playerId: {
+              gameId: this.gameId,
+              playerId: playerState.playerId,
+            },
+          },
+          data: {
+            currentPoints: playerState.currentPoints,
+            isReach: playerState.isReach,
+            reachRound: playerState.reachRound,
+          },
+        })
+      }
+
+      // 3. UNDOイベントを記録
+      await tx.gameEvent.create({
+        data: {
+          gameId: this.gameId,
+          eventType: "UNDO",
+          eventData: {
+            undoneEventId: lastEvent.id,
+            undoneEventType: lastEvent.eventType,
+            undoneEventData: lastEvent.eventData,
+            previousState,
+            timestamp: new Date(),
+          },
+          round: previousState.game.currentRound,
+          honba: previousState.game.honba,
+        },
+      })
+    })
+
+    console.log("Undo operation completed successfully")
+
+    return {
+      undoneEvent: {
+        id: lastEvent.id,
+        eventType: lastEvent.eventType,
+        eventData: lastEvent.eventData,
+      },
+      previousState,
+      success: true,
+    }
+  }
+
+  /**
+   * 指定されたイベントの1つ前の状態を計算
+   */
+  private async calculatePreviousState(
+    targetEvent: GameEventWithData
+  ): Promise<{
+    game: GameStateData
+    participants: ParticipantStateData[]
+  }> {
+    console.log("Calculating previous state for event:", targetEvent.id)
+
+    // そのイベントより前の状態を取得（イベント実行前の状態）
+    const eventsBeforeTarget = await prisma.gameEvent.findMany({
+      where: {
+        gameId: this.gameId,
+        createdAt: {
+          lt: targetEvent.createdAt,
+        },
+        eventType: {
+          not: "UNDO",
+        },
+      },
+      orderBy: {
+        createdAt: "asc",
+      },
+    })
+
+    // ゲームの初期状態から開始
+    const game = await prisma.game.findUnique({
+      where: { id: this.gameId },
+      include: {
+        participants: {
+          orderBy: { position: "asc" },
+        },
+        settings: true,
+      },
+    })
+
+    if (!game) {
+      throw new Error("Game not found")
+    }
+
+    // 初期状態
+    let gameState = {
+      currentRound: 1,
+      honba: 0,
+      kyotaku: 0,
+      currentOya: game.startingOya,
+    }
+
+    let participantStates = game.participants.map((p) => ({
+      playerId: p.playerId,
+      currentPoints: game.settings?.initialPoints || 25000,
+      isReach: false,
+      reachRound: null,
+    }))
+
+    // イベントを順番に適用して1つ前の状態を計算
+    for (const event of eventsBeforeTarget) {
+      const result = this.applyEventToState(event, gameState, participantStates)
+      gameState = result.gameState
+      participantStates = result.participantStates
+    }
+
+    return {
+      game: gameState,
+      participants: participantStates,
+    }
+  }
+
+  /**
+   * イベントを状態に適用（状態計算用）
+   */
+  private applyEventToState(
+    event: GameEventWithData,
+    gameState: GameStateData,
+    participantStates: ParticipantStateData[]
+  ): { gameState: GameStateData; participantStates: ParticipantStateData[] } {
+    const newGameState = { ...gameState }
+    const newParticipantStates = [...participantStates]
+
+    switch (event.eventType) {
+      case "TSUMO":
+      case "RON":
+        // 和了時の処理：点数分配と親ローテーション
+        this.applyWinEventToState(event, newGameState, newParticipantStates)
+        break
+
+      case "REACH":
+        // リーチ宣言：プレイヤーの点数減算と供託増加
+        this.applyReachEventToState(event, newGameState, newParticipantStates)
+        break
+
+      case "RYUKYOKU":
+        // 流局：テンパイ料と親ローテーション
+        this.applyRyukyokuEventToState(
+          event,
+          newGameState,
+          newParticipantStates
+        )
+        break
+
+      default:
+        console.warn(
+          "Unknown event type for state calculation:",
+          event.eventType
+        )
+        break
+    }
+
+    return {
+      gameState: newGameState,
+      participantStates: newParticipantStates,
+    }
+  }
+
+  /**
+   * 和了イベントを状態に適用
+   */
+  private applyWinEventToState(
+    event: GameEventWithData,
+    gameState: GameStateData,
+    participantStates: ParticipantStateData[]
+  ): void {
+    const eventData = event.eventData
+
+    // 点数分配（簡略化）
+    if (eventData.distributions && Array.isArray(eventData.distributions)) {
+      for (const distribution of eventData.distributions as {
+        playerId: string
+        pointChange: number
+      }[]) {
+        const participant = participantStates.find(
+          (p) => p.playerId === distribution.playerId
+        )
+        if (participant) {
+          participant.currentPoints += distribution.pointChange
+        }
+      }
+    }
+
+    // リーチ状態をクリア
+    participantStates.forEach((p) => {
+      p.isReach = false
+      p.reachRound = null
+    })
+
+    // 供託クリア
+    gameState.kyotaku = 0
+
+    // 親ローテーション
+    const winnerId = eventData.winnerId as string
+    const winner = participantStates.find((p) => p.playerId === winnerId)
+    const isOyaWin =
+      winner &&
+      participantStates.findIndex((p) => p.playerId === winnerId) ===
+        gameState.currentOya
+
+    if (isOyaWin) {
+      // 親和了：連荘
+      gameState.honba += 1
+    } else {
+      // 子和了：親交代
+      gameState.currentOya = (gameState.currentOya + 1) % 4
+      gameState.honba = 0
+      gameState.currentRound += 1
+    }
+  }
+
+  /**
+   * リーチイベントを状態に適用
+   */
+  private applyReachEventToState(
+    event: GameEventWithData,
+    gameState: GameStateData,
+    participantStates: ParticipantStateData[]
+  ): void {
+    const eventData = event.eventData
+    const playerId = eventData.playerId as string
+
+    const participant = participantStates.find((p) => p.playerId === playerId)
+    if (participant) {
+      participant.currentPoints -= 1000
+      participant.isReach = true
+      participant.reachRound = gameState.currentRound
+    }
+
+    gameState.kyotaku += 1
+  }
+
+  /**
+   * 流局イベントを状態に適用
+   */
+  private applyRyukyokuEventToState(
+    event: GameEventWithData,
+    gameState: GameStateData,
+    participantStates: ParticipantStateData[]
+  ): void {
+    const eventData = event.eventData
+    const tenpaiPlayers = (eventData.tenpaiPlayers as string[]) || []
+
+    // テンパイ料の処理
+    if (tenpaiPlayers.length > 0 && tenpaiPlayers.length < 4) {
+      const tenpaiCount = tenpaiPlayers.length
+      const notienpaiCount = 4 - tenpaiCount
+      const pointPerTenpai = Math.floor(3000 / tenpaiCount)
+      const pointPerNoten = Math.floor(3000 / notienpaiCount)
+
+      participantStates.forEach((participant) => {
+        if (tenpaiPlayers.includes(participant.playerId)) {
+          participant.currentPoints += pointPerTenpai
+        } else {
+          participant.currentPoints -= pointPerNoten
+        }
+      })
+    }
+
+    // リーチ状態をクリア（供託は持ち越し）
+    participantStates.forEach((p) => {
+      p.isReach = false
+      p.reachRound = null
+    })
+
+    // 親ローテーション（親がテンパイかどうかで判定）
+    const currentOyaPlayer = participantStates[gameState.currentOya]
+    const isOyaTenpai =
+      currentOyaPlayer && tenpaiPlayers.includes(currentOyaPlayer.playerId)
+
+    gameState.honba += 1
+
+    if (!isOyaTenpai) {
+      gameState.currentOya = (gameState.currentOya + 1) % 4
+      gameState.currentRound += 1
     }
   }
 }
