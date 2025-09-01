@@ -204,6 +204,7 @@ export class GameEndChecker {
 const RoundDisplay: React.FC<{ roundState: RoundState }> = ({ roundState }) => {
   const getRoundName = (round: number) => {
     const winds = ['東', '南', '西', '北'];
+    if (round < 1 || round > winds.length * 4) return '不明'; // 範囲外の局番号
     const windIndex = Math.floor((round - 1) / 4);
     const roundNumber = ((round - 1) % 4) + 1;
     return `${winds[windIndex]}${roundNumber}局`;

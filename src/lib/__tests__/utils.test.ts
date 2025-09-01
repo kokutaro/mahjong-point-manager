@@ -98,6 +98,11 @@ describe("Utils", () => {
       expect(getRoundName(7)).toBe("南3局")
     })
 
+    test("getRoundName handles out-of-range values", () => {
+      expect(getRoundName(0)).toBe("不明")
+      expect(getRoundName(17)).toBe("不明")
+    })
+
     test("generateRoomCode creates four digit codes", () => {
       const code = generateRoomCode()
       expect(code).toMatch(/^\d{4}$/)

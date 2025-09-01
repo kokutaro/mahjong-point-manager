@@ -11,6 +11,7 @@ export function formatPoints(points: number): string {
 
 export function getRoundName(round: number): string {
   const winds = ["東", "南", "西", "北"]
+  if (round < 1 || round > winds.length * 4) return "不明"
   const windIndex = Math.floor((round - 1) / 4)
   const roundNumber = ((round - 1) % 4) + 1
   return `${winds[windIndex]}${roundNumber}局`
