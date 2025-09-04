@@ -4,17 +4,23 @@ interface MenuDrawerProps {
   isOpen: boolean
   onClose: () => void
   onShowHistory: () => void
+  onShowHelp?: () => void
 }
 
 export default function MenuDrawer({
   isOpen,
   onClose,
   onShowHistory,
+  onShowHelp,
 }: MenuDrawerProps) {
   if (!isOpen) return null
 
   const handleHistory = () => {
     onShowHistory()
+    onClose()
+  }
+  const handleHelp = () => {
+    onShowHelp?.()
     onClose()
   }
 
@@ -38,6 +44,14 @@ export default function MenuDrawer({
               className="w-full text-left px-2 py-2 rounded hover:bg-gray-100"
             >
               📋 セッション履歴
+            </button>
+          </li>
+          <li>
+            <button
+              onClick={handleHelp}
+              className="w-full text-left px-2 py-2 rounded hover:bg-gray-100"
+            >
+              ❓ ヘルプ
             </button>
           </li>
         </ul>

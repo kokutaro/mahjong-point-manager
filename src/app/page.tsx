@@ -1,6 +1,8 @@
 "use client"
 
 import WebSocketDebug, { useWebSocketDebug } from "@/components/WebSocketDebug"
+import MenuDrawer from "@/components/MenuDrawer"
+import YakuHelpModal from "@/components/help/YakuHelpModal"
 import { useAuth } from "@/contexts/AuthContext"
 import {
   useSessionStore,
@@ -22,6 +24,8 @@ function HomePageContent() {
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get("redirect")
   const { showDebug } = useWebSocketDebug()
+  const [showMenu, setShowMenu] = useState(false)
+  const [showHelpModal, setShowHelpModal] = useState(false)
 
   // Zustand ストア
   const { setSessionMode } = useSessionStore()
@@ -192,6 +196,13 @@ function HomePageContent() {
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4">
       <div className="max-w-2xl mx-auto">
         <div className="bg-white rounded-lg shadow-lg p-8">
+          <button
+            onClick={() => setShowMenu(true)}
+            className="fixed top-4 right-4 z-40 bg-white rounded-md shadow p-2"
+            aria-label="メニューを開く"
+          >
+            ☰
+          </button>
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-800 mb-2">
               麻雀点数管理
@@ -351,6 +362,17 @@ function HomePageContent() {
 
       {/* WebSocketデバッグ (Ctrl+Shift+W で表示) */}
       <WebSocketDebug show={showDebug} />
+
+      <MenuDrawer
+        isOpen={showMenu}
+        onClose={() => setShowMenu(false)}
+        onShowHistory={() => router.push("/sessions")}
+        onShowHelp={() => setShowHelpModal(true)}
+      />
+      <YakuHelpModal
+        isOpen={showHelpModal}
+        onClose={() => setShowHelpModal(false)}
+      />
     </div>
   )
 }
