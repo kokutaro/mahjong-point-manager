@@ -6,6 +6,7 @@ import GameInfo from "@/components/GameInfo"
 import GameResult from "@/components/GameResult"
 import SessionHistoryModal from "@/components/SessionHistoryModal"
 import MenuDrawer from "@/components/MenuDrawer"
+import YakuHelpModal from "@/components/help/YakuHelpModal"
 import PlayerStatus from "@/components/PlayerStatus"
 import PointAnimation from "@/components/PointAnimation"
 import RyukyokuForm from "@/components/RyukyokuForm"
@@ -77,6 +78,7 @@ export default function GamePage() {
   >([])
 
   const [showMenu, setShowMenu] = useState(false)
+  const [showHelpModal, setShowHelpModal] = useState(false)
   const [showHistoryModal, setShowHistoryModal] = useState(false)
 
   const gameId = params.gameId as string
@@ -1018,6 +1020,11 @@ export default function GamePage() {
         isOpen={showMenu}
         onClose={() => setShowMenu(false)}
         onShowHistory={() => setShowHistoryModal(true)}
+        onShowHelp={() => setShowHelpModal(true)}
+      />
+      <YakuHelpModal
+        isOpen={showHelpModal}
+        onClose={() => setShowHelpModal(false)}
       />
       <SessionHistoryModal
         isOpen={showHistoryModal}

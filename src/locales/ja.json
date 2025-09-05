@@ -1,0 +1,55 @@
+{
+  "help.title": "役・飜数ヘルプ",
+  "help.search.placeholder": "役名/別名で検索",
+  "filter.category.all": "すべて",
+  "filter.category.menzenOnly": "門前限定",
+  "filter.category.kuisagari": "喰い下がり",
+  "filter.category.misc": "その他",
+  "filter.category.yakuman": "役満",
+  "filter.han.all": "飜数(すべて)",
+  "filter.han.1": "1飜",
+  "filter.han.2": "2飜",
+  "filter.han.3": "3飜",
+  "filter.han.6": "6飜",
+  "filter.han.yakuman": "役満",
+  "legend.openTanyao": "オープン断么なし",
+  "legend.doubleYakuman": "ダブル役満あり",
+  "legend.nagashiMangan": "流し満貫あり",
+  "legend.kazoeYakuman": "数え役満なし",
+
+  "yaku.pinfu.name": "平和",
+  "yaku.pinfu.note": "門前のみ。両面待ち・符なしの手。",
+  "yaku.pinfu.ex1": "両面待ちの面子手。",
+
+  "yaku.tanyao.name": "断么九",
+  "yaku.tanyao.note": "1,9字牌を含まない。副露でも成立。",
+
+  "yaku.iipeiko.name": "一盃口",
+  "yaku.iipeiko.note": "同一順子の重複。門前のみ。",
+
+  "yaku.toitoi.name": "対々和",
+  "yaku.toitoi.note": "全て刻子(槓子含む)。",
+
+  "yaku.sanshoku.name": "三色同順",
+  "yaku.sanshoku.note": "三色で同じ順子。副露は喰い下がり。",
+
+  "yaku.honitsu.name": "混一色",
+  "yaku.honitsu.note": "一色＋字牌。副露は喰い下がり。",
+
+  "yaku.junchan.name": "純全帯么九",
+  "yaku.junchan.note": "全て1,9を含む面子＋老頭雀頭。副露は喰い下がり。",
+
+  "yaku.chinitsu.name": "清一色",
+  "yaku.chinitsu.note": "一色のみ。副露は喰い下がり。",
+
+  "yaku.daisangen.name": "大三元",
+  "yaku.daisangen.note": "白發中の三刻(槓)。",
+
+  "yaku.suankouTanki.name": "四暗刻単騎",
+  "yaku.suankouTanki.note": "四暗刻で単騎待ち(ダブル)。",
+
+  "ui.closed": "門前",
+  "ui.open": "副露",
+  "ui.yakuman": "役満",
+  "ui.double": "ダブル"
+}
