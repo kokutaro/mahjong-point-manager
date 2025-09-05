@@ -13,10 +13,14 @@ describe("MeldTiles", () => {
       called: "m2",
     }
     const { container } = render(<MeldTiles meld={meld} />)
+    const wrappers = container.querySelectorAll("span[role='img'] > span")
+    // first child span is absolute wrapper when not rotated; rotated one should have rotate-90
+    // find the span under role=img that has rotate-90
+    const rotated = Array.from(wrappers).find((el) =>
+      el.className.includes("rotate-90")
+    )
+    expect(rotated).toBeTruthy()
     const imgs = container.querySelectorAll("img")
-    // first image should be rotated (rotate-90 on img)
-    expect(imgs[0].className).toContain("rotate-90")
-    // order should start with m2 image
     expect(imgs[0].getAttribute("src")).toMatch(/m_2\.gif|m_2\.gif\?/) // next/image may add query
   })
 
@@ -28,8 +32,11 @@ describe("MeldTiles", () => {
       from: "toimen",
     }
     const { container } = render(<MeldTiles meld={meld} />)
-    const imgs = container.querySelectorAll("img")
-    expect(imgs[1].className).toContain("rotate-90")
+    const wrappers = container.querySelectorAll("span[role='img'] > span")
+    const rotated = Array.from(wrappers).find((el) =>
+      el.className.includes("rotate-90")
+    )
+    expect(rotated).toBeTruthy()
   })
 
   test("kan (closed): ends are back tiles", () => {

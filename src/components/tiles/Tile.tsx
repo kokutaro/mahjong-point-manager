@@ -42,19 +42,38 @@ export function Tile({
       role="img"
       aria-label={alt}
       className={clsx(
-        "relative inline-flex items-end justify-center",
+        "relative inline-flex items-end justify-center leading-none shrink-0",
         className
       )}
       style={{ width: dim, height: dim }}
     >
-      <Image
-        src={src}
-        alt={alt}
-        width={dim}
-        height={dim}
-        className={clsx("object-contain", rotate && "rotate-90 origin-bottom")}
-        priority={false}
-      />
+      {rotate ? (
+        <span
+          className={
+            "absolute bottom-5 left-0 w-full h-full origin-bottom-left rotate-90"
+          }
+        >
+          <Image
+            src={src}
+            alt={alt}
+            width={dim}
+            height={dim}
+            className={"object-contain w-full h-full"}
+            priority={false}
+          />
+        </span>
+      ) : (
+        <span className={"absolute inset-0 w-full h-full"}>
+          <Image
+            src={src}
+            alt={alt}
+            width={dim}
+            height={dim}
+            className={"object-contain w-full h-full"}
+            priority={false}
+          />
+        </span>
+      )}
       {!back && isRed && (
         <span
           aria-hidden

@@ -18,7 +18,7 @@ export function MeldTiles({ meld, size = "sm", className }: Props) {
     const others = meld.tiles.filter((t) => t !== called)
     const ordered = called ? [called, ...others] : [...meld.tiles]
     return (
-      <span className={clsx("inline-flex gap-1 items-center", className)}>
+      <span className={clsx("inline-flex gap-[2px] items-end", className)}>
         {ordered.map((t, i) => (
           <Tile key={`${t}-${i}`} code={t} size={size} rotate={i === 0} />
         ))}
@@ -29,7 +29,7 @@ export function MeldTiles({ meld, size = "sm", className }: Props) {
   if (meld.kind === "pon") {
     const idxRotate = meld.from === "shimo" ? 0 : meld.from === "toimen" ? 1 : 2
     return (
-      <span className={clsx("inline-flex gap-1 items-center", className)}>
+      <span className={clsx("inline-flex gap-[2px] items-end", className)}>
         {meld.tiles.map((t, i) => (
           <Tile
             key={`${t}-${i}`}
@@ -46,7 +46,7 @@ export function MeldTiles({ meld, size = "sm", className }: Props) {
   if (meld.subtype === "closed") {
     // 両端を裏、間2つは表
     return (
-      <span className={clsx("inline-flex gap-1 items-center", className)}>
+      <span className={clsx("inline-flex gap-[2px] items-end", className)}>
         <Tile code={meld.tiles[0]} size={size} back />
         <Tile code={meld.tiles[1]} size={size} />
         <Tile code={meld.tiles[2]} size={size} />
@@ -59,7 +59,7 @@ export function MeldTiles({ meld, size = "sm", className }: Props) {
     // 下家:左、対面:左から2番目、上家:右
     const idxRotate = meld.from === "shimo" ? 0 : meld.from === "toimen" ? 1 : 3
     return (
-      <span className={clsx("inline-flex gap-1 items-center", className)}>
+      <span className={clsx("inline-flex gap-[2px] items-end", className)}>
         {meld.tiles.map((t, i) => (
           <Tile
             key={`${t}-${i}`}
@@ -75,13 +75,13 @@ export function MeldTiles({ meld, size = "sm", className }: Props) {
   // added (加槓): ポンの向き + さらに同位置に横向きを重ねる
   const idxRotate = meld.from === "shimo" ? 0 : meld.from === "toimen" ? 1 : 2
   return (
-    <span className={clsx("inline-flex gap-1 items-center", className)}>
+    <span className={clsx("inline-flex gap-[2px] items-end", className)}>
       {meld.tiles.slice(0, 3).map((t, i) => (
         <span key={`${t}-${i}`} className="relative inline-block">
           <Tile code={t} size={size} rotate={i === idxRotate} />
           {i === idxRotate && (
-            <span className="absolute -top-2 left-0">
-              <Tile code={meld.tiles[3]} size={size} rotate />
+            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
+              <Tile code={meld.tiles[3]} size={size} rotate={true} />
             </span>
           )}
         </span>

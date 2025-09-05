@@ -95,7 +95,7 @@ export const yakuJa: Yaku[] = [
     notesKey: "yaku.toitoi.note",
     examples: [
       {
-        notation: "m333s333z11_,p444-,s555=",
+        notation: "m333s333z11_,p444-,s5555=",
       },
     ],
   },
@@ -108,22 +108,7 @@ export const yakuJa: Yaku[] = [
     notesKey: "yaku.sanshoku.note",
     examples: [
       {
-        tiles: [
-          "m4",
-          "m5",
-          "m6",
-          "p4",
-          "p5",
-          "p6",
-          "s4",
-          "s5",
-          "s6",
-          "m2",
-          "m2",
-          "s9",
-          "s9",
-          "s9",
-        ],
+        notation: "m123p123z333z22_,s231=",
       },
     ],
   },

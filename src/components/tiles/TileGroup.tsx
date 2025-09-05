@@ -1,8 +1,8 @@
 "use client"
 
 import type { TileCode } from "@/lib/mahjong/tiles"
-import { Tile } from "./Tile"
 import clsx from "clsx"
+import { Tile } from "./Tile"
 
 export type TileGroupProps = {
   codes: TileCode[]
@@ -21,7 +21,7 @@ const gapMap = {
 export function TileGroup({
   codes,
   size = "sm",
-  gap = "sm",
+  gap = "none",
   wrap = false,
   className,
 }: TileGroupProps) {
