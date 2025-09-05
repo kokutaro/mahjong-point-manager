@@ -2,10 +2,11 @@
 
 import {
   tileAriaLabel,
-  tileToUnicode,
+  tileToImageSrc,
   type TileCode,
 } from "@/lib/mahjong/tiles"
 import clsx from "clsx"
+import Image from "next/image"
 
 export type TileProps = {
   code: TileCode
@@ -14,27 +15,40 @@ export type TileProps = {
   ariaLabel?: string
 }
 
-const sizeMap: Record<NonNullable<TileProps["size"]>, string> = {
-  xs: "text-base",
-  sm: "text-2xl",
-  md: "text-4xl",
-  lg: "text-6xl",
+// 画像サイズ（px）: 高さ=幅（等角比で内側に収まる）
+const sizePx: Record<NonNullable<TileProps["size"]>, number> = {
+  xs: 18,
+  sm: 24,
+  md: 32,
+  lg: 40,
 }
 
 export function Tile({ code, size = "sm", className, ariaLabel }: TileProps) {
   const isRed = typeof code === "string" && code.endsWith("5r")
+  const dim = sizePx[size]
+  const alt = ariaLabel || tileAriaLabel(code)
+  const src = tileToImageSrc(code)
   return (
     <span
       role="img"
-      aria-label={ariaLabel || tileAriaLabel(code)}
-      className={clsx(
-        "inline-block align-middle leading-none",
-        sizeMap[size],
-        isRed && "text-red-500",
-        className
-      )}
+      aria-label={alt}
+      className={clsx("relative inline-block align-middle", className)}
+      style={{ width: dim, height: dim }}
     >
-      {tileToUnicode(code)}
+      <Image
+        src={src}
+        alt={alt}
+        width={dim}
+        height={dim}
+        className="object-contain"
+        priority={false}
+      />
+      {isRed && (
+        <span
+          aria-hidden
+          className="absolute top-0.5 right-0.5 w-2 h-2 bg-red-500 rounded-full ring-1 ring-white"
+        />
+      )}
     </span>
   )
 }
