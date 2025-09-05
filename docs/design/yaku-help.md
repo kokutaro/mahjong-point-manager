@@ -50,15 +50,53 @@
 
 ## 5. データモデル
 
-TypeScript型（実装配置は `src/lib/mahjong` を想定）
+TypeScript型（実装配置は `src/lib/mahjong` を想定）。従来の単牌配列表現に加え、短縮表記・鳴き・ツモを安全に扱うための型を拡張する。
 
 ```ts
 // tiles.ts
 export type TileSuit = "m" | "p" | "s" | "z"
+export type NumberSuit = "m" | "p" | "s"
 export type TileCode =
-  | `${"m" | "p" | "s"}${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9}`
-  | `${"m" | "p" | "s"}5r` // 赤5
+  | `${NumberSuit}${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9}`
+  | `${NumberSuit}5r` // 赤5
   | `z${1 | 2 | 3 | 4 | 5 | 6 | 7}` // 東南西北白發中
+
+// 牌姿短縮表記: 実体は string だが、Zod などで妥当性検証する前提のブランド型
+export type HandNotationString = string & { readonly __brand: unique symbol }
+
+// 鳴き方向（記号・論理名の両方を用意）
+export type CallFromSymbol = "-" | "=" | "+" // -:下家, =:対面, +:上家
+export type CallFrom = "shimo" | "toimen" | "kami"
+
+// 面子（副露/槓子を含む）
+export type KanSubtype = "closed" | "open" | "added" // 暗槓/明槓/加槓
+export type Meld =
+  | {
+      kind: "chi"
+      suit: NumberSuit
+      tiles: readonly [TileCode, TileCode, TileCode] // 連続3枚
+      from: CallFrom // （実運用上は常に上家）
+    }
+  | {
+      kind: "pon"
+      suit: TileSuit
+      tiles: readonly [TileCode, TileCode, TileCode] // 同一3枚
+      from: CallFrom
+    }
+  | {
+      kind: "kan"
+      suit: TileSuit
+      tiles: readonly [TileCode, TileCode, TileCode, TileCode] // 同一4枚
+      subtype: KanSubtype
+      from?: CallFrom // 明槓/加槓で必須、暗槓は省略
+    }
+
+// 文字列表記の解析結果
+export type ParsedHand = {
+  concealed: TileCode[] // 手牌（ツモを含まない）
+  tsumo?: TileCode // ツモ牌（手牌ブロック末尾の `_` で示す）
+  melds: Meld[] // 鳴き・槓子
+}
 
 // yaku.ts
 export type YakuCategory = "menzen-only" | "kuisagari" | "misc" | "yakuman"
@@ -66,10 +104,18 @@ export type HanValue =
   | { kind: "han"; closed: number | null; open: number | null }
   | { kind: "yakuman"; rank: 1 | 2 }
 
-export type Example = {
-  tiles: TileCode[] // 手牌例（14枚想定だが、概要表現でも可）
-  descriptionKey?: string // 例の補足
-}
+// 代表形の表現は「単牌配列」または「短縮表記」のいずれかを許容する
+export type Example =
+  | {
+      tiles: TileCode[] // 手牌例（14枚想定だが、概要表現でも可）
+      descriptionKey?: string
+      notation?: never
+    }
+  | {
+      notation: HandNotationString // 例: "s123m222s44_,z111-,z2222"
+      descriptionKey?: string
+      tiles?: never
+    }
 
 export type Yaku = {
   id: string // 例: 'pinfu', 'tanyao', 'daisangen'
@@ -78,7 +124,7 @@ export type Yaku = {
   category: YakuCategory
   value: HanValue
   notesKey?: string // i18nキー: 成立条件/注意点
-  examples?: Example[] // 最大2例
+  examples?: Example[] // 最大2例（tiles/notationのどちらか）
   ruleFlags?: {
     doubleYakuman?: boolean // ダブル役満か
     nagashiMangan?: boolean // 流し満貫表記用
@@ -91,6 +137,12 @@ export type RuleSet = {
   nagashiMangan: true
   kazoeYakuman: false
 }
+
+// ユーティリティの関数シグネチャ（実装は 6.1/6.2/6.3 の仕様に準拠）
+export type HandParseResult = ParsedHand
+export function parseHandNotation(input: string): HandParseResult
+export function formatHandNotation(hand: ParsedHand): HandNotationString
+export function mapCallFromSymbol(sym: CallFromSymbol): CallFrom
 ```
 
 ### 5.1 役データ（サンプル 10件）
@@ -108,22 +160,7 @@ export const yakuJa: Yaku[] = [
     notesKey: "yaku.pinfu.note",
     examples: [
       {
-        tiles: [
-          "m2",
-          "m3",
-          "m4",
-          "p4",
-          "p5",
-          "p6",
-          "s3",
-          "s4",
-          "s5",
-          "s7",
-          "s8",
-          "s9",
-          "m6",
-          "m6",
-        ],
+        notation: "m234p456s345s789m66",
         descriptionKey: "yaku.pinfu.ex1",
       },
     ],
@@ -137,22 +174,7 @@ export const yakuJa: Yaku[] = [
     notesKey: "yaku.tanyao.note",
     examples: [
       {
-        tiles: [
-          "m2",
-          "m3",
-          "m4",
-          "p3",
-          "p4",
-          "p5",
-          "s6",
-          "s7",
-          "s8",
-          "m7",
-          "m8",
-          "m9",
-          "p2",
-          "p2",
-        ],
+        notation: "m234p345s678m789p22",
       },
     ],
   },
@@ -165,22 +187,7 @@ export const yakuJa: Yaku[] = [
     notesKey: "yaku.iipeiko.note",
     examples: [
       {
-        tiles: [
-          "m2",
-          "m3",
-          "m4",
-          "m2",
-          "m3",
-          "m4",
-          "p6",
-          "p7",
-          "p8",
-          "s3",
-          "s4",
-          "s5",
-          "z1",
-          "z1",
-        ],
+        notation: "m234m234p678s345z11",
       },
     ],
   },
@@ -193,22 +200,7 @@ export const yakuJa: Yaku[] = [
     notesKey: "yaku.toitoi.note",
     examples: [
       {
-        tiles: [
-          "m3",
-          "m3",
-          "m3",
-          "p7",
-          "p7",
-          "p7",
-          "s9",
-          "s9",
-          "s9",
-          "z1",
-          "z1",
-          "z1",
-          "m8",
-          "m8",
-        ],
+        notation: "m333p777s999z111m88",
       },
     ],
   },
@@ -221,22 +213,7 @@ export const yakuJa: Yaku[] = [
     notesKey: "yaku.sanshoku.note",
     examples: [
       {
-        tiles: [
-          "m4",
-          "m5",
-          "m6",
-          "p4",
-          "p5",
-          "p6",
-          "s4",
-          "s5",
-          "s6",
-          "m2",
-          "m2",
-          "s9",
-          "s9",
-          "s9",
-        ],
+        notation: "m456p456s456m22s999",
       },
     ],
   },
@@ -247,6 +224,11 @@ export const yakuJa: Yaku[] = [
     category: "kuisagari",
     value: { kind: "han", closed: 3, open: 2 },
     notesKey: "yaku.honitsu.note",
+    examples: [
+      {
+        notation: "m123m456m789z55z66",
+      },
+    ],
   },
   {
     id: "junchan",
@@ -255,6 +237,11 @@ export const yakuJa: Yaku[] = [
     category: "kuisagari",
     value: { kind: "han", closed: 3, open: 2 },
     notesKey: "yaku.junchan.note",
+    examples: [
+      {
+        notation: "m123p123s123m789p99",
+      },
+    ],
   },
   {
     id: "chinitsu",
@@ -263,6 +250,11 @@ export const yakuJa: Yaku[] = [
     category: "kuisagari",
     value: { kind: "han", closed: 6, open: 5 },
     notesKey: "yaku.chinitsu.note",
+    examples: [
+      {
+        notation: "m234567789m555m22",
+      },
+    ],
   },
   {
     id: "daisangen",
@@ -273,22 +265,7 @@ export const yakuJa: Yaku[] = [
     notesKey: "yaku.daisangen.note",
     examples: [
       {
-        tiles: [
-          "z5",
-          "z5",
-          "z5",
-          "z6",
-          "z6",
-          "z6",
-          "z7",
-          "z7",
-          "z7",
-          "m2",
-          "m3",
-          "m4",
-          "p6",
-          "p7",
-        ],
+        notation: "z555z666z777m234p67",
       },
     ],
   },
@@ -300,6 +277,11 @@ export const yakuJa: Yaku[] = [
     value: { kind: "yakuman", rank: 2 },
     notesKey: "yaku.suankouTanki.note",
     ruleFlags: { doubleYakuman: true },
+    examples: [
+      {
+        notation: "m333p777s999z111m6",
+      },
+    ],
   },
 ]
 ```
