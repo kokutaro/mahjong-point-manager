@@ -41,3 +41,19 @@ export function tileAriaLabel(code: TileCode): string {
   })()
   return isRed ? `${label} 赤` : label
 }
+
+/**
+ * 牌コードから画像パスを返す
+ * - 数牌: /img/pai/{m|p|s}_{1-9}.gif
+ * - 字牌: /img/pai/z_{1-7}.gif （1:東,2:南,3:西,4:北,5:白,6:發,7:中）
+ * - 赤5: 通常の5画像を使用（UI側で赤マーカー）
+ */
+export function tileToImageSrc(code: TileCode): string {
+  const suit = code[0] as TileSuit
+  if (suit === "z") {
+    const n = Number(code.slice(1))
+    return `/img/pai/z_${n}.gif`
+  }
+  const n = code.endsWith("5r") ? 5 : Number(code[1])
+  return `/img/pai/${suit}_${n}.gif`
+}
