@@ -10,7 +10,7 @@
 ## 修正機能追加の際の作業開始時・終了時に必ず実施すること。必ず毎回全てTODOに含めてください
 
 - **以下の操作は作業開始時に必ず行ってください**
-  - **作業開始時**: 必ず専用ブランチを作成する（feat-<機能名>、fix-<修正内容>等）
+  - **作業開始時**: 必ず専用ブランチを作成する（feat/<機能名>、fix/<修正内容>等）
   - **mainブランチでの直接作業は絶対禁止**: いかなる変更もmainブランチに直接コミットしない
   - **実際にコードを修正する際は事前に以下の作業を行う**
     - 探索(対象となるコードを注意深く探索する)
@@ -25,7 +25,6 @@
   5. リモートブランチにpush (`git push -u origin <ブランチ名>`)
   6. PR作成 (gh CLIでPR作成)
      - @ai-rules/pr-guide.mdにガイドラインを記述しています。上記の作業時には必ず確認して必ず内容に従って作業を行ってください。
-  7. ジャーナル記録の実施(## Journaling workflowを参照)
 
 ## 動作確認・テスト時の必須確認事項（コミット前に必ず実施されるべきです）
 
@@ -37,36 +36,6 @@
 - テスト・動作確認は修正を行った際は必ず行ってください。
 - E2Eテストとしてユーザ目線での動作が問題ないかしっかりと確認してください。playwright-mcp を利用して下さい。
 - 必ず上記テストが通った場合のみコミットを作成して下さい。
-
-## Journaling workflow
-
-You (the AI agent) have to report what you did in this project at each end of the task in my Notion note.
-
-Create one in the page with the title "Log: `<Job title>`".
-Update the same note throughout the same session.
-
-Update this note at each end of the task with the following format:
-
-## Log: `<task title>`
-
-- **Prompt**: <受け取った指示>
-- **Issue**: <課題の内容>
-
-### What I did: <やったことの要約>
-
-...
-
-### How I did it: <どうやって解決したか>
-
-...
-
-### What were challenging: <難しかったこと>
-
-...
-
-### Future work (optional)
-
-- <今後の改善案など>
 
 ## プロジェクトの目的
 
