@@ -13,11 +13,9 @@ describe("MeldTiles", () => {
       called: "m2",
     }
     const { container } = render(<MeldTiles meld={meld} />)
-    // leftmost should have rotate-90 class
     const imgs = container.querySelectorAll("img")
-    // first wrapper span has rotate-90
-    const wrappers = container.querySelectorAll("span[role='img']")
-    expect(wrappers[0].className).toContain("rotate-90")
+    // first image should be rotated (rotate-90 on img)
+    expect(imgs[0].className).toContain("rotate-90")
     // order should start with m2 image
     expect(imgs[0].getAttribute("src")).toMatch(/m_2\.gif|m_2\.gif\?/) // next/image may add query
   })
@@ -30,8 +28,8 @@ describe("MeldTiles", () => {
       from: "toimen",
     }
     const { container } = render(<MeldTiles meld={meld} />)
-    const wrappers = container.querySelectorAll("span[role='img']")
-    expect(wrappers[1].className).toContain("rotate-90")
+    const imgs = container.querySelectorAll("img")
+    expect(imgs[1].className).toContain("rotate-90")
   })
 
   test("kan (closed): ends are back tiles", () => {

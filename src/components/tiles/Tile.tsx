@@ -42,8 +42,7 @@ export function Tile({
       role="img"
       aria-label={alt}
       className={clsx(
-        "relative inline-block align-middle",
-        rotate && "rotate-90",
+        "relative inline-flex items-end justify-center",
         className
       )}
       style={{ width: dim, height: dim }}
@@ -53,7 +52,7 @@ export function Tile({
         alt={alt}
         width={dim}
         height={dim}
-        className="object-contain"
+        className={clsx("object-contain", rotate && "rotate-90 origin-bottom")}
         priority={false}
       />
       {!back && isRed && (
