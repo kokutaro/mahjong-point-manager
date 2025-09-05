@@ -15,8 +15,8 @@ describe("/dev/hand-notation demo page", () => {
     // ツモが5ではなく9だが、UIは parse できるはず（9s をツモ）
     expect(screen.queryByText(/invalid/i)).not.toBeInTheDocument()
 
-    // 整形表記に _ が含まれる（ツモ付き）
-    expect(screen.getByText((c) => c.includes("_"))).toBeInTheDocument()
+    // 整形表記に期待どおりの文字列（ツモ付き）が表示される
+    expect(screen.getByText("m123p456s789_")).toBeInTheDocument()
   })
 
   it("shows error for invalid notation", () => {
