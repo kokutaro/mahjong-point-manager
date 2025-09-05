@@ -13,6 +13,8 @@ export type Meld =
       suit: NumberSuit
       tiles: readonly [TileCode, TileCode, TileCode]
       from: CallFrom
+      // チーで鳴いた牌（記法上は方向記号直前の数字）
+      called?: TileCode
     }
   | {
       kind: "pon"
@@ -140,17 +142,23 @@ function parseMeldBlock(block: string): Meld {
     const a = Number(ns[0])
     const b = Number(ns[1])
     const c = Number(ns[2])
-    if (a + 1 === b && b + 1 === c) {
+    // 並び順は任意だが、昇順に並べると連続している必要がある
+    const sorted = [a, b, c].sort((x, y) => x - y)
+    if (sorted[0] + 1 === sorted[1] && sorted[1] + 1 === sorted[2]) {
       const tiles = [
-        makeTile(suit as NumberSuit, a),
-        makeTile(suit as NumberSuit, b),
-        makeTile(suit as NumberSuit, c),
+        makeTile(suit as NumberSuit, sorted[0]),
+        makeTile(suit as NumberSuit, sorted[1]),
+        makeTile(suit as NumberSuit, sorted[2]),
       ] as const
+      // 記法上、方向記号直前の数字を「鳴いた牌」とみなす
+      const calledDigit = Number(ns[2])
+      const called = makeTile(suit as NumberSuit, calledDigit)
       return {
         kind: "chi",
         suit: suit as NumberSuit,
         tiles,
         from: mapCallFromSymbol(dir),
+        called,
       }
     }
   }

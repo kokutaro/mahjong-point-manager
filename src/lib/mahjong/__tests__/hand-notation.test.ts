@@ -45,6 +45,20 @@ describe("parseHandNotation", () => {
     }
   })
 
+  it("accepts chi with called tile indicated by last digit (e.g., m342-)", () => {
+    const parsed = parseHandNotation("m34_,m342-")
+    expect(parsed.melds.length).toBe(1)
+    const m = parsed.melds[0]
+    expect(m.kind).toBe("chi")
+    if (m.kind === "chi") {
+      // 内部表現は昇順
+      expect(m.tiles).toEqual(["m2", "m3", "m4"])
+      // called は直前の数字
+      expect(m.called).toBe("m2")
+      expect(m.from).toBe("shimo")
+    }
+  })
+
   it("rejects invalid forms", () => {
     expect(() => parseHandNotation("")).toThrow()
     expect(() => parseHandNotation("123m")).toThrow() // number before suit

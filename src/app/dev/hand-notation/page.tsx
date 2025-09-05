@@ -8,40 +8,20 @@ import {
 import type { ParsedHand, Meld } from "@/lib/mahjong/hand-notation"
 import TileGroup from "@/components/tiles/TileGroup"
 import Tile from "@/components/tiles/Tile"
+import MeldTiles from "@/components/tiles/MeldTiles"
 
 function MeldView({ meld }: { meld: Meld }) {
-  if (meld.kind === "chi") {
-    return (
-      <div className="flex items-center gap-2">
-        <span className="text-xs rounded bg-blue-50 px-1 py-0.5 border border-blue-200">
-          チー
-        </span>
-        <TileGroup codes={[...meld.tiles]} />
-        <span className="text-xs text-gray-500">from: {meld.from}</span>
-      </div>
-    )
-  }
-  if (meld.kind === "pon") {
-    return (
-      <div className="flex items-center gap-2">
-        <span className="text-xs rounded bg-amber-50 px-1 py-0.5 border border-amber-200">
-          ポン
-        </span>
-        <TileGroup codes={[...meld.tiles]} />
-        <span className="text-xs text-gray-500">from: {meld.from}</span>
-      </div>
-    )
-  }
+  const label =
+    meld.kind === "chi" ? "チー" : meld.kind === "pon" ? "ポン" : "カン"
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs rounded bg-purple-50 px-1 py-0.5 border border-purple-200">
-        カン
+      <span className="text-xs rounded bg-blue-50 px-1 py-0.5 border border-blue-200">
+        {label}
       </span>
-      <TileGroup codes={[...meld.tiles]} />
-      <span className="text-xs text-gray-500">{meld.subtype}</span>
-      {meld.from && (
-        <span className="text-xs text-gray-500">from: {meld.from}</span>
-      )}
+      <MeldTiles meld={meld} />
+      <span className="text-xs text-gray-500">
+        {meld.kind === "kan" ? meld.subtype : `from: ${meld.from}`}
+      </span>
     </div>
   )
 }
