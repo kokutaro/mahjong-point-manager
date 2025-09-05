@@ -1,8 +1,10 @@
 "use client"
 
 import { t } from "@/lib/i18n"
-import type { Yaku } from "@/lib/mahjong/yaku"
+import type { Example, Yaku } from "@/lib/mahjong/yaku"
 import { TileGroup } from "@/components/tiles/TileGroup"
+import { parseHandNotation } from "@/lib/mahjong/hand-notation"
+import MeldTiles from "@/components/tiles/MeldTiles"
 
 type Props = {
   yaku: Yaku
@@ -46,9 +48,40 @@ export function YakuRow({ yaku, locale = "ja" }: Props) {
         <HanBadge yaku={yaku} locale={locale} />
       </div>
       <div className="sm:col-span-2">
-        {yaku.examples?.[0]?.tiles && (
-          <TileGroup codes={yaku.examples[0].tiles} size="sm" />
-        )}
+        {(() => {
+          const ex = yaku.examples?.[0] as Example | undefined
+          if (!ex) return null
+          if ("notation" in ex && ex.notation) {
+            try {
+              const parsed = parseHandNotation(ex.notation)
+              return (
+                <div className="flex items-center gap-3">
+                  <TileGroup codes={parsed.concealed} size="sm" />
+                  {parsed.tsumo && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-gray-500">ツモ</span>
+                      <TileGroup codes={[parsed.tsumo]} size="sm" />
+                    </div>
+                  )}
+                  {parsed.melds.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-400">|</span>
+                      {parsed.melds.map((m, i) => (
+                        <MeldTiles key={i} meld={m} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            } catch {
+              // フォールバック: 何もしない
+            }
+          }
+          if ("tiles" in ex && ex.tiles) {
+            return <TileGroup codes={ex.tiles} size="sm" />
+          }
+          return null
+        })()}
         {yaku.notesKey && (
           <div className="text-xs text-gray-500 mt-1">
             {t(yaku.notesKey, locale)}
