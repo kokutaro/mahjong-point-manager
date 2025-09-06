@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const nextJest = require("next/jest")
 
 const createJestConfig = nextJest({
@@ -24,6 +25,8 @@ const customJestConfig = {
   collectCoverageFrom: [
     "src/**/*.{js,jsx,ts,tsx}",
     "!src/**/*.d.ts",
+    // バレル/型定義中心のファイル群はカバレッジ対象外にする
+    "!src/schemas/index.ts",
     "!src/pages/_app.tsx",
     "!src/pages/_document.tsx",
   ],
