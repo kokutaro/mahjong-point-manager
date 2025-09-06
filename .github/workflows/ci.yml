@@ -21,10 +21,8 @@ jobs:
           filters: |
             docs:
               - '**/*.md'
-              - 'docs/**'
             nondocs:
               - '!**/*.md'
-              - '!docs/**'
 
   ci:
     needs: should_run
