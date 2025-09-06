@@ -145,4 +145,20 @@ describe("SoloGamePage", () => {
       expect(screen.getByText("ゲームアクション")).toBeInTheDocument()
     )
   })
+
+  it("shows game end screen when status is FINISHED", async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: { gameState: { ...baseState, status: "FINISHED" as const } },
+      }),
+    })
+
+    render(<SoloGamePage params={Promise.resolve({ gameId: "game1" })} />)
+
+    await waitFor(() =>
+      expect(screen.getByTestId("game-end-screen")).toBeInTheDocument()
+    )
+  })
 })
