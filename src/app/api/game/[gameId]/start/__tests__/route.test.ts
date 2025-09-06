@@ -93,4 +93,106 @@ describe("POST /api/game/[gameId]/start", () => {
     })
     expect(res.status).toBe(404)
   })
+
+  it("returns 403 when host mismatches", async () => {
+    const game = {
+      id: "g1",
+      roomCode: "RC",
+      hostPlayerId: "host",
+      status: "WAITING",
+      participants: new Array(4).fill(0).map((_, i) => ({
+        playerId: `p${i}`,
+        position: i,
+        currentPoints: 25000,
+        isReach: false,
+        player: { name: `N${i}` },
+      })),
+    }
+    mockPrisma.game.findUnique.mockResolvedValue(game as any)
+    const { req } = createMocks({
+      method: "POST",
+      json: () => ({ hostPlayerId: "other" }),
+    })
+    const res = await POST(req as unknown as NextRequest, {
+      params: Promise.resolve({ gameId: "g1" }),
+    })
+    expect(res.status).toBe(403)
+  })
+
+  it("returns 400 when participants not 4", async () => {
+    const game = {
+      id: "g1",
+      roomCode: "RC",
+      hostPlayerId: "host",
+      status: "WAITING",
+      participants: [
+        {
+          playerId: "p1",
+          position: 0,
+          currentPoints: 25000,
+          isReach: false,
+          player: { name: "A" },
+        },
+        {
+          playerId: "p2",
+          position: 1,
+          currentPoints: 25000,
+          isReach: false,
+          player: { name: "B" },
+        },
+        {
+          playerId: "p3",
+          position: 2,
+          currentPoints: 25000,
+          isReach: false,
+          player: { name: "C" },
+        },
+      ],
+    }
+    mockPrisma.game.findUnique.mockResolvedValue(game as any)
+    const { req } = createMocks({
+      method: "POST",
+      json: () => ({ hostPlayerId: "host" }),
+    })
+    const res = await POST(req as unknown as NextRequest, {
+      params: Promise.resolve({ gameId: "g1" }),
+    })
+    expect(res.status).toBe(400)
+  })
+
+  it("returns 400 when already started or finished", async () => {
+    const game = {
+      id: "g1",
+      roomCode: "RC",
+      hostPlayerId: "host",
+      status: "PLAYING",
+      participants: new Array(4).fill(0).map((_, i) => ({
+        playerId: `p${i}`,
+        position: i,
+        currentPoints: 25000,
+        isReach: false,
+        player: { name: `N${i}` },
+      })),
+    }
+    mockPrisma.game.findUnique.mockResolvedValue(game as any)
+    const { req } = createMocks({
+      method: "POST",
+      json: () => ({ hostPlayerId: "host" }),
+    })
+    const res = await POST(req as unknown as NextRequest, {
+      params: Promise.resolve({ gameId: "g1" }),
+    })
+    expect(res.status).toBe(400)
+  })
+
+  it("returns 400 on validation error", async () => {
+    const { req } = createMocks({
+      method: "POST",
+      json: () => ({ foo: "bar" }),
+    })
+    const res = await POST(req as unknown as NextRequest, {
+      params: Promise.resolve({ gameId: "g1" }),
+    })
+    expect(res.status).toBe(400)
+  })
 })

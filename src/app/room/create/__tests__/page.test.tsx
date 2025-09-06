@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react"
+import { render, screen, fireEvent, waitFor } from "@testing-library/react"
 import CreateRoomPage from "../page"
 import { useAuth } from "@/contexts/AuthContext"
 import { useRouter } from "next/navigation"
@@ -17,6 +17,8 @@ const mockPush = jest.fn()
 describe("CreateRoomPage", () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    // @ts-expect-error test override
+    global.fetch = jest.fn()
   })
 
   it("shows login required when unauthenticated", () => {
@@ -39,5 +41,45 @@ describe("CreateRoomPage", () => {
     expect(inputs[1]).toHaveValue(5)
     expect(inputs[2]).toHaveValue(-5)
     expect(inputs[3]).toHaveValue(-10)
+  })
+
+  it("submits and navigates on success", async () => {
+    const refreshAuth = jest.fn()
+    ;(useAuth as jest.Mock).mockReturnValue({
+      isAuthenticated: true,
+      user: { name: "Tester" },
+      refreshAuth,
+    })
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, data: { roomCode: "ABC123" } }),
+    })
+
+    render(<CreateRoomPage />)
+    fireEvent.click(screen.getByRole("button", { name: "ルーム作成" }))
+
+    await waitFor(() => {
+      expect(refreshAuth).toHaveBeenCalled()
+      expect(mockPush).toHaveBeenCalledWith("/room/ABC123")
+    })
+  })
+
+  it("shows error when API fails", async () => {
+    ;(useAuth as jest.Mock).mockReturnValue({
+      isAuthenticated: true,
+      user: { name: "Tester" },
+      refreshAuth: jest.fn(),
+    })
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: { message: "ルーム作成に失敗しました" } }),
+    })
+
+    render(<CreateRoomPage />)
+    fireEvent.click(screen.getByRole("button", { name: "ルーム作成" }))
+
+    await waitFor(() =>
+      expect(screen.getByText("ルーム作成に失敗しました")).toBeInTheDocument()
+    )
   })
 })
