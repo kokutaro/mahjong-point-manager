@@ -7,7 +7,26 @@ on:
     branches: [main]
 
 jobs:
+  should_run:
+    runs-on: ubuntu-latest
+    outputs:
+      run_backend_ci: ${{ steps.check_files.outputs.changes.nondocs }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect changed paths (docs-only 判定)
+        id: check_files
+        uses: dorny/paths-filter@v3
+        with:
+          token: ${{ github.token }}
+          filters: |
+            nondocs:
+              - '**'
+              - '!**/*.md'
+              - '!docs/**'
+
   ci:
+    needs: should_run
+    if: needs.should_run.outputs.run_backend_ci == 'true'
     runs-on: ubuntu-latest
 
     services:
@@ -29,46 +48,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Detect changed paths (docs-only 判定)
-        id: changes
-        uses: dorny/paths-filter@v3
-        with:
-          token: ${{ github.token }}
-          filters: |
-            docs:
-              - '**/*.md'
-              - 'docs/**'
-            nondocs:
-              - '**'
-              - '!**/*.md'
-              - '!docs/**'
-
-      - name: Set DOCS_ONLY env
-        run: |
-          if [ "${{ steps.changes.outputs.docs }}" = 'true' ] && [ "${{ steps.changes.outputs.nondocs }}" != 'true' ]; then
-            echo "DOCS_ONLY=true" >> $GITHUB_ENV
-          else
-            echo "DOCS_ONLY=false" >> $GITHUB_ENV
-          fi
-
-      - name: Docs-only change; skipping heavy CI
-        if: env.DOCS_ONLY == 'true'
-        run: |
-          echo "Docs-only change detected. Skipping install, build, type-check, lint and tests."
-
       - name: Setup Node.js
-        if: env.DOCS_ONLY != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
 
       - name: Install dependencies
-        if: env.DOCS_ONLY != 'true'
         run: npm ci
 
       - name: Setup database
-        if: env.DOCS_ONLY != 'true'
         run: |
           npx prisma generate
           npx prisma db push
@@ -76,28 +65,23 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
 
       - name: Run type check
-        if: env.DOCS_ONLY != 'true'
         run: npm run type-check
 
       - name: Run lint
-        if: env.DOCS_ONLY != 'true'
         run: npm run lint
 
       - name: Run tests with coverage
-        if: env.DOCS_ONLY != 'true'
         run: npm run test:coverage
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
 
       - name: Upload coverage reports
-        if: env.DOCS_ONLY != 'true'
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: kokutaro/mahjong-point-manager
 
       - name: Build application
-        if: env.DOCS_ONLY != 'true'
         run: npm run build
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
