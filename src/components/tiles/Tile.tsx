@@ -45,7 +45,7 @@ export function Tile({
         "relative inline-flex items-end justify-center leading-none shrink-0",
         className
       )}
-      style={{ width: dim, height: dim }}
+      style={{ width: dim / 1.2, height: dim }}
     >
       {rotate ? (
         <span
@@ -56,7 +56,7 @@ export function Tile({
           <Image
             src={src}
             alt={alt}
-            width={dim}
+            width={dim / 1.2}
             height={dim}
             className={"object-contain w-full h-full"}
             priority={false}
@@ -67,7 +67,7 @@ export function Tile({
           <Image
             src={src}
             alt={alt}
-            width={dim}
+            width={dim / 1.2}
             height={dim}
             className={"object-contain w-full h-full"}
             priority={false}
