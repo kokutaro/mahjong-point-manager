@@ -100,6 +100,23 @@
 - ✅ **トビ終了**: マイナス点数での即時終了
 - ❌ **焼き鳥**: 未実装（将来拡張予定）
 
+### 2.8. 役ヘルプ（Yaku Help）
+
+- ✅ **役一覧UI**: 役名・翻数・条件・注意点を一覧表示（i18n対応）
+- ✅ **検索/フィルタ**: 文字検索、カテゴリ（面前限定/喰い下がり/その他/役満）、翻数で絞り込み
+- ✅ **和了例の視覚表示**: 牌姿短縮表記を解析し、手牌・ツモ・鳴き（チー/ポン/カン）を画像で表示
+- ✅ **導線**: ホーム/対局画面のメニューからヘルプを起動。専用ページ `/help/yaku` も提供
+- ✅ **データモデル更新**: 役データは短縮表記（notation）に対応したサンプルを含む
+
+### 2.9. 牌表示アップデート（Unicode → 画像）と風露（鳴き）表示
+
+- ✅ **牌画像化**: 牌表示をUnicodeから画像へ移行（`next/image`、`public/img/pai` アセット）
+- ✅ **赤5表示**: 赤5は画像は通常5を使用し、UIオーバーレイで赤マーカーを表示
+- ✅ **回転/裏面**: 風露牌の横向き表示、暗槓の裏面表示などに対応
+- ✅ **風露表示**: `MeldTiles` によりチー/ポン/カン（明槓/暗槓/加槓）を正しい向き・配置で表示
+- ✅ **アクセシビリティ**: 牌ごとの `aria-label` を付与（例: 「一萬」「東」「赤」）
+- ✅ **デモページ**: 牌姿短縮表記のパース/整形と視覚化デモを `/dev/hand-notation` に提供
+
 ## 3. 技術スタック
 
 ### 3.1. フロントエンド
@@ -236,7 +253,13 @@ src/
 │   ├── game/              # ゲーム画面
 │   ├── room/              # ルーム作成・参加
 │   ├── sessions/          # セッション履歴
+│   ├── help/
+│   │   └── yaku/          # 役ヘルプページ (/help/yaku)
+│   └── dev/
+│       └── hand-notation/ # 牌姿短縮表記デモ (/dev/hand-notation)
 ├── components/            # React コンポーネント
+│   ├── help/              # 役ヘルプUI（YakuHelp, YakuTable など）
+│   └── tiles/             # 牌表示（Tile, TileGroup, MeldTiles）
 ├── hooks/                 # カスタムフック
 ├── lib/                   # ユーティリティ・ロジック
 │   ├── point-manager.ts   # 点数管理クラス
@@ -263,6 +286,7 @@ src/
 - 流局処理
 - API エンドポイントの動作
 - UI コンポーネントの表示・操作
+- 役ヘルプ（検索/フィルタ/表示）、牌姿短縮表記（パース/整形/表示）、風露表示（チー/ポン/カン）
 
 ### 9.3. テストコマンド
 
@@ -286,6 +310,10 @@ npm run db:reset
 # 開発サーバー起動
 npm run dev
 ```
+
+補足:
+
+- 役ヘルプは `/help/yaku`、牌姿短縮表記のデモは `/dev/hand-notation` を参照してください。
 
 ### 10.2. 本番デプロイ
 
@@ -335,3 +363,7 @@ npm start
 - [UI/UX設計](docs/ui-ux-design.md)
 - [ゲーム明確終了機能 Phase 1](docs/game-termination-phase1.md)
 - [ゲーム明確終了機能 Phase 2](docs/game-termination-phase2.md)
+- [ゲーム明確終了機能 Phase 3](docs/game-termination-phase3.md)
+- [役ヘルプ 機能設計](docs/design/yaku-help.md)
+- [牌表示のUnicode→画像移行 設計](docs/design/tile-image-migration.md)
+- [風露牌の表示設計](docs/design/furo-tiles-display.md)
