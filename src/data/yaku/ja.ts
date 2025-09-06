@@ -10,22 +10,7 @@ export const yakuJa: Yaku[] = [
     notesKey: "yaku.pinfu.note",
     examples: [
       {
-        tiles: [
-          "m2",
-          "m3",
-          "m4",
-          "p4",
-          "p5",
-          "p6",
-          "s3",
-          "s4",
-          "s5",
-          "s7",
-          "s8",
-          "s9",
-          "m6",
-          "m6",
-        ],
+        notation: "m22s234p123345786_",
         descriptionKey: "yaku.pinfu.ex1",
       },
     ],
@@ -95,7 +80,7 @@ export const yakuJa: Yaku[] = [
     notesKey: "yaku.toitoi.note",
     examples: [
       {
-        notation: "m333s333z11_,p444-,s5555=",
+        notation: "m333s333z11_,p444-,s5555",
       },
     ],
   },
@@ -146,6 +131,11 @@ export const yakuJa: Yaku[] = [
     aliases: ["純全帯么九", "ジュンチャン", "じゅんちゃん", "junchan"],
     category: "kuisagari",
     value: { kind: "han", closed: 3, open: 2 },
+    examples: [
+      {
+        notation: "s123789m12399_,p999=",
+      },
+    ],
     notesKey: "yaku.junchan.note",
   },
   {
@@ -157,22 +147,7 @@ export const yakuJa: Yaku[] = [
     notesKey: "yaku.chinitsu.note",
     examples: [
       {
-        tiles: [
-          "m1",
-          "m2",
-          "m3",
-          "m1",
-          "m2",
-          "m3",
-          "m1",
-          "m2",
-          "m3",
-          "m1",
-          "m2",
-          "m3",
-          "m9",
-          "m9",
-        ],
+        notation: "m12312312312399_",
       },
     ],
   },
@@ -185,22 +160,7 @@ export const yakuJa: Yaku[] = [
     notesKey: "yaku.daisangen.note",
     examples: [
       {
-        tiles: [
-          "z5",
-          "z5",
-          "z5",
-          "z6",
-          "z6",
-          "z6",
-          "z7",
-          "z7",
-          "z7",
-          "m2",
-          "m3",
-          "m4",
-          "p6",
-          "p7",
-        ],
+        notation: "z555m345s33_,z666=,z777+",
       },
     ],
   },
@@ -216,6 +176,11 @@ export const yakuJa: Yaku[] = [
     category: "yakuman",
     value: { kind: "yakuman", rank: 2 },
     notesKey: "yaku.suankouTanki.note",
+    examples: [
+      {
+        notation: "s222555888m333z11_",
+      },
+    ],
     ruleFlags: { doubleYakuman: true },
   },
 ]
