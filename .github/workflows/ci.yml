@@ -10,7 +10,7 @@ jobs:
   should_run:
     runs-on: ubuntu-latest
     outputs:
-      run_backend_ci: ${{ !contains(steps.check_files.outputs.changes, 'nondocs') && contains(steps.check_files.outputs.changes, 'docs')}}
+      run_backend_ci: ${{ contains(steps.check_files.outputs.changes, 'nondocs')}}
     steps:
       - uses: actions/checkout@v4
       - name: Detect changed paths (docs-only 判定)
