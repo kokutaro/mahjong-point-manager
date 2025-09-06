@@ -7,7 +7,7 @@ PR作成前に必ず以下を確認してください：
 参照: @ai-rules/pr-guide.md, @ai-rules/development-process-guide.md, @ai-rules/testing-qa-guide.md, @ai-rules/coding-standards.md, @ai-rules/tech-stack-guide.md
 -->
 
-## 📝 概要
+# 📝 概要
 
 このPRの目的を1–2文で簡潔に説明してください。
 
